@@ -38,13 +38,15 @@ async def health_check():
     return {"status": "ok", "service": "omniweb-core"}
 
 # Register active modules
-# 1. Lingua module
-module_registry.register_module(
-    app=app,
-    module_name="lingua",
-    router_import_path="modules.lingua.api.lingua_routes.router",
-    prefix="/api/v1/lingua"
-)
+for module_name in settings.ACTIVE_MODULES:
+    if module_name == "lingua":
+        module_registry.register_module(
+            app=app,
+            module_name="lingua",
+            router_import_path="modules.lingua.api.lingua_routes.router",
+            prefix="/api/v1/lingua"
+        )
+    # Future modules can be added here or the registry can be made even more dynamic
 
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # Cors configuration
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
+    # Active modules list
+    ACTIVE_MODULES: list[str] = ["lingua"]
+
     class Config:
         case_sensitive = True
 
