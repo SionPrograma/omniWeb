@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from backend.core.config import settings
 from backend.core.module_registry import module_registry
 import uvicorn
@@ -32,11 +33,7 @@ if settings.BACKEND_CORS_ORIGINS:
 
 @app.get("/")
 async def root():
-    return {
-        "message": f"Welcome to {settings.PROJECT_NAME}",
-        "version": settings.VERSION,
-        "active_modules": module_registry.get_active_modules()
-    }
+    return FileResponse("frontend/dashboard/index.html")
 
 @app.get("/health")
 async def health_check():

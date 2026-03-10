@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniWeb | Personal Knowledge Environment</title>
+    <style>
+        :root {
+            --bg-color: #050508;
+            --accent-color: #00d4ff;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #050508 100%);
+        }
+
+        /* Ambient Stars */
+        .stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.2);
+            }
+        }
+
+        /* Header section */
+        header {
+            text-align: center;
+            z-index: 10;
+            margin-bottom: 4rem;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 200;
+            letter-spacing: 0.5rem;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.3));
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: lowercase;
+            font-style: italic;
+        }
+
+        /* Chips Grid */
+        .chips-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            z-index: 10;
+            perspective: 1000px;
+        }
+
+        .chip {
+            width: 180px;
+            height: 100px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+            color: white;
+            position: relative;
+            animation: float var(--float-duration) infinite ease-in-out;
+            animation-delay: var(--float-delay);
+        }
+
+        .chip:hover {
+            transform: scale(1.1) translateZ(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .chip-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .chip-status {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chip.coming-soon {
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        .chip.coming-soon:hover {
+            transform: none;
+            border-color: var(--glass-border);
+            box-shadow: none;
+        }
+
+        .chip.active {
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        /* Animations */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .chips-container {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stars-container" id="stars"></div>
+
+    <header>
+        <h1>OmniWeb</h1>
+        <div class="subtitle">Personal Knowledge Environment</div>
+    </header>
+
+    <main class="chips-container">
+        <!-- Lingua Module -->
+        <a href="/lingua/" class="chip active" style="--float-duration: 6s; --float-delay: 0s;">
+            <span class="chip-title">Lingua</span>
+            <span class="chip-status">Active</span>
+        </a>
+
+        <!-- Planner Module -->
+        <div class="chip coming-soon" style="--float-duration: 7s; --float-delay: 1s;">
+            <span class="chip-title">Planner</span>
+            <span class="chip-status">Coming Soon</span>
+        </div>
+
+        <!-- Nutrition Module -->
+        <div class="chip coming-soon" style="--float-duration: 5.5s; --float-delay: 0.5s;">
+            <span class="chip-title">Nutrition</span>
+            <span class="chip-status">Coming Soon</span>
+        </div>
+
+        <!-- Assistant Module -->
+        <div class="chip coming-soon" style="--float-duration: 6.5s; --float-delay: 1.5s;">
+            <span class="chip-title">Assistant</span>
+            <span class="chip-status">Coming Soon</span>
+        </div>
+    </main>
+
+    <script>
+        // Generate stars
+        const starsContainer = document.getElementById('stars');
+        const starCount = 100;
+
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+
+            const size = Math.random() * 2 + 1;
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const duration = Math.random() * 3 + 2;
+
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.left = `${x}%`;
+            star.style.top = `${y}%`;
+            star.style.setProperty('--duration', `${duration}s`);
+
+            starsContainer.appendChild(star);
+        }
+
+        // Add some mouse follow effect for depth
+        document.addEventListener('mousemove', (e) => {
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
+            const container = document.querySelector('.chips-container');
+            container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+    </script>
+</body>
+
+</html>
