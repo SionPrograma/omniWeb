@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoTranslator MVP | OmniWeb</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>OmniWeb VideoTranslator</h1>
+            <p>AI-Powered Video Transcription, Translation & Narration</p>
+        </header>
+
+        <main class="main-card">
+            <form id="translator-form">
+                <div class="input-group">
+                    <label for="youtube-url">YouTube URL</label>
+                    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..."
+                        autocomplete="off">
+                </div>
+
+                <div class="input-group">
+                    <label>Or Upload Video File</label>
+                    <div class="file-drop-zone" id="drop-zone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag and drop or click to upload</p>
+                        <input type="file" id="video-file" hidden accept="video/*">
+                        <p id="file-name" style="margin-top: 10px; color: var(--accent-primary); display: none;"></p>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="target-lang">Target Language</label>
+                    <select id="target-lang">
+                        <option value="es">Spanish (es)</option>
+                        <option value="en">English (en)</option>
+                        <option value="fr">French (fr)</option>
+                        <option value="de">German (de)</option>
+                        <option value="it">Italian (it)</option>
+                        <option value="pt">Portuguese (pt)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="primary" id="submit-btn">
+                    <span>Translate & Narrate</span>
+                </button>
+            </form>
+
+            <div class="job-status-container" id="status-container">
+                <h3 style="margin-bottom: 1.5rem;">Processing Status</h3>
+                <div id="stages-list">
+                    <!-- Stages will be injected here -->
+                </div>
+            </div>
+
+            <div class="result-container" id="result-container">
+                <p style="font-weight: 600; color: var(--success);">Processing Complete!</p>
+                <audio id="result-audio" controls></audio>
+                <a id="download-link" class="download-btn" href="#" download>
+                    <i class="fas fa-download"></i> Download Result
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
