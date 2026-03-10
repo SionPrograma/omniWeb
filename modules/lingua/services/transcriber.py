@@ -1,8 +1,6 @@
-import whisper
 from pathlib import Path
 from ..models.lingua_config import settings
 import gc
-import torch
 
 class Transcriber:
     def __init__(self):
@@ -10,6 +8,8 @@ class Transcriber:
 
     def get_model(self):
         if self.model is None:
+            import whisper
+            import torch
             # Respect CPU_FRIENDLY_MODE: explicitly specify cpu if set
             device = "cpu" if settings.CPU_FRIENDLY_MODE or not torch.cuda.is_available() else "cuda"
             self.model = whisper.load_model(settings.WHISPER_MODEL, device=device)
@@ -26,6 +26,7 @@ class Transcriber:
         return result
 
     def _cleanup_memory(self):
+        import torch
         # Delete model instance and force garbage collection to free RAM
         if self.model is not None:
             del self.model

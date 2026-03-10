@@ -1,7 +1,5 @@
-from TTS.api import TTS
 from pathlib import Path
 from ..models.lingua_config import settings
-import torch
 import gc
 import re
 import wave
@@ -11,14 +9,19 @@ import os
 class TTSGenerator:
     def __init__(self):
         # Force CPU if requested for stability, otherwise use GPU if available
-        if settings.CPU_FRIENDLY_MODE:
-            self.device = "cpu"
-        else:
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu" # Default
         self.tts = None
 
     def get_tts(self):
         if self.tts is None:
+            import torch
+            from TTS.api import TTS
+            
+            if settings.CPU_FRIENDLY_MODE:
+                self.device = "cpu"
+            else:
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+                
             self.tts = TTS(settings.COQUI_TTS_MODEL).to(self.device)
         return self.tts
 
@@ -125,6 +128,7 @@ class TTSGenerator:
             raise
 
     def _cleanup_memory(self):
+        import torch
         # Force garbage collection to free large model tensors
         if self.tts is not None:
             del self.tts

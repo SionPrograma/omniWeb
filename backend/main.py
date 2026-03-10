@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from backend.core.config import settings
 from backend.core.module_registry import module_registry
 import uvicorn
@@ -14,6 +15,10 @@ app = FastAPI(
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
+
+# Mount Lingua UI
+# We mount it at /lingua to serve the HTML/JS/CSS from the module's ui directory
+app.mount("/lingua", StaticFiles(directory="modules/lingua/ui", html=True), name="lingua_ui")
 
 # Set up CORS
 if settings.BACKEND_CORS_ORIGINS:
