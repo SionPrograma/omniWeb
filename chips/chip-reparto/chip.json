@@ -3,7 +3,7 @@
     "slug": "reparto",
     "name": "Reparto",
     "description": "Sistema de logística y gestión de paradas con integración de mapas",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "type": "hybrid",
     "has_frontend": true,
     "has_backend": true,

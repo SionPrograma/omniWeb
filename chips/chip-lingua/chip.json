@@ -1,8 +1,8 @@
 {
-    "id": "chip-finanzas",
-    "slug": "finanzas",
-    "name": "Finanzas",
-    "description": "Gestión personal de movimientos financieros con soporte híbrido",
+    "id": "chip-lingua",
+    "slug": "lingua",
+    "name": "Lingua",
+    "description": "Sistema avanzado de transcripción, traducción y síntesis de voz",
     "version": "0.3.0",
     "type": "hybrid",
     "has_frontend": true,

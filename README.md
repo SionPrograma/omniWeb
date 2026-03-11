@@ -1,5 +1,5 @@
 # OmniWeb 🌐
-**Version:** v0.2.1
+**Version:** v0.3.0
 
 OmniWeb es un **Sistema Operativo Personal Web** en fase de desarrollo activo. Fue diseñado para centralizar y orquestar múltiples servicios, aplicaciones y dominios de conocimiento (finanzas, aprendizaje, gestión de ideas) bajo un único ecosistema digital ligero y unificado.
 
@@ -19,7 +19,7 @@ Para levantar el entorno completo de OmniWeb en local (Backend Orquestador + UI 
 
 *Nota: La plataforma es "Portable First". Si un endpoint falla o la conexión a red se interrumpe, la mayoría de los "Chips" poseen un fallback local a StateManager/LocalStorage para no bloquear el progreso del usuario.*
 
-## 🏗 Arquitectura (v0.2.1)
+## 🏗 Arquitectura (v0.3.0)
 
 OmniWeb rompe deliberadamente con la tendencia predominante de las *Single Page Applications* (SPA) monolíticas en React o Vue. En su lugar, opera como una **Multi-Page Application (MPA)** híbrida:
 
@@ -40,7 +40,7 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 - `chips/`: El estándar activo para crear módulos. Sigue el [Contrato Técnico v1.0](docs/contrato_tecnico_chips_v1.0.md).
 - `modules/`: Código **Legacy**. Alberga servicios complejos o transicionales (IA, Whisper, etc.).
 
-## 🔋 Estado Actual del Ecosistema (v0.2.1)
+## 🔋 Estado Actual del Ecosistema (v0.3.0)
 
 ### 📌 Implementado y Estándar
 - **Dashboard Central**: Activo. Realiza tracking inteligente mediante el `state-manager` para resaltar de qué chip provino el usuario.
@@ -53,7 +53,7 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 - **Lingua (`modules/lingua`)**: Es el backend poderoso en Python que orquesta IA de voz pero cuyo Front original ya no condice con la arquitectura. Su uso visual está **depreciado**.
 
 ### 🔭 Roadmap y Visión Futura (Documentado, Ejecución Pendiente)
-- **Persistencia en Base de Datos**: Actualmente, OmniWeb v0.2.1 delega responsablemente el guardado de sesiones temporales y progresos al `LocalStorage` o `SessionStorage` puro de cada componente a fin de no bloquear la creación de UI. En el futuro, el orquestador FastAPI abrirá endpoints de resguardo persistente definitivo (SQLite/PosgreSQL).
+- **Persistencia en Base de Datos**: [Implementado v0.3.0] OmniWeb utiliza SQLite centralizado en `backend/data/omniweb.db` para el almacenamiento persistente de los chips híbridos (Finanzas, Reparto).
 - **Migración de Backend de IA**: Extraer los endpoints asíncronos y rutinas LLM pesadas que viven apagadas hoy en `modules/lingua/services` e inyectarlas dentro de la api oficial del `chips/chip-idiomas-ia/api/`.
 - **Chip Música**: En estado de *Placeholder*. Existe organización de ideas lógicas pero falta desarrollar su interfaz visual.
 - **Multiusuario & Identidad**: Hoy la plataforma es intrínsecamente monousuario (pensada como herramienta personal del desarrollador). A futuro, implementará _Auth_ centralizado.

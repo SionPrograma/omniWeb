@@ -3,7 +3,7 @@
     "slug": "programacion",
     "name": "Programación",
     "description": "Mentoría interactiva de desarrollo, arquitecturas y patrones",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "type": "frontend-only",
     "has_frontend": true,
     "has_backend": false,

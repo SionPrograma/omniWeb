@@ -3,7 +3,7 @@
     "slug": "idiomas-ia",
     "name": "Idiomas IA",
     "description": "Tutor de idiomas bilingüe asistido por inteligencia contextual",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "type": "frontend-only",
     "has_frontend": true,
     "has_backend": false,

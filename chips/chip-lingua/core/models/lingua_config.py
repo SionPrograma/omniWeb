@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # PROJECT_ROOT is where .env and requirements.txt are located
-PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
+PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 class Settings(BaseSettings):
     APP_NAME: str = "OmniWeb VideoTranslator MVP"

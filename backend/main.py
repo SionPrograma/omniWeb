@@ -50,24 +50,16 @@ db_manager.init_db()
 # Mount Modules UI & Register API Routes
 for module_name in settings.ACTIVE_MODULES:
     # 1. Mount UI
-    ui_path = None
-    if module_name == "lingua":
-        ui_path = "modules/lingua/ui"
-    else:
-        chip_folder = f"chip-{module_name}"
-        ui_path = f"chips/{chip_folder}/frontend"
+    chip_folder = f"chip-{module_name}"
+    ui_path = f"chips/{chip_folder}/frontend"
     
-    if ui_path and os.path.exists(ui_path):
+    if os.path.exists(ui_path):
         app.mount(f"/{module_name}", StaticFiles(directory=ui_path, html=True), name=f"{module_name}_ui")
         print(f"Mounted UI for {module_name} at /{module_name}")
 
     # 2. Register API Router (if exists)
-    router_path = None
-    if module_name == "lingua":
-        router_path = "modules.lingua.api.lingua_routes.router"
-    else:
-        # Expected pattern for new chips: chips.chip-name.core.router
-        router_path = f"chips.chip-{module_name}.core.router"
+    # Expected pattern for new chips: chips.chip-name.core.router
+    router_path = f"chips.chip-{module_name}.core.router"
         
     # Attempt registration (registry handles errors if path doesn't exist)
     module_registry.register_module(
