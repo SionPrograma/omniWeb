@@ -196,40 +196,80 @@
             style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.2.1-stable</div>
     </header>
 
-    <main class="chips-container">
-        <!-- Idiomas IA (Prev. Lingua) -->
-        <a href="/idiomas-ia/" class="chip active" style="--float-duration: 6s; --float-delay: 0s;">
-            <span class="chip-title">Idiomas IA</span>
-            <span class="chip-status">Active</span>
-        </a>
-
-        <!-- Reparto -->
-        <a href="/reparto/" class="chip active" style="--float-duration: 7s; --float-delay: 1s;">
-            <span class="chip-title">Reparto</span>
-            <span class="chip-status">Portable First</span>
-        </a>
-
-        <!-- Finanzas -->
-        <a href="/finanzas/" class="chip active" style="--float-duration: 5.5s; --float-delay: 0.5s;">
-            <span class="chip-title">Finanzas</span>
-            <span class="chip-status">Active</span>
-        </a>
-
-        <!-- Programación -->
-        <a href="/programacion/" class="chip active" style="--float-duration: 6.5s; --float-delay: 1.5s;">
-            <span class="chip-title">Programación</span>
-            <span class="chip-status">Active</span>
-        </a>
-
-        <!-- Música -->
-        <div class="chip active" style="--float-duration: 8s; --float-delay: 2s;">
-            <span class="chip-title">Música</span>
-            <span class="chip-status">Base ready</span>
-        </div>
+    <main class="chips-container" id="chips-grid">
+        <!-- Chips will be loaded dynamically here -->
     </main>
 
 
     <script>
+        // DOM Elements
+        const chipsGrid = document.getElementById('chips-grid');
+
+        // Logic: Load Chips from API
+        async function loadChips() {
+            try {
+                const response = await fetch('/api/v1/system/chips');
+                if (!response.ok) throw new Error('API unstable');
+
+                const chips = await response.ok ? await response.json() : [];
+                renderChips(chips);
+            } catch (error) {
+                console.warn('Using manual fallback due to API error:', error);
+                // No need to clear grid, if API fails we could show a message or just leave it empty
+                // In a real app, we might have a hardcoded fallback list here.
+            }
+        }
+
+        function renderChips(chips) {
+            chipsGrid.innerHTML = ''; // Clear skeleton/existing
+
+            // Filter only visible chips
+            const visibleChips = chips.filter(c => c.metadata?.dashboard_visible !== false);
+
+            visibleChips.forEach((chip, index) => {
+                const card = document.createElement('a');
+                card.href = chip.prefix ? `/${chip.slug}/` : '#';
+                card.className = `chip ${chip.status === 'active' || chip.status === 'frontend-only' ? 'active' : 'placeholder'}`;
+
+                // Random float delays for natural feel
+                const duration = 5 + Math.random() * 3;
+                const delay = Math.random() * 2;
+                card.style.setProperty('--float-duration', `${duration}s`);
+                card.style.setProperty('--float-delay', `${delay}s`);
+
+                // Use metadata name if available, otherwise slug
+                const displayName = chip.metadata?.name || chip.name || chip.slug;
+                const displayStatus = chip.metadata?.type === 'placeholder' ? 'Base Ready' : (chip.status === 'active' ? 'Active' : 'Offline');
+
+                card.innerHTML = `
+                    <span class="chip-title">${displayName}</span>
+                    <span class="chip-status">${displayStatus}</span>
+                `;
+
+                if (chip.metadata?.type === 'placeholder') {
+                    card.classList.add('coming-soon');
+                    card.removeAttribute('href');
+                }
+
+                chipsGrid.appendChild(card);
+            });
+
+            highlightRecent();
+        }
+
+        function highlightRecent() {
+            const lastSession = localStorage.getItem('omniweb_last_session');
+            if (lastSession) {
+                const lastChip = document.querySelector(`a[href="/${lastSession}/"]`);
+                if (lastChip) {
+                    lastChip.style.borderColor = "rgba(52, 211, 153, 0.8)";
+                    lastChip.style.boxShadow = "0 0 15px rgba(52, 211, 153, 0.3)";
+                    const statusText = lastChip.querySelector('.chip-status');
+                    if (statusText) statusText.innerText = "Reciente";
+                }
+            }
+        }
+
         // Generate stars
         const starsContainer = document.getElementById('stars');
         const starCount = 100;
@@ -257,23 +297,13 @@
             const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
             const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
             const container = document.querySelector('.chips-container');
-            container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-        });
-
-        // Command Center: Highlight last used chip
-        document.addEventListener('DOMContentLoaded', () => {
-            const lastSession = localStorage.getItem('omniweb_last_session');
-            if (lastSession) {
-                // Find the anchor matching the last chip
-                const lastChip = document.querySelector(`a[href="/${lastSession}/"]`);
-                if (lastChip) {
-                    lastChip.style.borderColor = "rgba(52, 211, 153, 0.8)"; // Mint success color
-                    lastChip.style.boxShadow = "0 0 15px rgba(52, 211, 153, 0.3)";
-                    const statusText = lastChip.querySelector('.chip-status');
-                    if (statusText) statusText.innerText = "Reciente";
-                }
+            if (container) {
+                container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
             }
         });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadChips);
     </script>
 </body>
 

@@ -35,6 +35,11 @@ async def root():
 async def health_check():
     return {"status": "ok", "service": "omniweb-core"}
 
+@app.get(f"{settings.API_V1_STR}/system/chips")
+async def get_system_chips():
+    """Returns the list of all registered chips with their metadata."""
+    return module_registry.get_active_modules()
+
 # Mount Core static resources
 app.mount("/core", StaticFiles(directory="core"), name="core_static")
 
