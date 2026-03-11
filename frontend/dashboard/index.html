@@ -257,6 +257,21 @@
             const container = document.querySelector('.chips-container');
             container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
         });
+
+        // Command Center: Highlight last used chip
+        document.addEventListener('DOMContentLoaded', () => {
+            const lastSession = localStorage.getItem('omniweb_last_session');
+            if (lastSession) {
+                // Find the anchor matching the last chip
+                const lastChip = document.querySelector(`a[href="/${lastSession}/"]`);
+                if (lastChip) {
+                    lastChip.style.borderColor = "rgba(52, 211, 153, 0.8)"; // Mint success color
+                    lastChip.style.boxShadow = "0 0 15px rgba(52, 211, 153, 0.3)";
+                    const statusText = lastChip.querySelector('.chip-status');
+                    if (statusText) statusText.innerText = "Reciente";
+                }
+            }
+        });
     </script>
 </body>
 

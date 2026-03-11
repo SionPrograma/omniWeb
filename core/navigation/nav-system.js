@@ -1,3 +1,5 @@
+import '/core/shared/components/omni-shell.js';
+
 /**
  * OmniWeb Global Navigation System
  * Permite navegar entre chips, volver atrás y restaurar la última vista usada.

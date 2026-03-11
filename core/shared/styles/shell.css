@@ -1,0 +1,65 @@
+/* OmniWeb Shell Styling v1.0 
+   Applied globally over independent MPAs 
+*/
+
+#omni-shell-root {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    /* Ensure it stays above chip UIs */
+    pointer-events: none;
+    /* Let clicks pass through empty wrapper space */
+}
+
+.omni-dock {
+    pointer-events: auto;
+    /* Re-enable clicks for the dock itself */
+    display: flex;
+    align-items: center;
+    background: rgba(10, 10, 15, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    padding: 6px 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 212, 255, 0.15);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.omni-dock:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 212, 255, 0.3);
+    border-color: rgba(0, 212, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.omni-dock-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    outline: none;
+}
+
+.omni-logo {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 0 2px rgba(0, 212, 255, 0.5));
+}
+
+.omni-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    transition: color 0.2s;
+}
+
+.omni-dock-btn:hover .omni-text {
+    color: #00d4ff;
+}
