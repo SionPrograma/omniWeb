@@ -6,10 +6,10 @@ const CHIP_ID = 'reparto';
 
 // Default stops (fallback and initial map view)
 const defaultStops = [
-    { id: 1, name: "Empresa Transportes A", address: "Av. Principal 123", orderId: "RPT-001", status: "PENDIENTE", lat: 36.7213, lng: -4.4214 },
-    { id: 2, name: "Almacen Norte", address: "Calle Industrial 45", orderId: "RPT-002", status: "PENDIENTE", lat: 36.7113, lng: -4.4314 },
-    { id: 3, name: "Cliente VIP 1", address: "Boulevard Central 89", orderId: "RPT-003", status: "PENDIENTE", lat: 36.7313, lng: -4.4114 },
-    { id: 4, name: "Despacho B", address: "Av. Costanera 101", orderId: "RPT-004", status: "PENDIENTE", lat: 36.7413, lng: -4.4014 },
+    { id: 1, name: "Empresa Transportes A", address: "Calle Alameda Principal, Malaga, Spain", orderId: "RPT-001", status: "PENDIENTE", lat: 36.7196, lng: -4.4225 },
+    { id: 2, name: "Almacen Norte", address: "Calle Victoria, Malaga, Spain", orderId: "RPT-002", status: "PENDIENTE", lat: 36.7242, lng: -4.4162 },
+    { id: 3, name: "Cliente VIP 1", address: "Calle Larios, Malaga, Spain", orderId: "RPT-003", status: "PENDIENTE", lat: 36.7188, lng: -4.4217 },
+    { id: 4, name: "Despacho B", address: "Av. de Andalucia, Malaga, Spain", orderId: "RPT-004", status: "PENDIENTE", lat: 36.7161, lng: -4.4332 },
 ];
 
 let stops = [];
@@ -132,6 +132,10 @@ function initMap() {
 }
 
 function createMarker(stop) {
+    if (stop.lat === null || stop.lng === null || typeof stop.lat === 'undefined') {
+        console.warn(`Stop ${stop.id} has no coordinates. Skipping marker.`);
+        return;
+    }
     const marker = L.marker([stop.lat, stop.lng], {
         icon: createMarkerIcon(stop.status),
         title: stop.name
@@ -187,7 +191,9 @@ function renderStopsList() {
 
         li.addEventListener('click', () => {
             openDetailView(stop.id);
-            map.flyTo([stop.lat, stop.lng], 16, { duration: 1 });
+            if (map && stop.lat && stop.lng) {
+                map.flyTo([stop.lat, stop.lng], 16, { duration: 1 });
+            }
         });
         stopsListEl.appendChild(li);
     });

@@ -20,6 +20,13 @@ class EventBus:
         Registers a listener for a specific event.
         Prevents duplicate subscriptions for the same handler.
         """
+        from backend.core.permissions import enforce_permission
+        try:
+            enforce_permission("event_subscribe")
+        except Exception as e:
+            logger.error(f"EventBus: Subscribe denied for '{event_name}': {e}")
+            raise
+
         if event_name not in self._listeners:
             self._listeners[event_name] = []
         
@@ -40,6 +47,13 @@ class EventBus:
         Publishes an event and notifies all registered listeners.
         Supports both sync and async handlers.
         """
+        from backend.core.permissions import enforce_permission
+        try:
+            enforce_permission("event_publish")
+        except Exception as e:
+            logger.error(f"EventBus: Publish denied for '{event_name}': {e}")
+            raise
+
         # Collect tasks (persistence + async handlers)
         tasks = [self._persist_event(event_name, payload)]
 

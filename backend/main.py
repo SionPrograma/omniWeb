@@ -39,7 +39,13 @@ async def health_check():
 @app.get(f"{settings.API_V1_STR}/system/chips")
 async def get_system_chips():
     """Returns the list of all registered chips with their metadata."""
-    return module_registry.get_active_modules()
+    chips = module_registry.get_active_modules()
+    filtered_chips = []
+    for chip in chips:
+        # Control sistémico: Oculta a nivel API los chips que tienen dashboard_visible = False
+        if chip.get("metadata", {}).get("dashboard_visible", True):
+            filtered_chips.append(chip)
+    return filtered_chips
 
 # Mount Core static resources
 app.mount("/core", StaticFiles(directory="core"), name="core_static")

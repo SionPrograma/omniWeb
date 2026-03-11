@@ -27,6 +27,15 @@ class DatabaseManager:
         Recommended to use as a context manager if possible, 
         or close manually.
         """
+        # Integra el modelo operativo de permisos de chip.
+        from backend.core.permissions import enforce_permission
+        
+        try:
+            enforce_permission("db_access")
+        except Exception as e:
+            logger.error(f"Module attempted unauthorized DB access: {e}")
+            raise
+
         try:
             conn = sqlite3.connect(self.db_path)
             # Row factory enables column access by name
