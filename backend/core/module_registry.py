@@ -24,7 +24,10 @@ class ChipMetadata(BaseModel):
     entry_frontend: Optional[str] = "frontend/index.html"
     dashboard_visible: bool = True
     permissions: List[str] = []
-    active: bool = True # Plugin system: allows disabling chips without deleting them
+    active: bool = True 
+    installed: bool = True
+    created_by: Optional[str] = "system"
+    created_at: Optional[str] = None
 
 class ModuleRegistry:
     """
@@ -219,5 +222,33 @@ class ModuleRegistry:
                 metadata = self._load_metadata(slug)
                 chips.append(metadata)
         return chips
+
+    def activate_chip(self, slug: str) -> bool:
+        """Enables a chip by setting its active status to True in chip.json."""
+        return self._set_chip_active_status(slug, True)
+
+    def deactivate_chip(self, slug: str) -> bool:
+        """Disables a chip by setting its active status to False in chip.json."""
+        return self._set_chip_active_status(slug, False)
+
+    def _set_chip_active_status(self, slug: str, status: bool) -> bool:
+        chip_path = f"chips/chip-{slug}/chip.json"
+        if not os.path.exists(chip_path):
+            return False
+            
+        try:
+            with open(chip_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            data["active"] = status
+            
+            with open(chip_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+            
+            logger.info(f"Chip {slug} status set to {status}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update chip {slug} status: {e}")
+            return False
 
 module_registry = ModuleRegistry()

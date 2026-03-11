@@ -20,7 +20,10 @@ class ChipTemplates:
             "entry_frontend": "frontend/index.html",
             "dashboard_visible": True,
             "permissions": spec.permissions,
-            "active": False # Safety rule: generated chips start inactive
+            "active": False,
+            "installed": True,
+            "created_by": "ai-host",
+            "created_at": __import__("datetime").datetime.utcnow().isoformat()
         }
         return json.dumps(data, indent=4)
 
