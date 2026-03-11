@@ -38,12 +38,21 @@ class DatabaseManager:
 
     def init_db(self):
         """
-        Placeholder for global table initialization.
-        Usually called during server startup.
+        Initializes core system tables.
         """
         logger.info(f"Initializing SQLite persistence at {self.db_path}")
-        # In a real scenario, we could run core table schemas here.
-        pass
+        with self.get_connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS system_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_name TEXT NOT NULL,
+                    payload TEXT,
+                    source_chip TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+        logger.info("System core tables initialized.")
 
 # Global instance for shared access
 db_manager = DatabaseManager()

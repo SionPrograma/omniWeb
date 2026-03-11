@@ -23,6 +23,8 @@ class ChipMetadata(BaseModel):
     has_backend: bool = False
     entry_frontend: Optional[str] = "frontend/index.html"
     dashboard_visible: bool = True
+    permissions: List[str] = []
+    active: bool = True # Plugin system: allows disabling chips without deleting them
 
 class ModuleRegistry:
     """
@@ -38,12 +40,19 @@ class ModuleRegistry:
         Follows the Discovery -> Validation -> Mounting pattern.
         """
         # 1. Discovery
-        metadata = self._load_metadata(module_name)
+        metadata_dict = self._load_metadata(module_name)
+        metadata = ChipMetadata(**metadata_dict)
+        
+        # 1.1 Check if chip is active (Plugin Installer Logic)
+        if not metadata.active:
+            logger.info(f"Chip {module_name} is installed but INACTIVE. Skipping.")
+            return False
+
         router_obj = self._discover_backend_router(module_name, router_import_path)
         
         # If no router is found (and no critical error occurred), it's a frontend-only chip
         if router_obj is None:
-            self._register_module_state(module_name, None, metadata)
+            self._register_module_state(module_name, None, metadata_dict)
             return True
 
         # 2. Validation
@@ -55,7 +64,7 @@ class ModuleRegistry:
         success = self._mount_backend_router(app, router_obj, module_name, final_prefix)
         
         if success:
-            self._register_module_state(module_name, final_prefix, metadata)
+            self._register_module_state(module_name, final_prefix, metadata_dict)
             
         return success
 
@@ -164,7 +173,24 @@ class ModuleRegistry:
         ).model_dump()
 
     def get_active_modules(self) -> List[Dict[str, Any]]:
-        """Returns a list of all active modules."""
+        """Returns a list of all active modules currently mounted."""
         return list(self.modules.values())
+
+    def discover_all_chips(self) -> List[Dict[str, Any]]:
+        """
+        Scans the chips/ directory for any valid chip.json.
+        This provides the base for the Plugin Installer.
+        """
+        chips = []
+        chips_dir = "chips"
+        if not os.path.exists(chips_dir):
+            return []
+            
+        for folder in os.listdir(chips_dir):
+            if folder.startswith("chip-") and os.path.isdir(os.path.join(chips_dir, folder)):
+                slug = folder.replace("chip-", "")
+                metadata = self._load_metadata(slug)
+                chips.append(metadata)
+        return chips
 
 module_registry = ModuleRegistry()

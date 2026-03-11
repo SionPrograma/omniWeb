@@ -47,9 +47,17 @@ app.mount("/core", StaticFiles(directory="core"), name="core_static")
 # Initialize Persistence Layer
 db_manager.init_db()
 
-# Mount Modules UI & Register API Routes
-for module_name in settings.ACTIVE_MODULES:
-    # 1. Mount UI
+# Discover and Register Modules (Phase 4: Plugin Installer approach)
+all_chips = module_registry.discover_all_chips()
+
+for chip_metadata in all_chips:
+    module_name = chip_metadata["slug"]
+    
+    # 1. Mount UI (if active)
+    if not chip_metadata.get("active", True):
+        # We still register it in memory as 'inactive' but don't mount routes
+        continue
+
     chip_folder = f"chip-{module_name}"
     ui_path = f"chips/{chip_folder}/frontend"
     
@@ -57,11 +65,8 @@ for module_name in settings.ACTIVE_MODULES:
         app.mount(f"/{module_name}", StaticFiles(directory=ui_path, html=True), name=f"{module_name}_ui")
         print(f"Mounted UI for {module_name} at /{module_name}")
 
-    # 2. Register API Router (if exists)
-    # Expected pattern for new chips: chips.chip-name.core.router
+    # 2. Register API Router
     router_path = f"chips.chip-{module_name}.core.router"
-        
-    # Attempt registration (registry handles errors if path doesn't exist)
     module_registry.register_module(
         app=app,
         module_name=module_name,

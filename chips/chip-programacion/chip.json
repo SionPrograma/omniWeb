@@ -3,10 +3,14 @@
     "slug": "programacion",
     "name": "Programación",
     "description": "Mentoría interactiva de desarrollo, arquitecturas y patrones",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "type": "frontend-only",
     "has_frontend": true,
     "has_backend": false,
     "entry_frontend": "frontend/index.html",
-    "dashboard_visible": true
+    "dashboard_visible": true,
+    "active": true,
+    "permissions": [
+        "system_visible"
+    ]
 }

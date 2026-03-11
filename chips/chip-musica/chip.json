@@ -3,10 +3,16 @@
     "slug": "musica",
     "name": "Música",
     "description": "Explorador de teoría musical, escalas e ideas creativas con persistencia",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "type": "hybrid",
     "has_frontend": true,
     "has_backend": true,
     "entry_frontend": "frontend/index.html",
-    "dashboard_visible": true
+    "dashboard_visible": true,
+    "active": true,
+    "permissions": [
+        "db_access",
+        "event_publish",
+        "event_subscribe"
+    ]
 }

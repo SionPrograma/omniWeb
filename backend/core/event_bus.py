@@ -1,7 +1,9 @@
 import logging
 import asyncio
 import inspect
-from typing import Dict, List, Any, Callable, Union
+import json
+from typing import Dict, List, Any, Callable, Optional, Union
+from backend.core.database import db_manager
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +40,16 @@ class EventBus:
         Publishes an event and notifies all registered listeners.
         Supports both sync and async handlers.
         """
+        # Collect tasks (persistence + async handlers)
+        tasks = [self._persist_event(event_name, payload)]
+
         if event_name not in self._listeners:
-            logger.debug(f"No listeners for event '{event_name}'")
+            logger.debug(f"No listeners for event '{event_name}'. Event persisted.")
+            await asyncio.gather(*tasks)
             return
 
         logger.info(f"EventBus: Publishing '{event_name}'")
         
-        # We'll collect coroutines and handle sync calls immediately
-        tasks = []
         for handler in self._listeners[event_name]:
             try:
                 if inspect.iscoroutinefunction(handler):
@@ -65,6 +69,22 @@ class EventBus:
             await handler(payload)
         except Exception as e:
             logger.error(f"EventBus: Error in async listener '{handler.__name__}' for '{event_name}': {e}")
+
+    async def _persist_event(self, event_name: str, payload: Any):
+        """Saves interest events to SQLite for audit."""
+        try:
+            payload_json = json.dumps(payload) if payload else None
+            # Extract source if available in payload
+            source = payload.get("source_chip") if isinstance(payload, dict) else None
+            
+            with db_manager.get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO system_events (event_name, payload, source_chip) VALUES (?, ?, ?)",
+                    (event_name, payload_json, source)
+                )
+                conn.commit()
+        except Exception as e:
+            logger.error(f"EventBus: Persistence failed for '{event_name}': {e}")
 
 # Singleton instance for global use
 event_bus = EventBus()

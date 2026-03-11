@@ -3,10 +3,16 @@
     "slug": "lingua",
     "name": "Lingua",
     "description": "Sistema avanzado de transcripción, traducción y síntesis de voz",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "type": "hybrid",
     "has_frontend": true,
     "has_backend": true,
     "entry_frontend": "frontend/index.html",
-    "dashboard_visible": true
+    "dashboard_visible": true,
+    "active": true,
+    "permissions": [
+        "db_access",
+        "event_publish",
+        "event_subscribe"
+    ]
 }
