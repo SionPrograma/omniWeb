@@ -9,7 +9,7 @@ import uvicorn
 import sys
 import os
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.core.auth import get_admin_user
+from backend.core.auth import get_admin_user, get_current_user, OmniUser, oauth2_scheme
 
 from backend.core.self_check import run_self_checks
 
@@ -162,14 +162,43 @@ async def restore_db_from_backup(filename: str, admin_user: dict = Security(get_
 
 @app.post(f"{settings.API_V1_STR}/auth/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Basic auth flow for obtaining admin token."""
+    """
+    Authenticates a user and returns a persistent session token.
+    """
+    from backend.core.auth import get_user_by_username, verify_password, create_session
     from fastapi import HTTPException
-    # For OmniWeb local OS, user/password can be bypassed if client knows the ADMIN_TOKEN via env
-    # or simple check (e.g. login with any username, password=ADMIN_TOKEN)
-    if form_data.password != settings.ADMIN_TOKEN:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
     
-    return {"access_token": settings.ADMIN_TOKEN, "token_type": "bearer"}
+    # 1. Fetch user hash from DB
+    with set_chip_context("core"):
+        with db_manager.get_connection() as conn:
+            row = conn.execute(
+                "SELECT id, hashed_password FROM users WHERE username = ?",
+                (form_data.username,)
+            ).fetchone()
+            
+            if not row or not verify_password(form_data.password, row["hashed_password"]):
+                raise HTTPException(status_code=400, detail="Incorrect username or password")
+            
+            user_id = row["id"]
+
+    # 2. Create persistent session
+    token = create_session(user_id)
+    
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.get(f"{settings.API_V1_STR}/auth/me")
+async def get_my_profile(current_user: OmniUser = Security(get_current_user)):
+    """Returns the profile of the currently authenticated user."""
+    return current_user
+
+@app.post(f"{settings.API_V1_STR}/auth/logout")
+async def logout(token: str = Depends(oauth2_scheme)):
+    """Inactivates the current session token."""
+    with set_chip_context("core"):
+        with db_manager.get_connection() as conn:
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            conn.commit()
+    return {"status": "success", "message": "Logged out successfully"}
 
 # Mount Core static resources
 app.mount("/core", StaticFiles(directory="core"), name="core_static")
