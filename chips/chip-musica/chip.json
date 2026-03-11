@@ -2,11 +2,11 @@
     "id": "chip-musica",
     "slug": "musica",
     "name": "Música",
-    "description": "Explorador de teoría musical, escalas e improvisación interactiva",
-    "version": "0.3.0",
-    "type": "frontend-only",
+    "description": "Explorador de teoría musical, escalas e ideas creativas con persistencia",
+    "version": "0.3.1",
+    "type": "hybrid",
     "has_frontend": true,
-    "has_backend": false,
+    "has_backend": true,
     "entry_frontend": "frontend/index.html",
     "dashboard_visible": true
 }
