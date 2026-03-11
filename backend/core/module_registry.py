@@ -48,10 +48,19 @@ class ModuleRegistry:
             logger.info(f"Chip {module_name} is installed but INACTIVE. Skipping.")
             return False
 
+        # 1.2 Check if chip actually requires a backend
+        if not metadata.has_backend:
+            # Silently register state for frontend-only chips
+            self._register_module_state(module_name, None, metadata_dict)
+            return True
+
         router_obj = self._discover_backend_router(module_name, router_import_path)
         
-        # If no router is found (and no critical error occurred), it's a frontend-only chip
+        # If no router is found (and no critical error occurred)
         if router_obj is None:
+            # We only error if metadata claimed a backend but none was found
+            if metadata.has_backend:
+                 logger.warning(f"Chip {module_name} claims to have a backend but no router was found at {router_import_path}.")
             self._register_module_state(module_name, None, metadata_dict)
             return True
 
@@ -72,37 +81,51 @@ class ModuleRegistry:
         """
         Responsibility: DISCOVERY.
         Attempts to locate the router object in the given Python import path.
+        Optimized to handle cases where the module and the variable share names.
         """
-        parts = router_import_path.split('.')
-        module_path = '.'.join(parts[:-1])
-        obj_name = parts[-1]
-        
+        import types
+
+        # Strategy A: Treat router_import_path as a module and look for '.router'
+        # This is the standard: chips.chip-reparto.core.router -> module 'router' -> variable 'router'
         try:
-            # Attempt 1: module.variable (e.g., chips.chip-reparto.core.router.router)
-            module = importlib.import_module(module_path)
-            return getattr(module, obj_name)
-        except (ModuleNotFoundError, AttributeError) as e:
-            # Check for critical internal errors (dependency missing inside the module)
-            if isinstance(e, ModuleNotFoundError) and getattr(e, 'name', None) != module_path:
-                logger.error(f"Internal dependency error in module {module_name}: {e}")
-                raise e # Propagate critical loader errors
-                
-            # Attempt 2: module as a file (e.g., router.py) exporting 'router'
-            try:
-                module = importlib.import_module(router_import_path)
-                return getattr(module, 'router')
-            except ModuleNotFoundError as e2:
-                # Valid case: Frontend-only chip (no backend found at all)
-                if getattr(e2, 'name', None) in (router_import_path, module_path):
-                    return None
-                logger.error(f"Internal dependency error in {router_import_path}: {e2}")
-                raise e2
-            except AttributeError:
-                # No 'router' attribute in the guessed path
-                return None
+            module = importlib.import_module(router_import_path)
+            if hasattr(module, "router"):
+                obj = getattr(module, "router")
+                if isinstance(obj, APIRouter):
+                    return obj
+        except (ModuleNotFoundError, AttributeError):
+            pass # Try strategy B
         except Exception as e:
-            logger.error(f"Unexpected discovery error for {module_name}: {str(e)}")
-            return None
+            # Internal dependency or syntax error
+            if "No module named" in str(e) and router_import_path not in str(e):
+                logger.error(f"Internal dependency error in module {module_name}: {e}")
+                raise e
+            logger.debug(f"Strategy A failed for {module_name} at {router_import_path}")
+
+        # Strategy B: Treat last part as variable name in parent module
+        # This handles: chips.chip-reparto.core.router.router or modules.my_module.app
+        parts = router_import_path.split('.')
+        if len(parts) > 1:
+            module_path = '.'.join(parts[:-1])
+            obj_name = parts[-1]
+            try:
+                module = importlib.import_module(module_path)
+                obj = getattr(module, obj_name)
+                # If we found a module instead of an APIRouter, avoid returning it (prevents false positives)
+                if isinstance(obj, APIRouter):
+                    return obj
+                if isinstance(obj, (types.ModuleType,)):
+                    # If it's a module, maybe we should look inside? 
+                    if hasattr(obj, "router"):
+                        inner_obj = getattr(obj, "router")
+                        if isinstance(inner_obj, APIRouter):
+                            return inner_obj
+            except (ModuleNotFoundError, AttributeError):
+                pass
+            except Exception as e:
+                logger.debug(f"Strategy B failed for {module_name} at {module_path}")
+
+        return None
 
     def _validate_backend(self, module_name: str, router_obj: Any, path: str) -> bool:
         """
