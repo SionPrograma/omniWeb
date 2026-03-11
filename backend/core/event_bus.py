@@ -13,14 +13,15 @@ class EventBus:
     Supports both synchronous and asynchronous listeners.
     """
     def __init__(self):
-        self._listeners: Dict[str, List[Callable]] = {}
+        # Stores list of dicts: {"handler": Callable, "chip_slug": str}
+        self._listeners: Dict[str, List[Dict[str, Any]]] = {}
 
     def subscribe(self, event_name: str, handler: Callable):
         """
         Registers a listener for a specific event.
         Prevents duplicate subscriptions for the same handler.
         """
-        from backend.core.permissions import enforce_permission
+        from backend.core.permissions import enforce_permission, get_current_chip
         try:
             enforce_permission("event_subscribe")
         except Exception as e:
@@ -30,16 +31,20 @@ class EventBus:
         if event_name not in self._listeners:
             self._listeners[event_name] = []
         
-        if handler not in self._listeners[event_name]:
-            self._listeners[event_name].append(handler)
-            logger.debug(f"Subscribed handler '{handler.__name__}' to event '{event_name}'")
+        # Check against existing handlers
+        if not any(l["handler"] == handler for l in self._listeners[event_name]):
+            self._listeners[event_name].append({
+                "handler": handler,
+                "chip_slug": get_current_chip()
+            })
+            logger.debug(f"Subscribed handler '{handler.__name__}' to event '{event_name}' context '{get_current_chip()}'")
 
     def unsubscribe(self, event_name: str, handler: Callable):
         """
         Removes a listener for a specific event.
         """
-        if event_name in self._listeners and handler in self._listeners[event_name]:
-            self._listeners[event_name].remove(handler)
+        if event_name in self._listeners:
+            self._listeners[event_name] = [l for l in self._listeners[event_name] if l["handler"] != handler]
             logger.debug(f"Unsubscribed handler '{handler.__name__}' from event '{event_name}'")
 
     async def publish(self, event_name: str, payload: Any = None):
@@ -64,12 +69,21 @@ class EventBus:
 
         logger.info(f"EventBus: Publishing '{event_name}'")
         
-        for handler in self._listeners[event_name]:
+        from backend.core.permissions import set_chip_context
+
+        for listener in self._listeners[event_name]:
+            handler = listener["handler"]
+            chip_slug = listener["chip_slug"]
+            
             try:
                 if inspect.iscoroutinefunction(handler):
-                    tasks.append(self._run_async_handler(handler, event_name, payload))
+                    tasks.append(self._run_async_handler(handler, event_name, payload, chip_slug))
                 else:
-                    handler(payload)
+                    if chip_slug:
+                        with set_chip_context(chip_slug):
+                            handler(payload)
+                    else:
+                        handler(payload)
             except Exception as e:
                  logger.error(f"EventBus: Error in sync listener '{handler.__name__}' for '{event_name}': {e}")
 
@@ -77,10 +91,15 @@ class EventBus:
             # We use gather to run them concurrently. Exceptions are handled inside _run_async_handler
             await asyncio.gather(*tasks)
 
-    async def _run_async_handler(self, handler: Callable, event_name: str, payload: Any):
-        """Internal helper to wrap async handlers with error logging."""
+    async def _run_async_handler(self, handler: Callable, event_name: str, payload: Any, chip_slug: Optional[str]):
+        """Internal helper to wrap async handlers with error logging and context propagation."""
+        from backend.core.permissions import set_chip_context
         try:
-            await handler(payload)
+            if chip_slug:
+                with set_chip_context(chip_slug):
+                    await handler(payload)
+            else:
+                await handler(payload)
         except Exception as e:
             logger.error(f"EventBus: Error in async listener '{handler.__name__}' for '{event_name}': {e}")
 

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniWeb AI Host</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #050505;
+            color: #eee;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        .chat-container {
+            flex: 1;
+            border: 1px solid #333;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .message {
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            max-width: 80%;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user {
+            background: #1a1a1a;
+            align-self: flex-end;
+            border: 1px solid #444;
+        }
+
+        .ai {
+            background: #072a40;
+            align-self: flex-start;
+            border: 1px solid #1e5c80;
+            color: #a3d8f4;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 1rem;
+        }
+
+        input {
+            flex: 1;
+            background: #111;
+            border: 1px solid #333;
+            padding: 1rem;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        button {
+            background: #007acc;
+            color: #fff;
+            border: none;
+            padding: 0 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #005f99;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-weight: 300;
+            font-size: 1.5rem;
+            color: #007acc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>OmniWeb AI Host (v1.0-alpha)</h1>
+
+    <div class="chat-container" id="chat">
+        <div class="message ai">OmniWeb Host active. How can I help you today?</div>
+    </div>
+
+    <form class="input-area" id="ai-form">
+        <input type="text" id="ai-input" placeholder="Open finances, track delivery, etc." autocomplete="off">
+        <button type="submit">Ask Host</button>
+    </form>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const form = document.getElementById('ai-form');
+        const input = document.getElementById('ai-input');
+
+        function addMessage(text, isUser = false) {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            div.classList.add(isUser ? 'user' : 'ai');
+            div.innerText = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            addMessage(msg, true);
+            input.value = '';
+
+            try {
+                const response = await fetch('/api/v1/ai-host/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+
+                const data = await response.json();
+                if (data.message) {
+                    addMessage(data.message);
+                    if (data.actions && data.actions.length > 0) {
+                        data.actions.forEach(chip => {
+                            setTimeout(() => {
+                                window.parent.postMessage({ type: 'activate_chip', slug: chip }, '*');
+                            }, 500);
+                        });
+                    }
+                } else {
+                    addMessage("Task complete.");
+                }
+            } catch (err) {
+                addMessage("I encountered an issue processing that request. Please check the core system logs.", false);
+            }
+        }
+    </script>
+</body>
+
+</html>

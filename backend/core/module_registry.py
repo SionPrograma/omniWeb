@@ -88,7 +88,9 @@ class ModuleRegistry:
         # Strategy A: Treat router_import_path as a module and look for '.router'
         # This is the standard: chips.chip-reparto.core.router -> module 'router' -> variable 'router'
         try:
-            module = importlib.import_module(router_import_path)
+            from backend.core.permissions import set_chip_context
+            with set_chip_context(module_name):
+                module = importlib.import_module(router_import_path)
             if hasattr(module, "router"):
                 obj = getattr(module, "router")
                 if isinstance(obj, APIRouter):
@@ -109,8 +111,10 @@ class ModuleRegistry:
             module_path = '.'.join(parts[:-1])
             obj_name = parts[-1]
             try:
-                module = importlib.import_module(module_path)
-                obj = getattr(module, obj_name)
+                from backend.core.permissions import set_chip_context
+                with set_chip_context(module_name):
+                    module = importlib.import_module(module_path)
+                    obj = getattr(module, obj_name)
                 # If we found a module instead of an APIRouter, avoid returning it (prevents false positives)
                 if isinstance(obj, APIRouter):
                     return obj

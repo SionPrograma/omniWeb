@@ -1,0 +1,18 @@
+{
+    "id": "chip-os-admin",
+    "slug": "os-admin",
+    "name": "OS Administrator",
+    "description": "System management module for OmniWeb. Handles plugins, backups, health, and observability.",
+    "version": "0.4.3",
+    "type": "hybrid",
+    "has_frontend": true,
+    "has_backend": true,
+    "entry_frontend": "frontend/index.html",
+    "dashboard_visible": false,
+    "permissions": [
+        "db_access",
+        "event_subscribe",
+        "event_publish"
+    ],
+    "active": true
+}

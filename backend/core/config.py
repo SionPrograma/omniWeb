@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "OmniWeb Platform"
-    VERSION: str = "0.3.0"
+    VERSION: str = "0.4.4"
     API_V1_STR: str = "/api/v1"
     
     # Cors configuration
@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     # Database & Storage
     DATA_DIR: str = "backend/data"
     DATABASE_NAME: str = "omniweb.db"
+    ADMIN_TOKEN: str = os.getenv("OMNIWEB_ADMIN_TOKEN", "omniweb-dev-secret-token")
 
     @property
     def DATABASE_URL(self) -> str:
@@ -25,3 +26,4 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings()
+

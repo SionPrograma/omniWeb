@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniWeb OS Admin</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            margin: 2rem;
+        }
+
+        .panel {
+            border: 1px solid #0f0;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #fff;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>OmniWeb Administrator (Task 9-11)</h1>
+
+    <div class="panel" id="health-panel">
+        <h2>System Health</h2>
+        <button onclick="fetchHealth()">Check Health</button>
+        <button onclick="fetchStats()">Check Stats</button>
+        <button onclick="doBackup()">Create SQLite Backup</button>
+        <pre id="health-output"></pre>
+    </div>
+
+    <div class="panel" id="plugins-panel">
+        <h2>Plugin Installer</h2>
+        <button onclick="fetchPlugins()">List Chips</button>
+        <ul id="plugins-list"></ul>
+    </div>
+
+    <div class="panel" id="obs-panel">
+        <h2>Observability Tools (DB Events)</h2>
+        <button onclick="fetchLogs()">Fetch Realtime Logs</button>
+        <pre id="logs-output" style="max-height: 200px; overflow-y: auto;"></pre>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+
+        async function fetchHealth() {
+            const r = await fetch(`${API_BASE}/system/health`);
+            document.getElementById('health-output').innerText = JSON.stringify(await r.json(), null, 2);
+        }
+
+        async function fetchStats() {
+            const r = await fetch(`${API_BASE}/system/stats`);
+            document.getElementById('health-output').innerText = JSON.stringify(await r.json(), null, 2);
+        }
+
+        async function doBackup() {
+            const r = await fetch(`${API_BASE}/system/db/backup`, { method: 'POST' });
+            document.getElementById('health-output').innerText = JSON.stringify(await r.json(), null, 2);
+        }
+
+        async function fetchPlugins() {
+            const r = await fetch(`${API_BASE}/system/chips`);
+            const chips = await r.json();
+            const list = document.getElementById('plugins-list');
+            list.innerHTML = '';
+            chips.forEach(c => {
+                list.innerHTML += `<li>[${c.status}] ${c.slug} <button onclick="togglePlugin('${c.slug}', ${!c.metadata.active})">Toggle</button></li>`;
+            });
+        }
+
+        async function fetchLogs() {
+            const r = await fetch(`${API_BASE}/os-admin/logs`);
+            document.getElementById('logs-output').innerText = JSON.stringify(await r.json(), null, 2);
+        }
+
+        async function togglePlugin(slug, state) {
+            const r = await fetch(`${API_BASE}/os-admin/plugins/${slug}/toggle?active=${state}`, { method: 'POST' });
+            alert((await r.json()).message);
+            fetchPlugins();
+        }
+    </script>
+</body>
+
+</html>

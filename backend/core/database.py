@@ -63,5 +63,64 @@ class DatabaseManager:
             conn.commit()
         logger.info("System core tables initialized.")
 
+    def run_migrations(self):
+        """
+        Executes raw SQL migration files inside backend/data/migrations.
+        Ensures versioned schema evolutions.
+        """
+        data_dir = os.path.dirname(self.db_path)
+        migrations_dir = os.path.join(data_dir, "migrations")
+        os.makedirs(migrations_dir, exist_ok=True)
+            
+        with self.get_connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS system_migrations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT UNIQUE NOT NULL,
+                    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            
+            applied = {row["filename"] for row in conn.execute("SELECT filename FROM system_migrations")}
+            files = sorted([f for f in os.listdir(migrations_dir) if f.endswith(".sql")])
+            for file in files:
+                if file not in applied:
+                    logger.info(f"Applying DB migration: {file}")
+                    with open(os.path.join(migrations_dir, file), "r", encoding="utf-8") as f:
+                        sql = f.read()
+                    
+                    try:
+                        conn.executescript(sql)
+                        conn.execute("INSERT INTO system_migrations (filename) VALUES (?)", (file,))
+                        conn.commit()
+                    except Exception as e:
+                        logger.error(f"Migration {file} failed: {e}")
+                        conn.rollback()
+                        raise
+
+    def backup_db(self, destination_path: str = None) -> str:
+        """
+        Creates a consistent online backup of the SQLite database.
+        Returns the absolute path to the backup file.
+        """
+        import time
+        if not destination_path:
+            filename = f"omniweb_backup_{int(time.time())}.db"
+            data_dir = os.path.dirname(self.db_path)
+            destination_path = os.path.join(data_dir, "backups", filename)
+            
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+        
+        logger.info(f"Creating DB backup at {destination_path}")
+        # Note: We use sqlite3.connect directly here to bypass standard permission checks
+        # as this is a core infrastructural operation, but we still do it safely.
+        with sqlite3.connect(self.db_path) as source:
+            with sqlite3.connect(destination_path) as dest:
+                source.backup(dest)
+                
+        logger.info("DB backup completed successfully.")
+        return destination_path
+
 # Global instance for shared access
 db_manager = DatabaseManager()

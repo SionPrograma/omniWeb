@@ -1,0 +1,18 @@
+{
+    "id": "chip-ai-host",
+    "slug": "ai-host",
+    "name": "AI Host",
+    "description": "Primary interface for OmniWeb. Orchestrates chips and automates tasks.",
+    "version": "0.1.0",
+    "type": "hybrid",
+    "has_frontend": true,
+    "has_backend": true,
+    "entry_frontend": "frontend/index.html",
+    "dashboard_visible": true,
+    "permissions": [
+        "db_access",
+        "event_subscribe",
+        "event_publish"
+    ],
+    "active": true
+}

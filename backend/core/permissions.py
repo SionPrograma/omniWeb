@@ -1,6 +1,7 @@
 import logging
-import inspect
 from typing import Dict, Any, List, Optional
+import contextvars
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -8,32 +9,39 @@ class PermissionDeniedError(Exception):
     """Excepción lanzada cuando un chip intenta realizar una acción no permitida."""
     pass
 
-def _get_caller_chip() -> Optional[str]:
+# Context variable to store current chip slug. Default is None (untrusted)
+_current_chip_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("current_chip", default=None)
+
+@contextmanager
+def set_chip_context(slug: str):
     """
-    Inspecciona la pila de llamadas para determinar qué chip ejecuta el código.
-    Retorna el slug del chip (ej: 'finanzas') o None si es una llamada del core_system.
+    Context manager to set the current executing chip slug globally for the current flow/async task.
     """
-    for frame_info in inspect.stack():
-        filename = frame_info.filename.replace("\\", "/") # Normalizar rutas
-        if "chips/chip-" in filename:
-            parts = filename.split("chips/chip-")
-            if len(parts) > 1:
-                # Extraer "finanzas" de "finanzas/core/repository.py"
-                slug_part = parts[1].split("/")[0]
-                return slug_part
-    return None
+    token = _current_chip_ctx.set(slug)
+    try:
+        yield
+    finally:
+        _current_chip_ctx.reset(token)
+
+def get_current_chip() -> Optional[str]:
+    """Returns the currently active chip slug from context, or None if untrusted."""
+    return _current_chip_ctx.get()
 
 def enforce_permission(required_permission: str):
     """
     Verifica que el chip actual en ejecución tenga el permiso requerido.
     Si la llamada proviene del propio core (main.py, module_registry.py, etc) se permite.
-    Levanta PermissionDeniedError si no tiene el permiso.
+    Levanta PermissionDeniedError si no tiene el permiso o el origen es desconocido.
     """
-    chip_slug = _get_caller_chip()
+    chip_slug = get_current_chip()
     
-    # 1. Si no hay chip detectado, es el sistema central operando (ej: dashboard o inicialización)
-    if not chip_slug:
+    # 1. Si el contexto es 'core', el sistema central está operando de forma autorizada
+    if chip_slug == "core":
         return
+
+    # 1.5. Si no hay chip (ej. hilo en background desconectado), es Untrusted
+    if not chip_slug:
+        raise PermissionDeniedError(f"Origen de llamada desconocido o contexto perdido para '{required_permission}'.")
 
     # Evitamos importación circular importando aquí
     from backend.core.module_registry import module_registry
