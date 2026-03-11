@@ -27,29 +27,48 @@ class CommandRouter:
 
     async def route(self, message: str) -> AICommandResponse:
         msg = message.lower()
+        res = None
         
         # Simple rule-based intent classification
         if "abrir" in msg or "open" in msg:
-             return await self.intents["open"](msg)
+             res = await self.intents["open"](msg)
         elif "crea" in msg or "create" in msg:
-             return await self.intents["create"](msg)
+             res = await self.intents["create"](msg)
         elif "activa" in msg or "activate" in msg:
-             return await self.intents["activate"](msg)
+             res = await self.intents["activate"](msg)
         elif "desactiva" in msg or "deactivate" in msg:
-             return await self.intents["deactivate"](msg)
+             res = await self.intents["deactivate"](msg)
         elif "estado" in msg or "status" in msg or "salud" in msg:
-             return await self.intents["status"](msg)
+             res = await self.intents["status"](msg)
         elif "listar" in msg or "list" in msg or "chips" in msg:
-             return await self.intents["list"](msg)
+             res = await self.intents["list"](msg)
         elif "workflow" in msg or "flujo" in msg or "sesión" in msg:
-             return await self.intents["workflow"](msg)
+             res = await self.intents["workflow"](msg)
         
-        return AICommandResponse(
-            intent="unknown",
-            status="error",
-            message="Lo siento, no entiendo ese comando.",
-            payload={}
-        )
+        if not res:
+            res = AICommandResponse(
+                intent="unknown",
+                status="error",
+                message="Lo siento, no entiendo ese comando.",
+                payload={}
+            )
+
+        # Telemetry (Phase F)
+        try:
+            from backend.core.usage.usage_tracker import usage_tracker
+            usage_tracker.log_event(
+                event_type="ai_command_executed",
+                chip_slug="ai-host",
+                metadata={
+                    "intent": res.intent,
+                    "status": res.status,
+                    "message_preview": message[:50] # Privacy first
+                }
+            )
+        except:
+            pass
+
+        return res
 
     async def _handle_open(self, msg: str) -> AICommandResponse:
         target = "none"

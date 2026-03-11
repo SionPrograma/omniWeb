@@ -272,6 +272,40 @@
             font-weight: bold;
         }
 
+        /* System Insights Panel */
+        .insights-panel {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            width: 300px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+        }
+
+        .insights-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .insight-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .insight-label {
+            opacity: 0.6;
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 600px) {
             .chips-container {
@@ -288,6 +322,11 @@
                 bottom: 1rem;
                 height: 350px;
             }
+
+            .insights-panel {
+                display: none;
+                /* Hide on small screens for clarity */
+            }
         }
     </style>
 </head>
@@ -299,8 +338,18 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.4.8-stable</div>
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.4.9-stable</div>
     </header>
+
+    <!-- Insights Panel -->
+    <div class="insights-panel">
+        <div class="insights-title">System Insights</div>
+        <div id="insights-content">
+            <div class="insight-item">
+                <span class="insight-label">Analizando...</span>
+            </div>
+        </div>
+    </div>
 
     <main class="chips-container" id="chips-grid">
         <!-- Chips will be loaded dynamically here -->
@@ -428,6 +477,42 @@
         const aiInput = document.getElementById('ai-input');
         const sendBtn = document.getElementById('send-btn');
 
+        // Insights Logic
+        const insightsContent = document.getElementById('insights-content');
+
+        async function loadInsights() {
+            try {
+                const response = await fetch('/api/v1/system/usage');
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const usage = data.usage;
+
+                let html = `
+                    <div class="insight-item">
+                        <span class="insight-label">Total Eventos</span>
+                        <span>${usage.total_events}</span>
+                    </div>
+                `;
+
+                if (usage.top_chips.length > 0) {
+                    html += `<div style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.7rem; opacity: 0.5;">TOP CHIPS</div>`;
+                    usage.top_chips.forEach(chip => {
+                        html += `
+                            <div class="insight-item">
+                                <span class="insight-label">${chip.slug}</span>
+                                <span>${chip.count}</span>
+                            </div>
+                        `;
+                    });
+                }
+
+                insightsContent.innerHTML = html;
+            } catch (error) {
+                console.warn('Insights failed:', error);
+            }
+        }
+
         async function sendToAI() {
             const message = aiInput.value.trim();
             if (!message) return;
@@ -453,10 +538,11 @@
 
                 if (response.ok) {
                     addMessage('ai', data.message || "Comando procesado correctamente.");
-                    // If action was to open a chip, we could reload chips or redirect
-                    if (data.actions && data.actions.length > 0) {
-                        setTimeout(loadChips, 1000); // Reload grid to see potential activations
-                    }
+                    // Reload both chips and insights
+                    setTimeout(() => {
+                        loadChips();
+                        loadInsights();
+                    }, 1000);
                 } else {
                     addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
                 }
@@ -479,7 +565,10 @@
         });
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', loadChips);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChips();
+            loadInsights();
+        });
     </script>
 </body>
 

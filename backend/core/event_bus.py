@@ -128,6 +128,17 @@ class EventBus:
                     (event_name, payload_json, source)
                 )
                 conn.commit()
+
+            # 4. Usage Analytics Integration (Phase F)
+            try:
+                from backend.core.usage.usage_tracker import usage_tracker
+                usage_tracker.log_event(
+                    event_type=event_name,
+                    chip_slug=source,
+                    metadata=payload if isinstance(payload, dict) else {"payload": payload_json}
+                )
+            except Exception as usage_err:
+                logger.warning(f"EventBus: Usage tracking failed for '{event_name}': {usage_err}")
                 
         except Exception as e:
             logger.error(f"EventBus: Critical persistence failure for '{event_name}': {e}")

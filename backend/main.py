@@ -133,6 +133,20 @@ async def get_system_stats():
         "events_tracked": total_events
     }
 
+@app.get(f"{settings.API_V1_STR}/system/usage")
+async def get_system_usage():
+    """Returns detailed usage analytics for the Self-Improvement Engine."""
+    from backend.core.usage.usage_tracker import usage_tracker
+    from backend.core.permissions import set_chip_context
+    
+    with set_chip_context("core"):
+        stats = usage_tracker.get_statistics()
+        
+    return {
+        "status": "ok",
+        "usage": stats
+    }
+
 @app.post(f"{settings.API_V1_STR}/system/db/backup")
 async def create_db_backup(admin_user: dict = Security(get_admin_user)):
     """Triggers an online backup of the SQLite database."""
