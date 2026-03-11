@@ -1,6 +1,6 @@
 from typing import List, Optional
 from backend.core.database import db_manager
-from chips.chip_reparto.core.schemas import Stop
+from .schemas import Stop
 
 class RepartoRepository:
     """

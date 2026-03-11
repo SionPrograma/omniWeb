@@ -1,6 +1,6 @@
 from typing import List
-from chips.chip_finanzas.core.repository import finanzas_repo
-from chips.chip_finanzas.core.schemas import Transaction
+from .repository import finanzas_repo
+from .schemas import Transaction
 
 class FinanzasService:
     """

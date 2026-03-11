@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from typing import List, Dict, Any
-from chips.chip_reparto.core.schemas import Stop, StopStatusUpdate
-from chips.chip_reparto.core.service import reparto_service
+from .schemas import Stop, StopStatusUpdate
+from .service import reparto_service
 
 router = APIRouter(tags=["Reparto"])
 

@@ -1,6 +1,6 @@
 from typing import List, Optional
-from chips.chip_reparto.core.repository import reparto_repo
-from chips.chip_reparto.core.schemas import Stop
+from .repository import reparto_repo
+from .schemas import Stop
 
 class RepartoService:
     """

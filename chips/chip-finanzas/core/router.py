@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from typing import List
-from chips.chip_finanzas.core.schemas import Transaction, TransactionResponse
-from chips.chip_finanzas.core.service import finanzas_service
+from .schemas import Transaction, TransactionResponse
+from .service import finanzas_service
 
 # El prefix global de /api/v1/finanzas ya lo provee el module_registry en backend/main.py
 router = APIRouter(tags=["finanzas"])

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from backend.core.database import db_manager
-from chips.chip_finanzas.core.schemas import Transaction
+from .schemas import Transaction
 
 class FinanzasRepository:
     """
