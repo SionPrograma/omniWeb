@@ -1,30 +1,20 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
 from typing import List, Dict, Any
+from chips.chip_reparto.core.schemas import Stop, StopStatusUpdate
+from chips.chip_reparto.core.service import reparto_service
 
 router = APIRouter(tags=["Reparto"])
 
-class StopStatusUpdate(BaseModel):
-    status: str
-
-# Transitional mock data en memoria (pseudo-DB)
-mock_stops = [
-    { "id": 1, "name": "Empresa de Transportes A", "address": "Av. Principal 123", "orderId": "RPT-001", "status": "PENDIENTE" },
-    { "id": 2, "name": "Almacen Norte", "address": "Calle Industrial 45", "orderId": "RPT-002", "status": "PENDIENTE" },
-    { "id": 3, "name": "Cliente VIP 1", "address": "Boulevard Central 89", "orderId": "RPT-003", "status": "PENDIENTE" },
-    { "id": 4, "name": "Despacho B", "address": "Av. Costanera 101", "orderId": "RPT-004", "status": "PENDIENTE" },
-]
-
-@router.get("/stops", response_model=Dict[str, List[Dict[str, Any]]])
+@router.get("/stops", response_model=Dict[str, List[Stop]])
 async def get_stops():
-    """Retorna las paradas o entregas activas."""
-    return {"stops": mock_stops}
+    """Retorna las paradas o entregas activas (desde SQLite)."""
+    stops = reparto_service.get_all_stops()
+    return {"stops": stops}
 
 @router.put("/stops/{stop_id}/status")
 async def update_stop_status(stop_id: int, payload: StopStatusUpdate):
-    """Actualiza el estado de una parada específica (transicionalmente en memoria)."""
-    for stop in mock_stops:
-        if stop["id"] == stop_id:
-            stop["status"] = payload.status
-            return {"success": True, "stop": stop}
+    """Actualiza el estado de una parada específica en la DB."""
+    updated_stop = reparto_service.update_delivery_status(stop_id, payload.status)
+    if updated_stop:
+        return {"success": True, "stop": updated_stop}
     return {"success": False, "error": "Stop not found"}
