@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chip Programación | OmniWeb</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for a clean, code-like and pedagogical aesthetic -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="top-nav">
+            <button id="btn-back" class="icon-btn back-btn" aria-label="Volver al Dashboard">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
+            <div class="nav-branding">
+                <span class="chip-icon">&lt;/&gt;</span>
+                <h1 class="nav-title">Mentor de Programación</h1>
+            </div>
+            <div class="nav-spacer"></div>
+        </header>
+
+        <!-- Main Layout: Sidebar + Content Area -->
+        <div class="layout-container">
+
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <nav class="topic-nav">
+                    <button class="topic-btn active" data-topic="fundamentos">Fundamentos</button>
+                    <button class="topic-btn" data-topic="logica">Lógica</button>
+                    <button class="topic-btn" data-topic="arquitectura">Arquitectura</button>
+                    <button class="topic-btn" data-topic="tecnologias">Tecnologías</button>
+                    <button class="topic-btn" data-topic="herramientas">Herramientas</button>
+                </nav>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="content-area">
+                <div id="content-display" class="content-display">
+                    <!-- Dynamic content will be injected here via JS -->
+                    <div class="loading-state">Cargando módulo...</div>
+                </div>
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- Modulo de App con importaciones de Core -->
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>

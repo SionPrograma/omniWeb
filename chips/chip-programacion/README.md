@@ -11,3 +11,4 @@ Módulo enfocado en la enseñanza de arquitectura de software y programación.
 - `ejercicios/`: Retos interactivos.
 - `mentor-mode/`: Tutoría basada en IA.
 - `shared/`: Recursos de formación comunes.
+- `frontend/`: (Nuevo) Interfaz visual interactiva estructurada como un tutor/mentor 1 a 1. Permite navegar por los módulos educativos conservando la sesión (estado y navegación) gracias al core.
