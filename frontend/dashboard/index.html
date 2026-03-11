@@ -330,7 +330,30 @@
             border-left: 3px solid var(--accent-color);
         }
 
+        /* User Context Panel */
+        .user-context-panel {
+            position: fixed;
+            top: 21rem;
+            /* Grouped with proposals */
+            left: 21rem;
+            /* Beside proposals */
+            width: 300px;
+            background: rgba(20, 40, 60, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+        }
+
         /* Mobile Adjustments */
+        @media (max-width: 1200px) {
+            .user-context-panel {
+                left: 2rem;
+                top: 40rem;
+            }
+        }
+
         @media (max-width: 600px) {
             .chips-container {
                 grid-template-columns: 1fr;
@@ -348,7 +371,8 @@
             }
 
             .insights-panel,
-            .proposals-panel {
+            .proposals-panel,
+            .user-context-panel {
                 display: none;
                 /* Hide on small screens for clarity */
             }
@@ -382,6 +406,14 @@
         <div id="proposals-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Sin sugerencias por ahora. El sistema está observando tu uso.
             </div>
+        </div>
+    </div>
+
+    <!-- User Context Panel -->
+    <div class="user-context-panel">
+        <div class="insights-title">User Behavior</div>
+        <div id="context-content">
+            <div style="font-size: 0.8rem; opacity: 0.6;">Analizando patrones...</div>
         </div>
     </div>
 
@@ -514,6 +546,7 @@
         // Insights & Proposals Logic
         const insightsContent = document.getElementById('insights-content');
         const proposalsContent = document.getElementById('proposals-content');
+        const contextContent = document.getElementById('context-content');
 
         async function loadInsights() {
             try {
@@ -577,6 +610,40 @@
             }
         }
 
+        async function loadContext() {
+            try {
+                const response = await fetch('/api/v1/user/context');
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const patterns = data.patterns;
+
+                if (patterns.length === 0) {
+                    contextContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Observando hábitos...</div>';
+                    return;
+                }
+
+                let html = '';
+                patterns.forEach(p => {
+                    let label = p.type.toUpperCase();
+                    let info = "";
+                    if (p.type === "routine") info = `${p.data.routine_type}: ${p.data.chip}`;
+                    else if (p.type === "habit") info = `Secuencia: ${p.data.chips.join(' > ')}`;
+                    else info = `${p.data.preference_type}: ${p.data.chip || p.data.style}`;
+
+                    html += `
+                        <div class="insight-item">
+                            <span class="insight-label">${label}</span>
+                            <span>${info}</span>
+                        </div>
+                    `;
+                });
+                contextContent.innerHTML = html;
+            } catch (error) {
+                console.warn('Context failed:', error);
+            }
+        }
+
         async function sendToAI() {
             const message = aiInput.value.trim();
             if (!message) return;
@@ -607,6 +674,7 @@
                         loadChips();
                         loadInsights();
                         loadProposals();
+                        loadContext();
                     }, 1000);
                 } else {
                     addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
@@ -634,6 +702,7 @@
             loadChips();
             loadInsights();
             loadProposals();
+            loadContext();
         });
     </script>
 </body>

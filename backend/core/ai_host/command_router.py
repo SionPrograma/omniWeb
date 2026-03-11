@@ -23,7 +23,8 @@ class CommandRouter:
             "status": self._handle_status,
             "list": self._handle_list,
             "workflow": self._handle_workflow,
-            "insights": self._handle_insights
+            "insights": self._handle_insights,
+            "suggest": self._handle_suggest
         }
 
     async def route(self, message: str) -> AICommandResponse:
@@ -43,10 +44,12 @@ class CommandRouter:
              res = await self.intents["status"](msg)
         elif "listar" in msg or "list" in msg or "chips" in msg:
              res = await self.intents["list"](msg)
-        elif "workflow" in msg or "flujo" in msg or "sesión" in msg:
-             res = await self.intents["workflow"](msg)
+        elif "preparar" in msg or "sugiere" in msg or "sesión" in msg:
+             res = await self.intents["suggest"](msg)
         elif "insight" in msg or "mejorar" in msg or "optimizar" in msg or "sugerencia" in msg or "mejora" in msg:
              res = await self.intents["insights"](msg)
+        elif "workflow" in msg or "flujo" in msg:
+             res = await self.intents["workflow"](msg)
         
         if not res:
             res = AICommandResponse(
@@ -144,6 +147,52 @@ class CommandRouter:
             status="success",
             message=desc,
             payload={"proposals": proposals}
+        )
+
+    async def _handle_suggest(self, msg: str) -> AICommandResponse:
+        from backend.core.user_context.context_model import context_model
+        from backend.core.user_context.habit_detector import habit_detector
+        from backend.core.user_context.routine_analyzer import routine_analyzer
+        
+        # Analyze current context
+        habit_detector.detect_habits()
+        routine_analyzer.detect_routines()
+        
+        patterns = context_model.get_patterns()
+        if not patterns:
+            return AICommandResponse(
+                intent="suggest_context",
+                status="success",
+                message="Aún estoy aprendiendo tus hábitos. Por ahora, ¿cómo puedo ayudarte?",
+                payload={}
+            )
+            
+        # Select best suggestion based on time (routine)
+        import datetime
+        hour = datetime.datetime.now().hour
+        suggested_chips = []
+        
+        for p in patterns:
+            if p["type"] == "routine":
+                if p["data"]["routine_type"] == "morning" and 6 <= hour < 12:
+                    suggested_chips.append(p["data"]["chip"])
+                elif p["data"]["routine_type"] == "evening" and 18 <= hour < 24:
+                    suggested_chips.append(p["data"]["chip"])
+                    
+        if suggested_chips:
+            chips_str = ", ".join(list(set(suggested_chips)))
+            return AICommandResponse(
+                intent="suggest_context",
+                status="success",
+                message=f"Basado en tu rutina, ¿quieres que prepare el entorno con: {chips_str}?",
+                payload={"suggested_chips": suggested_chips, "action": "PREPARE_ROUTINE"}
+            )
+            
+        return AICommandResponse(
+            intent="suggest_context",
+            status="success",
+            message="No encontré una rutina específica para este momento, pero puedo abrir tus favoritos si lo deseas.",
+            payload={}
         )
 
 ai_command_router = CommandRouter()

@@ -161,6 +161,20 @@ async def get_system_proposals():
         "proposals": proposals
     }
 
+@app.get(f"{settings.API_V1_STR}/user/context")
+async def get_user_context():
+    """Returns detected user behavioral patterns and habits."""
+    from backend.core.user_context.context_model import context_model
+    from backend.core.permissions import set_chip_context
+    
+    with set_chip_context("core"):
+        patterns = context_model.get_patterns()
+        
+    return {
+        "status": "ok",
+        "patterns": patterns
+    }
+
 @app.post(f"{settings.API_V1_STR}/system/db/backup")
 async def create_db_backup(admin_user: dict = Security(get_admin_user)):
     """Triggers an online backup of the SQLite database."""
