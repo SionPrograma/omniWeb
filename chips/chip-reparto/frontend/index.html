@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chip Reparto | OmniWeb</title>
+
+    <!-- Leaflet (CDN) - Referencia 2 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <link rel="stylesheet" href="style.css">
     <!-- Google Fonts for a modern, clean look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -13,8 +18,11 @@
 <body>
     <div id="app" class="app-container">
 
-        <!-- Header -->
-        <header class="top-nav">
+        <!-- Capa 0: Mapa (Fondo) -->
+        <div id="map" class="map-background"></div>
+
+        <!-- Capa 1: Header (OmniWeb) -->
+        <header class="top-nav glass">
             <button id="btn-back" class="icon-btn back-btn" aria-label="Volver">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -23,49 +31,99 @@
             </button>
             <h1 class="nav-title">Reparto</h1>
             <div class="nav-spacer"></div>
+            <button id="btn-toggle-drawer" class="icon-btn toggle-btn" aria-label="Menú">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
         </header>
 
-        <!-- Main View (List of Stops) -->
-        <main id="view-list" class="view active">
-            <div class="status-panel">
-                <p>Progreso: <span id="progress-text">0/0</span></p>
-                <div class="progress-bar-container">
-                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
-                </div>
+        <!-- Capa 2: Panel Operativo (Drawer Lateral) -->
+        <aside id="ops-drawer" class="ops-drawer open">
+
+            <!-- Selector de modo de mapa (flotante interno) -->
+            <div class="drawer-controls">
+                <button id="btn-map-mode" class="pill-btn">Mapa: Gris</button>
+                <button id="btn-locate" class="pill-btn">Mi Ubicación</button>
             </div>
-            <ul id="stops-list" class="stops-list">
-                <!-- Stops will be injected here via JS -->
-            </ul>
-        </main>
 
-        <!-- Detail View (Specific Stop) -->
-        <main id="view-detail" class="view hidden">
-            <div class="detail-card">
-                <h2 id="detail-address" class="detail-title">Dirección...</h2>
-                <p id="detail-name" class="detail-subtitle">Cliente...</p>
-
-                <div class="detail-info">
-                    <p><strong>Pedido:</strong> <span id="detail-order-id">#000</span></p>
-                    <p><strong>Estado:</strong> <span id="detail-status" class="badge">Pendiente</span></p>
+            <!-- Main View (List of Stops) -->
+            <main id="view-list" class="view active">
+                <div class="drawer-section">
+                    <h3>Progreso</h3>
+                    <div class="status-panel">
+                        <p><span id="progress-text">0/0</span> paradas</p>
+                        <div class="progress-bar-container">
+                            <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="action-buttons">
-                    <button class="btn btn-success" id="btn-mark-delivered">
-                        Entregado
-                    </button>
-                    <button class="btn btn-warning" id="btn-mark-absent">
-                        Ausente
-                    </button>
-                    <button class="btn btn-secondary" id="btn-mark-pending">
-                        Marcar Pendiente
-                    </button>
+                <div class="drawer-section">
+                    <h3>Paradas</h3>
+                    <ul id="stops-list" class="stops-list">
+                        <!-- Stops will be injected here via JS -->
+                    </ul>
                 </div>
 
-                <button class="btn btn-outline" id="btn-close-detail" style="margin-top: 1.5rem; width: 100%;">
-                    Cerrar Detalle
-                </button>
-            </div>
-        </main>
+                <!-- Acción Masiva (Referencia 2) -->
+                <div class="drawer-section">
+                    <h3>Acción Masiva (WhatsApp)</h3>
+                    <div class="action-card">
+                        <div class="input-row">
+                            <input id="wa-start" type="text" placeholder="Inicio (10:00)">
+                            <input id="wa-end" type="text" placeholder="Fin (11:00)">
+                        </div>
+                        <button id="btn-wa-action" class="btn btn-warning" style="margin-top: 10px; width: 100%;">
+                            Avisar Clientes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat (Referencia 2) -->
+                <div class="drawer-section">
+                    <h3>Chat (Ruta)</h3>
+                    <div id="chat-log" class="chat-log"></div>
+                    <div class="input-row" style="margin-top: 5px;">
+                        <input id="chat-input" type="text" placeholder="Mensaje...">
+                        <button id="btn-chat-send" class="btn btn-secondary">Enviar</button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Detail View (Specific Stop) -->
+            <main id="view-detail" class="view hidden">
+                <div class="detail-card">
+                    <button class="btn-text" id="btn-back-to-list">
+                        &larr; Volver a la lista
+                    </button>
+                    <h2 id="detail-address" class="detail-title">Dirección...</h2>
+                    <p id="detail-name" class="detail-subtitle">Cliente...</p>
+
+                    <div class="detail-info">
+                        <p><strong>Pedido:</strong> <span id="detail-order-id">#000</span></p>
+                        <p><strong>Estado:</strong> <span id="detail-status" class="badge">Pendiente</span></p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-success" id="btn-mark-delivered">
+                            Entregado
+                        </button>
+                        <button class="btn btn-warning" id="btn-mark-absent">
+                            Ausente
+                        </button>
+                        <button class="btn btn-secondary" id="btn-mark-pending">
+                            Pendiente
+                        </button>
+                    </div>
+
+                    <button class="btn btn-outline" id="btn-close-detail" style="margin-top: 1.5rem; width: 100%;">
+                        Cerrar Panel
+                    </button>
+                </div>
+            </main>
+        </aside>
 
     </div>
 
