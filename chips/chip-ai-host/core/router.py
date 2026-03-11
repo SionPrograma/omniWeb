@@ -48,7 +48,16 @@ async def process_request(req: AIRequest, current_user: OmniUser = Security(get_
             actions = [target]
             response_text = f"Opening {target} module."
 
-    # 3. Publish to Orchestration Bus
+    # 4. Chip Factory (Strategic Expansion)
+    elif "crear chip" in msg or "create chip" in msg:
+        from backend.core.chip_factory import chip_factory
+        result = await chip_factory.create_from_request(msg)
+        if result["status"] == "success":
+            response_text = f"Great! I've created the {result['chip']['name']} chip for you. You can activate it from the OS Admin panel."
+        else:
+            response_text = f"I failed to create the chip: {result['detail']}"
+
+    # 5. Publish to Orchestration Bus
     for chip in actions:
         await event_bus.publish("ai_orchestration_command", {
             "source_chip": "ai-host",
