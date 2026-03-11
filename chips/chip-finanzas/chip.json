@@ -1,0 +1,12 @@
+{
+    "id": "chip-finanzas",
+    "slug": "finanzas",
+    "name": "Finanzas",
+    "description": "Gestión personal de movimientos financieros con soporte híbrido",
+    "version": "0.2.1",
+    "type": "hybrid",
+    "has_frontend": true,
+    "has_backend": true,
+    "entry_frontend": "frontend/index.html",
+    "dashboard_visible": true
+}

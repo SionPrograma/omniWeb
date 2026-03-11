@@ -37,8 +37,8 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
   - `backend/main.py`: Punto ciego de entrada. Sirve los frontends dinámicamente.
 - `core/`: **Frontend Core**. Librería de Vanilla JS del sistema. Contiene `nav-system` (Navegación MPA), `state-manager` (Persistencia del cliente) y el `omni-shell`.
 - `frontend/dashboard/`: UI espacial del "Centro de Mando" global. Se sirve en la ruta raíz (`/`). No contiene apps, sólo orquesta el acceso mediante lecturas inteligentes del progreso reciente.
-- `chips/`: El estándar activo para crear módulos.
-- `modules/`: Código **Legacy**. Alberga servicios complejos, pesados o transicionales desarrollados en las fases pre-chips de OmniWeb (Servicios Pydantic, Whisper AI, inferencias).
+- `chips/`: El estándar activo para crear módulos. Sigue el [Contrato Técnico v1.0](docs/contrato_tecnico_chips_v1.0.md).
+- `modules/`: Código **Legacy**. Alberga servicios complejos o transicionales (IA, Whisper, etc.).
 
 ## 🔋 Estado Actual del Ecosistema (v0.2.1)
 
@@ -60,7 +60,7 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 
 ## 📖 Documentación Interna (ADRs)
 
-Todo gran salto arquitectural se encuentra metódicamente trazado en la carpeta `docs/`. Destacan para esta versión:
+Todo gran salto arquitectural se encuentra metódicamente trazado en la carpeta `docs/`. Destacan:
 - `fase08_arquitectura_v0.2.0.md` ⇨ Separación Frontend/Backend en entorno Vanilla MPA.
-- `fase09_contrato_chips_v0.2.0.md` ⇨ Qué condiciones exige el ecosistema para que una app cuente como "Chip".
+- `contrato_tecnico_chips_v1.0.md` ⇨ **Estándar Actual**: Especificación técnica de Chips (Híbridos, Frontend-only, Placeholders).
 - `fase12_shell_v0.2.0.md` ⇨ Integración de UX global sin utilizar React Routers.

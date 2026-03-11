@@ -2,6 +2,8 @@ from fastapi import FastAPI, APIRouter
 from typing import Dict, Any, List
 import importlib
 import logging
+import json
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,8 @@ class ModuleRegistry:
             except ModuleNotFoundError as e2:
                 # Si el módulo en sí (o su versión .router) no existe, es un chip frontend-only
                 if getattr(e2, 'name', None) in (router_import_path, module_path):
-                    # Chip frontend-only. Es un comportamiento válido y omitimos error.
+                    # Chip frontend-only. Registramos metadata básica y retornamos éxito.
+                    self._register_internal(module_name, None, prefix)
                     return True
                 else:
                     logger.error(f"Internal dependency error in {router_import_path}: {e2}")
@@ -66,17 +69,39 @@ class ModuleRegistry:
         
         try:
             app.include_router(router, prefix=final_prefix, tags=[module_name])
-            
-            self.modules[module_name] = {
-                "name": module_name,
-                "prefix": final_prefix,
-                "status": "active"
-            }
+            self._register_internal(module_name, final_prefix, prefix)
             logger.info(f"Router registered for {module_name}")
             return True
         except Exception as e:
             logger.error(f"Failed to include router for {module_name} in FastAPI app: {str(e)}")
             return False
+
+    def _register_internal(self, module_name: str, final_prefix: str, original_prefix: str = None):
+        """Helper to populate the internal registry with metadata."""
+        metadata = self._load_metadata(module_name)
+        self.modules[module_name] = {
+            "name": metadata.get("name", module_name),
+            "slug": module_name,
+            "prefix": final_prefix,
+            "status": "active" if final_prefix else "frontend-only",
+            "metadata": metadata
+        }
+
+    def _load_metadata(self, slug: str) -> Dict[str, Any]:
+        """
+        Tries to load chip.json from the chip's directory.
+        Fallback: returns basic structure with name and slug.
+        """
+        chip_path = f"chips/chip-{slug}/chip.json"
+        
+        if os.path.exists(chip_path):
+            try:
+                with open(chip_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load metadata for {slug}: {str(e)}")
+        
+        return {"name": slug.capitalize(), "slug": slug}
 
     def get_active_modules(self) -> List[Dict[str, Any]]:
         """Returns a list of all active modules."""

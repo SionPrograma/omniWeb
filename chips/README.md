@@ -1,14 +1,16 @@
-# OmniWeb Chips (Arquitectura v0.2.0)
-Estructura modular de funcionalidades ("chips") independientes. 
+# OmniWeb Chips (Ecosistema v1.0)
 
-> **CONVENCIÓN ACTUAL:** Un **Chip** funge como la macro-aplicación principal de un micro-dominio operativo del ecosistema. Reemplazan el diseño legacy de `/modules/`.
->
-> 1. Un chip es agnóstico o auto-contenido (`chip-{nombre}/frontend/` guarda la vista sin interferir con otros).
-> 2. Interactúan con las bondades reusables centralizadas (`/core/state`, `/core/navigation`).
-> 3. El servidor Backend (`backend/main.py`) lee qué chips deben ser servidos dinámicamente.
+Estructura modular de funcionalidades ("chips") independientes. Para más detalles técnicos, consulta el [Contrato Técnico de Chips](file:///docs/contrato_tecnico_chips_v1.0.md).
 
-- `chip-reparto/`: Sistema de logística (Portable First, offline maps integration).
-- `chip-finanzas/`: Control financiero personal, calculadoras dinámicas y ahorros.
-- `chip-idiomas-ia/`: Tutor de idiomas bilingüe asistido por inteligencia contextual.
-- `chip-programacion/`: Mentoría interactiva de desarrollo, arquitecturas y patrones.
-- `chip-musica/`: Gestión de teoría práctica e improvisación.
+## Clasificación de Chips Actuales
+
+| Chip | Categoría | Descripción |
+| :--- | :--- | :--- |
+| `chip-reparto` | **Híbrido** | Logística con mapa y backend de paradas. |
+| `chip-finanzas` | **Híbrido** | Control financiero con API de transacciones. |
+| `chip-idiomas-ia` | **Frontend-only** | Interfaz de tutor de idiomas (Backend legacy en `modules/`). |
+| `chip-programacion`| **Frontend-only** | Mentoría de código con layouts interactivos. |
+| `chip-musica` | **Placeholder** | Roadmap de teoría y práctica musical (Sin UI activa). |
+
+> **Nota:** El servidor Backend (`backend/main.py`) orquestra la carga dinámica de estos chips basándose en su estructura de carpetas.
+

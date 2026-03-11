@@ -1,0 +1,11 @@
+{
+    "id": "chip-musica",
+    "slug": "musica",
+    "name": "Música",
+    "description": "Gestión de teoría práctica e improvisación musical",
+    "version": "0.1.0",
+    "type": "placeholder",
+    "has_frontend": false,
+    "has_backend": false,
+    "dashboard_visible": false
+}

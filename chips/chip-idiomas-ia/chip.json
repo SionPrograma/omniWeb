@@ -1,0 +1,12 @@
+{
+    "id": "chip-idiomas-ia",
+    "slug": "idiomas-ia",
+    "name": "Idiomas IA",
+    "description": "Tutor de idiomas bilingüe asistido por inteligencia contextual",
+    "version": "0.2.1",
+    "type": "frontend-only",
+    "has_frontend": true,
+    "has_backend": false,
+    "entry_frontend": "frontend/index.html",
+    "dashboard_visible": true
+}
