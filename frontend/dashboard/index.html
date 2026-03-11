@@ -360,6 +360,101 @@
             z-index: 50;
         }
 
+        /* Antimodal Context Panel */
+        .antimodal-panel {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            width: 300px;
+            background: rgba(20, 20, 40, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+            transition: all 0.5s ease;
+        }
+
+        .mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-btn.active {
+            border-color: var(--accent-color);
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-color);
+        }
+
+        /* Mode-specific UI changes */
+        body.mode-silent .chips-container,
+        body.mode-silent header,
+        body.mode-silent .insights-panel,
+        body.mode-silent .proposals-panel,
+        body.mode-silent .user-context-panel,
+        body.mode-silent .knowledge-graph-panel {
+            opacity: 0.2;
+            pointer-events: none;
+            filter: blur(2px);
+        }
+
+        body.mode-low_distraction .insights-panel,
+        body.mode-low_distraction .proposals-panel,
+        body.mode-low_distraction .user-context-panel,
+        body.mode-low_distraction .knowledge-graph-panel {
+            transform: translateX(-120%);
+        }
+
+        body.mode-compact .ai-panel {
+            height: 250px;
+        }
+
+        body.mode-background::after {
+            content: "Background Process Active";
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 0.7rem;
+            color: var(--accent-color);
+            background: rgba(5, 5, 8, 0.8);
+            padding: 5px 10px;
+            border: 1px solid var(--accent-color);
+            border-radius: 20px;
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 1200px) {
             .user-context-panel {
@@ -401,7 +496,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.3-stable</div>
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.5-stable</div>
     </header>
 
     <!-- Insights Panel -->
@@ -445,6 +540,21 @@
     <main class="chips-container" id="chips-grid">
         <!-- Chips will be loaded dynamically here -->
     </main>
+
+    <!-- Antimodal Panel -->
+    <div class="antimodal-panel">
+        <div class="insights-title">Interaction Mode</div>
+        <div style="font-size: 0.8rem; margin-bottom: 10px; opacity: 0.8;" id="current-mode-description">Standard
+            interface active.</div>
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('standard')" id="btn-standard">Estándar</button>
+            <button class="mode-btn" onclick="setMode('silent')" id="btn-silent">Silencioso</button>
+            <button class="mode-btn" onclick="setMode('compact')" id="btn-compact">Compacto</button>
+            <button class="mode-btn" onclick="setMode('low_distraction')" id="btn-low_distraction">Foco</button>
+            <button class="mode-btn" onclick="setMode('summary_only')" id="btn-summary_only">Resumen</button>
+            <button class="mode-btn" onclick="setMode('background')" id="btn-background">Segundo Plano</button>
+        </div>
+    </div>
 
     <!-- AI Host Panel -->
     <div class="ai-panel">
@@ -868,7 +978,50 @@
             loadProposals();
             loadContext();
             loadGraph();
+            loadAntimodal();
         });
+
+        // Antimodal logic
+        async function loadAntimodal() {
+            try {
+                const response = await fetch('/api/v1/system/antimodal');
+                if (!response.ok) return;
+                const data = await response.json();
+                updateModeUI(data.mode);
+            } catch (e) { }
+        }
+
+        async function setMode(mode) {
+            try {
+                const response = await fetch(`/api/v1/system/antimodal/mode?mode=${mode}`, { method: 'POST' });
+                if (response.ok) {
+                    updateModeUI(mode);
+                }
+            } catch (e) { }
+        }
+
+        function updateModeUI(mode) {
+            // Remove all mode classes
+            document.body.classList.remove('mode-standard', 'mode-silent', 'mode-compact', 'mode-low_distraction', 'mode-summary_only', 'mode-background');
+            document.body.classList.add(`mode-${mode}`);
+
+            // Update buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-${mode}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // Update description
+            const desc = document.getElementById('current-mode-description');
+            const descriptions = {
+                'standard': 'Interfaz completa habilitada.',
+                'silent': 'Interfaz minimizada. Sin ruido visual.',
+                'compact': 'Respuestas directas y esenciales.',
+                'low_distraction': 'Foco en la tarea actual. Paneles ocultos.',
+                'summary_only': 'Solo resultados y conclusiones clave.',
+                'background': 'El sistema trabaja silenciosamente.'
+            };
+            desc.innerText = descriptions[mode] || mode;
+        }
     </script>
 </body>
 

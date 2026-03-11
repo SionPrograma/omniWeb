@@ -3,6 +3,8 @@ from pydantic import BaseModel
 import logging
 from backend.core.multimodal.multimodal_router import multimodal_router, MultimodalInput
 from backend.core.multimodal.visual_response import VisualResponseEngine
+from backend.core.antimodal.antimodal_controller import antimodal_controller
+from backend.core.antimodal.antimodal_models import AntimodalMode
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,8 @@ class CommandRouter:
             "suggest": self._handle_suggest,
             "modify": self._handle_modify,
             "memory": self._handle_memory,
-            "graph": self._handle_graph
+            "graph": self._handle_graph,
+            "antimodal": self._handle_antimodal
         }
 
     async def route(self, message: str, modality: str = "text") -> AICommandResponse:
@@ -65,6 +68,8 @@ class CommandRouter:
              res = await self.intents["memory"](msg)
         elif "explora" in msg or "explore" in msg or "relacion" in msg or "relates" in msg or "camino" in msg or "path" in msg or "grafo" in msg or "graph" in msg:
              res = await self.intents["graph"](msg)
+        elif "antimodal" in msg or "silencio" in msg or "silent" in msg or "compact" in msg or "fondo" in msg or "background" in msg or "distraccion" in msg or "distraction" in msg or "resumen" in msg or "summary" in msg:
+             res = await self.intents["antimodal"](msg)
         
         if not res:
             res = AICommandResponse(
@@ -73,6 +78,9 @@ class CommandRouter:
                 message="Lo siento, no entiendo ese comando.",
                 payload={}
             )
+
+        # Antimodal adaptation (Phase 6)
+        res.message = antimodal_controller.process_ai_response(res.message)
 
         # Telemetry (Phase F)
         try:
@@ -360,5 +368,40 @@ class CommandRouter:
              )
 
         return AICommandResponse(intent="graph_query", status="error", message="No pude procesar tu consulta del grafo.")
+
+    async def _handle_antimodal(self, msg: str) -> AICommandResponse:
+        """
+        Handles Antimodal command routing.
+        Examples: "activa modo silencioso", "ponete en modo compacto", "solo dame resúmenes"
+        """
+        mode = AntimodalMode.STANDARD
+        action = "ENABLE"
+        
+        if "desactiva" in msg or "disable" in msg or "estándar" in msg or "standard" in msg:
+            mode = AntimodalMode.STANDARD
+            action = "DISABLE"
+        elif "silencio" in msg or "silent" in msg:
+            mode = AntimodalMode.SILENT
+        elif "compact" in msg or "compacto" in msg:
+            mode = AntimodalMode.COMPACT
+        elif "fondo" in msg or "background" in msg:
+            mode = AntimodalMode.BACKGROUND
+        elif "distraccion" in msg or "distraction" in msg or "foco" in msg or "focus" in msg:
+            mode = AntimodalMode.LOW_DISTRACTION
+        elif "resumen" in msg or "summary" in msg or "solo dame" in msg:
+            mode = AntimodalMode.SUMMARY_ONLY
+            
+        antimodal_controller.set_mode(mode)
+        
+        status_msg = f"Modo antimodal '{mode.value}' activado."
+        if action == "DISABLE":
+            status_msg = "Modo antimodal desactivado. Volviendo a interfaz estándar."
+            
+        return AICommandResponse(
+            intent="antimodal_mode_change",
+            status="success",
+            message=status_msg,
+            payload={"mode": mode.value, "status": antimodal_controller.get_status_summary()}
+        )
 
 ai_command_router = CommandRouter()

@@ -204,6 +204,25 @@ async def get_knowledge_graph():
         nodes = store.get_all_nodes()
         return {"status": "ok", "nodes": [n.model_dump() for n in nodes]}
 
+@app.get(f"{settings.API_V1_STR}/system/antimodal")
+async def get_antimodal_status():
+    """Returns the current antimodal state and mode."""
+    from backend.core.antimodal.antimodal_controller import antimodal_controller
+    return antimodal_controller.get_status_summary()
+
+@app.post(f"{settings.API_V1_STR}/system/antimodal/mode")
+async def set_antimodal_mode(mode: str):
+    """Updates the current antimodal mode."""
+    from backend.core.antimodal.antimodal_controller import antimodal_controller
+    from backend.core.antimodal.antimodal_models import AntimodalMode
+    try:
+        new_mode = AntimodalMode(mode)
+        antimodal_controller.set_mode(new_mode)
+        return {"status": "success", "mode": new_mode.value}
+    except ValueError:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail=f"Invalid antimodal mode: {mode}")
+
 @app.post(f"{settings.API_V1_STR}/system/graph/sync")
 async def sync_knowledge_graph(admin_user: dict = Security(get_admin_user)):
     """Triggers a manual synchronization of the knowledge graph from memory."""
