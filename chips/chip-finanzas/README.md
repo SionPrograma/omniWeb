@@ -11,3 +11,4 @@ Módulo para el control financiero personal.
 - `historial/`: Registro histórico de movimientos.
 - `configuracion/`: Ajustes de moneda y preferencias.
 - `shared/`: Utilidades financieras comunes.
+- `frontend/`: (Nuevo) Interfaz visual principal en Vanilla JS/HTML/CSS que unifica un dashboard con resumen, ingresos, gastos y ahorro utilizando el core.
