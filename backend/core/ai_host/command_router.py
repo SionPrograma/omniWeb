@@ -25,7 +25,8 @@ class CommandRouter:
             "workflow": self._handle_workflow,
             "insights": self._handle_insights,
             "suggest": self._handle_suggest,
-            "modify": self._handle_modify
+            "modify": self._handle_modify,
+            "memory": self._handle_memory
         }
 
     async def route(self, message: str) -> AICommandResponse:
@@ -53,6 +54,8 @@ class CommandRouter:
              res = await self.intents["workflow"](msg)
         elif "modificar" in msg or "modify" in msg or "parche" in msg:
              res = await self.intents["modify"](msg)
+        elif "recordar" in msg or "memory" in msg or "historia" in msg or "continuar" in msg or "resume" in msg or "recall" in msg:
+             res = await self.intents["memory"](msg)
         
         if not res:
             res = AICommandResponse(
@@ -249,5 +252,35 @@ class CommandRouter:
                 "visual": visual
             }
         )
+    
+    async def _handle_memory(self, msg: str) -> AICommandResponse:
+        from backend.core.long_memory.memory_retriever import memory_retriever
+        
+        # 1. Handle "continue/resume project"
+        if "continuar" in msg or "resume" in msg or "proyecto" in msg:
+            projects = memory_retriever.get_recent_projects()
+            if projects:
+                p = projects[0]
+                return AICommandResponse(
+                    intent="memory_recall",
+                    status="success",
+                    message=f"Hablemos de tu último proyecto: '{p.title}'. ¿Quieres continuar donde lo dejaste?",
+                    payload={"memory": p}
+                )
+            return AICommandResponse(intent="memory_recall", status="error", message="No encontré proyectos recientes para continuar.")
+
+        # 2. General recall
+        memories = memory_retriever.find_relevant_memories(msg)
+        if memories:
+            m = memories[0]
+            desc = f"He recordado esto: {m.summary}"
+            return AICommandResponse(
+                intent="memory_recall",
+                status="success",
+                message=desc,
+                payload={"memories": memories}
+            )
+            
+        return AICommandResponse(intent="memory_recall", status="error", message="No tengo recuerdos claros sobre eso aún.")
 
 ai_command_router = CommandRouter()

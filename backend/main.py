@@ -160,6 +160,12 @@ async def get_system_runtime():
         "runtime": runtime_manager.get_status()
     }
 
+@app.get(f"{settings.API_V1_STR}/system/memory")
+async def get_system_memory(current_user: OmniUser = Depends(get_current_user)):
+    """Returns long term memories for the dashboard."""
+    from backend.core.long_memory.memory_store import memory_store
+    return memory_store.get_memories()
+
 @app.get(f"{settings.API_V1_STR}/system/proposals")
 async def get_system_proposals():
     """Returns pending system improvement proposals."""
