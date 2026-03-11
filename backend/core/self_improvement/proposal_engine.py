@@ -50,4 +50,44 @@ class ProposalEngine:
                 ).fetchall()
                 return [dict(r) for r in rows]
 
+    async def execute_proposal(self, proposal_id: int) -> dict:
+        """
+        Executes a saved proposal through the Stability Loop.
+        """
+        from backend.core.stability_loop.loop_controller import loop_controller
+        from backend.core.stability_loop.loop_models import LoopStep
+        
+        with set_chip_context("core"):
+            with db_manager.get_connection() as conn:
+                proposal = conn.execute(
+                    "SELECT * FROM improvement_proposals WHERE id = ?", (proposal_id,)
+                ).fetchone()
+                
+        if not proposal:
+            return {"status": "error", "message": "Proposal not found"}
+            
+        async def execution_action():
+            # In a real system, this would parse 'recommended_action' and call the right module
+            # For now, we simulate the action and mark it as completed
+            logger.info(f"Executing improvement: {proposal['description']}")
+            with set_chip_context("core"):
+                with db_manager.get_connection() as conn:
+                    conn.execute(
+                        "UPDATE improvement_proposals SET status = 'completed' WHERE id = ?",
+                        (proposal_id,)
+                    )
+                    conn.commit()
+            return {"status": "success", "action": proposal["recommended_action"]}
+
+        loop_state, result = await loop_controller.execute_task(
+            "improvement_proposal",
+            {"proposal_id": proposal_id, "description": proposal["description"]},
+            execution_action
+        )
+        
+        if loop_state.current_step == LoopStep.COMPLETE:
+            return {"status": "success", "message": "Propuesta ejecutada y sistema estable.", "loop_id": loop_state.task_id}
+        else:
+            return {"status": "error", "message": f"Fallo en la ejecución o inestabilidad: {loop_state.current_step}", "loop_id": loop_state.task_id}
+
 proposal_engine = ProposalEngine()

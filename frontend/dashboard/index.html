@@ -455,6 +455,58 @@
             }
         }
 
+
+        /* Stability Loop Status Panel */
+        .loop-panel {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 320px;
+            background: rgba(40, 20, 40, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+            display: none;
+            transition: all 0.3s ease;
+        }
+
+        .loop-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            opacity: 0.5;
+            color: white;
+        }
+
+        .loop-step.active {
+            opacity: 1;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .loop-step.active::before {
+            content: "➜";
+            margin-right: 8px;
+            animation: moveRight 1s infinite;
+        }
+
+        @keyframes moveRight {
+            0% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(5px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 1200px) {
             .user-context-panel {
@@ -540,6 +592,19 @@
     <main class="chips-container" id="chips-grid">
         <!-- Chips will be loaded dynamically here -->
     </main>
+
+    </div>
+    </aside>
+
+    <!-- Execution Loop Status -->
+    <div class="loop-panel" id="loop-panel">
+        <div class="insights-title">Stability Loop</div>
+        <div id="loop-task-info" style="font-size: 0.75rem; margin-bottom: 10px; opacity: 0.8;"></div>
+        <div id="loop-steps">
+            <!-- Steps will appear here -->
+        </div>
+        <div id="loop-cycle" style="margin-top: 10px; font-size: 0.7rem; color: var(--accent-color);"></div>
+    </div>
 
     <!-- Antimodal Panel -->
     <div class="antimodal-panel">
@@ -1022,6 +1087,131 @@
             };
             desc.innerText = descriptions[mode] || mode;
         }
+
+        // Stability Loop Tracking
+        let activeLoopTaskId = null;
+        let loopInterval = null;
+
+        function trackLoop(taskId) {
+            activeLoopTaskId = taskId;
+            document.getElementById('loop-panel').style.display = 'block';
+            if (loopInterval) clearInterval(loopInterval);
+            loopInterval = setInterval(refreshLoopStatus, 1500);
+        }
+
+        async function refreshLoopStatus() {
+            if (!activeLoopTaskId) return;
+            try {
+                const response = await fetch(`/api/v1/system/loop/status?task_id=${activeLoopTaskId}`);
+                if (!response.ok) {
+                    stopTrackingLoop();
+                    return;
+                }
+                const data = await response.json();
+                updateLoopUI(data);
+
+                if (data.current_step === 'COMPLETE' || data.current_step === 'FAILED' || data.current_step === 'ROLLBACK') {
+                    setTimeout(stopTrackingLoop, 5000);
+                }
+            } catch (e) {
+                stopTrackingLoop();
+            }
+        }
+
+        function stopTrackingLoop() {
+            clearInterval(loopInterval);
+            loopInterval = null;
+            setTimeout(() => {
+                if (!loopInterval) document.getElementById('loop-panel').style.display = 'none';
+            }, 10000);
+        }
+
+        function updateLoopUI(data) {
+            const stepsDiv = document.getElementById('loop-steps');
+            const cycleDiv = document.getElementById('loop-cycle');
+            const taskInfo = document.getElementById('loop-task-info');
+
+            taskInfo.innerText = `Task ID: ${data.task_id.substring(0, 8)}...`;
+            cycleDiv.innerText = `Ciclo: ${data.cycle_count} / ${data.max_cycles} | Intentos reparación: ${data.repair_attempts}`;
+
+            const allSteps = [
+                'AUDIT_SYSTEM', 'ANALYZE_TASK', 'PLAN_EXECUTION',
+                'APPLY_CHANGE', 'RUN_TESTS', 'VERIFY_STABILITY',
+                'REPAIR', 'COMPLETE'
+            ];
+
+            stepsDiv.innerHTML = allSteps.map(step => `
+                <div class="loop-step ${data.current_step === step ? 'active' : ''}">
+                    ${step}
+                </div>
+            `).join('');
+        }
+
+        // Intercept AI Host response to detect loops
+        const originalSendToAI = sendToAI;
+        sendToAI = async function () {
+            // We wrap the original function to catch the loop_id in payload
+            const oldAddMessage = addMessage;
+            // Temporary override to inspect data
+            // This is a bit hacky, but works for the prototype dashboard
+            await originalSendToAI();
+        };
+
+        // Modify renderVisualResponse or similar to hook into the message result
+        // For now, let's just make trackLoop global so it can be called from console or other triggers
+        window.trackLoop = trackLoop;
+
+        // Auto-hook into sendToAI response
+        async function sendToAIWithLoop() {
+            const message = aiInput.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            aiInput.value = '';
+
+            try {
+                const token = localStorage.getItem('omniweb_token') || 'omniweb-dev-secret-token';
+                const response = await fetch('/api/v1/ai-host/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage('ai', data.message || "Comando procesado.");
+
+                    if (data.payload && data.payload.loop_id) {
+                        trackLoop(data.payload.loop_id);
+                    }
+
+                    if (data.payload && data.payload.visual) {
+                        renderVisualResponse(data.payload.visual);
+                    }
+
+                    setTimeout(() => {
+                        loadChips();
+                        loadInsights();
+                        loadProposals();
+                        loadContext();
+                    }, 1000);
+                } else {
+                    addMessage('ai', `Error: ${data.detail || 'Fallo'}`);
+                }
+            } catch (error) {
+                addMessage('ai', "Error al conectar con el AI Host.");
+            }
+        }
+
+        // Replace the event listener
+        sendBtn.removeEventListener('click', sendToAI);
+        sendBtn.addEventListener('click', sendToAIWithLoop);
+        // Note: Enter key listener also needs replacement or we just redefine the function
+        window.sendToAI = sendToAIWithLoop;
     </script>
 </body>
 

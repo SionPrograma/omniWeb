@@ -233,6 +233,22 @@ async def sync_knowledge_graph(admin_user: dict = Security(get_admin_user)):
         builder.process_all_memories()
         return {"status": "success", "message": "Graph synchronized with long-term memory."}
 
+@app.get(f"{settings.API_V1_STR}/system/loop/status")
+async def get_loop_status(task_id: str):
+    """Returns the current state of a stability loop task."""
+    from backend.core.stability_loop.loop_controller import loop_controller
+    status = loop_controller.get_task_status(task_id)
+    if not status:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Task not found")
+    return status
+
+@app.post(f"{settings.API_V1_STR}/system/proposals/execute")
+async def execute_proposal(proposal_id: int):
+    """Executes a system improvement proposal through the stability loop."""
+    from backend.core.self_improvement.proposal_engine import proposal_engine
+    return await proposal_engine.execute_proposal(proposal_id)
+
 @app.post(f"{settings.API_V1_STR}/system/db/backup")
 async def create_db_backup(admin_user: dict = Security(get_admin_user)):
     """Triggers an online backup of the SQLite database."""

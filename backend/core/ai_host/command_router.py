@@ -1,6 +1,8 @@
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 import logging
+from backend.core.stability_loop.loop_controller import loop_controller
+from backend.core.stability_loop.loop_models import LoopStep
 from backend.core.multimodal.multimodal_router import multimodal_router, MultimodalInput
 from backend.core.multimodal.visual_response import VisualResponseEngine
 from backend.core.antimodal.antimodal_controller import antimodal_controller
@@ -115,17 +117,33 @@ class CommandRouter:
         return AICommandResponse(intent="open_chip", status="error", message="No encontré el chip a abrir.")
 
     async def _handle_create(self, msg: str) -> AICommandResponse:
-        # Calls Chip Factory
+        # Calls Chip Factory via Stability Loop
         from backend.core.chip_factory import chip_factory
-        result = await chip_factory.create_from_request(msg)
-        if result["status"] == "success":
+        
+        async def create_action():
+            return await chip_factory.create_from_request(msg)
+            
+        loop_state, result = await loop_controller.execute_task(
+            "create_chip",
+            {"message": msg},
+            create_action
+        )
+        
+        if loop_state.current_step == LoopStep.COMPLETE and result["status"] == "success":
              return AICommandResponse(
                  intent="create_chip",
                  status="success",
-                 message=result["message"],
-                 payload={"chip": result["chip"]}
+                 message=f"{result['message']} [Estabilidad Verificada]",
+                 payload={"chip": result["chip"], "loop_id": loop_state.task_id}
              )
-        return AICommandResponse(intent="create_chip", status="error", message=result["detail"])
+        
+        error_msg = result["detail"] if result and "detail" in result else "Error en la creación o inestabilidad detectada."
+        return AICommandResponse(
+            intent="create_chip", 
+            status="error", 
+            message=f"{error_msg} (Estado: {loop_state.current_step})",
+            payload={"loop_id": loop_state.task_id}
+        )
 
     async def _handle_activate(self, msg: str) -> AICommandResponse:
         # Implementation in Step 3
@@ -236,38 +254,52 @@ class CommandRouter:
         if not target:
             return AICommandResponse(intent="modify_chip", status="error", message="Debes especificar un chip válido para modificar.")
             
-        # 1. Analyze
-        analysis = code_analyzer.analyze_chip(target)
-        
-        # 2. Generate Patch
-        patches = patch_generator.generate_patch(msg, analysis)
-        if not patches:
-             return AICommandResponse(intent="modify_chip", status="error", message="No pude determinar los cambios necesarios para tu solicitud.")
-             
-        # 3. Apply
-        result = chip_editor.apply_patches(target, patches)
-        if result["status"] == "error":
-             return AICommandResponse(intent="modify_chip", status="error", message=f"Error al aplicar cambios: {result['message']}")
-             
-        # 4. Reload
-        module_reloader.reload_chip(target)
-        
-        from backend.core.interface.visual_interface import visual_interface
-        visual = visual_interface.create_visual_payload(
-            "chip-modification-success",
-            f"Modificado {len(result['applied'])} archivos en {target}",
-            f"AI Developer: {target}"
-        )
+        async def modify_action():
+            # 1. Analyze
+            analysis = code_analyzer.analyze_chip(target)
+            # 2. Generate Patch
+            patches = patch_generator.generate_patch(msg, analysis)
+            if not patches:
+                 raise Exception("No se pudieron generar parches.")
+            # 3. Apply
+            result = chip_editor.apply_patches(target, patches)
+            if result["status"] == "error":
+                 raise Exception(result["message"])
+            # 4. Reload
+            module_reloader.reload_chip(target)
+            return result
 
+        loop_state, result = await loop_controller.execute_task(
+            "modify_chip",
+            {"chip_slug": target, "message": msg},
+            modify_action
+        )
+        
+        if loop_state.current_step == LoopStep.COMPLETE:
+            from backend.core.interface.visual_interface import visual_interface
+            visual = visual_interface.create_visual_payload(
+                "chip-modification-success",
+                f"Modificado {len(result['applied'])} archivos en {target}",
+                f"AI Developer: {target} (Estable)"
+            )
+
+            return AICommandResponse(
+                intent="modify_chip",
+                status="success",
+                message=f"El chip '{target}' ha sido modificado, recargado y su estabilidad verificada.",
+                payload={
+                    "applied": result["applied"], 
+                    "backup": result["backup"],
+                    "visual": visual,
+                    "loop_id": loop_state.task_id
+                }
+            )
+        
         return AICommandResponse(
-            intent="modify_chip",
-            status="success",
-            message=f"El chip '{target}' ha sido modificado y recargado con éxito.",
-            payload={
-                "applied": result["applied"], 
-                "backup": result["backup"],
-                "visual": visual
-            }
+            intent="modify_chip", 
+            status="error", 
+            message=f"No se pudo estabilizar el chip '{target}' tras la modificación.",
+            payload={"loop_id": loop_state.task_id}
         )
     
     async def _handle_memory(self, msg: str) -> AICommandResponse:
