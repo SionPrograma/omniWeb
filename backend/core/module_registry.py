@@ -1,11 +1,28 @@
 from fastapi import FastAPI, APIRouter
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from pydantic import BaseModel, Field, ValidationError
 import importlib
 import logging
 import json
 import os
 
 logger = logging.getLogger(__name__)
+
+class ChipMetadata(BaseModel):
+    """
+    Schema for chip.json metadata.
+    Ensures consistency across all OmniWeb modules.
+    """
+    id: str
+    slug: str
+    name: str
+    description: str = "Sin descripción"
+    version: str = "0.0.0"
+    type: str = "unknown" # hybrid, frontend-only, placeholder
+    has_frontend: bool = True
+    has_backend: bool = False
+    entry_frontend: Optional[str] = "frontend/index.html"
+    dashboard_visible: bool = True
 
 class ModuleRegistry:
     """
@@ -117,19 +134,34 @@ class ModuleRegistry:
 
     def _load_metadata(self, slug: str) -> Dict[str, Any]:
         """
-        Tries to load chip.json from the chip's directory.
-        Fallback: returns basic structure with name and slug.
+        Loads and validates chip.json from the chip's directory.
+        Follows the Discovery -> Validation pattern for metadata.
         """
         chip_path = f"chips/chip-{slug}/chip.json"
         
         if os.path.exists(chip_path):
             try:
                 with open(chip_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                
+                # Strong Pydantic Validation
+                validated = ChipMetadata(**data)
+                return validated.model_dump()
+                
+            except ValidationError as e:
+                logger.error(f"Metadata validation error in chip '{slug}': {str(e)}")
             except Exception as e:
                 logger.warning(f"Failed to load metadata for {slug}: {str(e)}")
         
-        return {"name": slug.capitalize(), "slug": slug}
+        # Consistent Fallback using the schema
+        return ChipMetadata(
+            id=f"chip-{slug}",
+            slug=slug,
+            name=slug.capitalize(),
+            description="Módulo detectado sin metadata válida (fallback)",
+            version="0.0.0",
+            type="unknown"
+        ).model_dump()
 
     def get_active_modules(self) -> List[Dict[str, Any]]:
         """Returns a list of all active modules."""
