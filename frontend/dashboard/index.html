@@ -346,6 +346,20 @@
             z-index: 50;
         }
 
+        /* Knowledge Graph Panel */
+        .knowledge-graph-panel {
+            position: fixed;
+            top: 40rem;
+            left: 2rem;
+            width: 300px;
+            background: rgba(60, 40, 20, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 1200px) {
             .user-context-panel {
@@ -387,7 +401,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.0-stable</div>
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.3-stable</div>
     </header>
 
     <!-- Insights Panel -->
@@ -415,6 +429,17 @@
         <div id="context-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Analizando patrones...</div>
         </div>
+    </div>
+
+    <!-- Knowledge Graph Panel -->
+    <div class="knowledge-graph-panel">
+        <div class="insights-title">Knowledge Graph</div>
+        <div id="graph-content">
+            <div style="font-size: 0.8rem; opacity: 0.6;">Cargando red de conceptos...</div>
+        </div>
+        <button id="sync-graph-btn"
+            style="margin-top: 10px; width: 100%; padding: 5px; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 8px; cursor: pointer; font-size: 0.8rem;">Sincronizar
+            Grafo</button>
     </div>
 
     <main class="chips-container" id="chips-grid">
@@ -554,6 +579,8 @@
         const insightsContent = document.getElementById('insights-content');
         const proposalsContent = document.getElementById('proposals-content');
         const contextContent = document.getElementById('context-content');
+        const graphContent = document.getElementById('graph-content');
+        const syncGraphBtn = document.getElementById('sync-graph-btn');
 
         async function loadInsights() {
             try {
@@ -650,6 +677,54 @@
                 console.warn('Context failed:', error);
             }
         }
+
+        async function loadGraph() {
+            try {
+                const response = await fetch('/api/v1/system/graph');
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const nodes = data.nodes;
+
+                if (nodes.length === 0) {
+                    graphContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Grafo vacío. Usa el AI Host para explorar temas.</div>';
+                    return;
+                }
+
+                // Show top 5 nodes for simplicity
+                let html = '';
+                nodes.slice(0, 6).forEach(n => {
+                    html += `
+                        <div class="insight-item">
+                            <span class="insight-label">${n.node_type}</span>
+                            <span>${n.name}</span>
+                        </div>
+                    `;
+                });
+
+                if (nodes.length > 6) {
+                    html += `<div style="font-size: 0.7rem; opacity: 0.4; text-align: center; margin-top: 5px;">+${nodes.length - 6} conceptos más</div>`;
+                }
+
+                graphContent.innerHTML = html;
+            } catch (error) {
+                console.warn('Graph failed:', error);
+            }
+        }
+
+        syncGraphBtn.addEventListener('click', async () => {
+            syncGraphBtn.innerText = "Sincronizando...";
+            try {
+                const response = await fetch('/api/v1/system/graph/sync', { method: 'POST' });
+                if (response.ok) {
+                    await loadGraph();
+                    syncGraphBtn.innerText = "¡Sincronizado!";
+                    setTimeout(() => syncGraphBtn.innerText = "Sincronizar Grafo", 2000);
+                }
+            } catch (e) {
+                syncGraphBtn.innerText = "Error";
+            }
+        });
 
         const voiceBtn = document.getElementById('voice-btn');
         const visualArea = document.getElementById('ai-visual-response');
@@ -771,6 +846,7 @@
             loadInsights();
             loadProposals();
             loadContext();
+            loadGraph();
         });
     </script>
 </body>

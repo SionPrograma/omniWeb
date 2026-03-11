@@ -1,5 +1,5 @@
 # OmniWeb 🌐
-**Version:** v0.3.0
+**Version:** v0.6.3
 
 OmniWeb es un **Sistema Operativo Personal Web** en fase de desarrollo activo. Fue diseñado para centralizar y orquestar múltiples servicios, aplicaciones y dominios de conocimiento (finanzas, aprendizaje, gestión de ideas) bajo un único ecosistema digital ligero y unificado.
 
@@ -19,7 +19,7 @@ Para levantar el entorno completo de OmniWeb en local (Backend Orquestador + UI 
 
 *Nota: La plataforma es "Portable First". Si un endpoint falla o la conexión a red se interrumpe, la mayoría de los "Chips" poseen un fallback local a StateManager/LocalStorage para no bloquear el progreso del usuario.*
 
-## 🏗 Arquitectura (v0.3.0)
+## 🏗 Arquitectura (v0.6.3)
 
 OmniWeb rompe deliberadamente con la tendencia predominante de las *Single Page Applications* (SPA) monolíticas en React o Vue. En su lugar, opera como una **Multi-Page Application (MPA)** híbrida:
 
@@ -39,8 +39,18 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 - `frontend/dashboard/`: UI espacial del "Centro de Mando" global. Se sirve en la ruta raíz (`/`). No contiene apps, sólo orquesta el acceso mediante lecturas inteligentes del progreso reciente.
 - `chips/`: El estándar activo para crear módulos. Sigue el [Contrato Técnico v1.0](docs/contrato_tecnico_chips_v1.0.md).
 - `modules/`: Código **Legacy**. Alberga servicios complejos o transicionales (IA, Whisper, etc.).
+- `tests/`: Suite de pruebas unitarias y de integración, incluyendo el **Reality Audit**.
 
-## 🔋 Estado Actual del Ecosistema (v0.3.0)
+## 🔋 Estado Actual del Ecosistema (v0.6.3)
+
+### 📌 Motores de Sistema (Core Engines)
+- **AI Host**: Orquestador de comandos en lenguaje natural.
+- **AI Developer**: Motor de auto-modificación de código y parcheo dinámico.
+- **Long Term Memory**: Persistencia de experiencias y contextos históricos.
+- **Knowledge Graph**: Red relacional de conceptos, proyectos y caminos de aprendizaje.
+- **Personal Context**: Detector de hábitos y rutinas para anticipación de necesidades.
+- **Self Improvement**: Generador de propuestas de optimización del sistema.
+- **Secure Auth & Zero Trust**: Sistema de permisos granular para chips y usuarios.
 
 ### 📌 Implementado y Estándar
 - **Dashboard Central**: Activo. Realiza tracking inteligente mediante el `state-manager` para resaltar de qué chip provino el usuario.

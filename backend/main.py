@@ -194,6 +194,26 @@ async def get_user_context():
         "patterns": patterns
     }
 
+@app.get(f"{settings.API_V1_STR}/system/graph")
+async def get_knowledge_graph():
+    """Returns the current state of the knowledge graph."""
+    from backend.core.knowledge_graph.graph_store import GraphStore
+    from backend.core.permissions import set_chip_context
+    with set_chip_context("core"):
+        store = GraphStore()
+        nodes = store.get_all_nodes()
+        return {"status": "ok", "nodes": [n.model_dump() for n in nodes]}
+
+@app.post(f"{settings.API_V1_STR}/system/graph/sync")
+async def sync_knowledge_graph(admin_user: dict = Security(get_admin_user)):
+    """Triggers a manual synchronization of the knowledge graph from memory."""
+    from backend.core.knowledge_graph.graph_builder import GraphBuilder
+    from backend.core.permissions import set_chip_context
+    with set_chip_context("core"):
+        builder = GraphBuilder()
+        builder.process_all_memories()
+        return {"status": "success", "message": "Graph synchronized with long-term memory."}
+
 @app.post(f"{settings.API_V1_STR}/system/db/backup")
 async def create_db_backup(admin_user: dict = Security(get_admin_user)):
     """Triggers an online backup of the SQLite database."""
