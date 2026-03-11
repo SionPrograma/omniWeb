@@ -104,9 +104,14 @@ def audit_runtime():
         r = requests.get(f"{BASE_URL}/api/v1/system/runtime")
         if r.status_code == 200:
             data = r.json()
-            print(f"   [PASS] Runtime detected: {data['runtime'].get('environment')} (Mode: {data['runtime'].get('mode')})")
-            if data['runtime'].get('boot').get('ai_host'):
-                 print("   [PASS] Boot Check: AI Host Available.")
+            runtime = data['runtime']
+            print(f"   [PASS] Runtime detected: {runtime.get('environment')} (Profile: {runtime.get('profile')})")
+            services = runtime.get('services', [])
+            ai_host_ok = any(s['name'] == 'ai_host' and s['status'] == 'running' for s in services)
+            if ai_host_ok:
+                 print("   [PASS] Boot Check: AI Host Available (Active Service).")
+            else:
+                 print("   [FAIL] Boot Check: AI Host service not running.")
         else:
             print(f"   [FAIL] Runtime endpoint returned {r.status_code}")
     except Exception as e:

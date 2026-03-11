@@ -441,6 +441,50 @@
             color: var(--accent-color);
         }
 
+        /* Runtime Foundation Panel */
+        .runtime-panel {
+            position: fixed;
+            bottom: 2rem;
+            right: 22rem;
+            width: 320px;
+            background: rgba(30, 20, 50, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+        }
+
+        .service-list {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-pill {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+        }
+
+        .status-pill.running {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+        }
+
+        .status-pill.stopped {
+            background: rgba(255, 68, 68, 0.1);
+            color: #ff4444;
+        }
+
         /* Mode-specific UI changes */
         body.mode-silent .chips-container,
         body.mode-silent header,
@@ -586,7 +630,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.7-stable</div>
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.8-stable</div>
     </header>
 
     <!-- Insights Panel -->
@@ -633,6 +677,15 @@
         <button id="sync-graph-btn"
             style="margin-top: 10px; width: 100%; padding: 5px; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 8px; cursor: pointer; font-size: 0.8rem;">Sincronizar
             Grafo</button>
+    </div>
+
+    <!-- Runtime Foundation Panel -->
+    <div class="runtime-panel">
+        <div class="insights-title">System Runtime</div>
+        <div id="runtime-content">
+            <div style="font-size: 0.8rem; opacity: 0.6;">Cargando runtime...</div>
+        </div>
+        <div class="service-list" id="service-list"></div>
     </div>
 
     <main class="chips-container" id="chips-grid">
@@ -1109,6 +1162,37 @@
             if (e.key === 'Enter') sendToAI();
         });
 
+        async function loadRuntime() {
+            try {
+                const response = await fetch('/api/v1/system/runtime');
+                if (!response.ok) return;
+                const data = await response.json();
+                const runtime = data.runtime;
+
+                const container = document.getElementById('runtime-content');
+                container.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-size: 0.8rem; opacity: 0.7;">Environment:</span>
+                        <span style="font-size: 0.8rem; font-weight: bold; color: var(--accent-color);">${runtime.environment.toUpperCase()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-size: 0.8rem; opacity: 0.7;">Profile:</span>
+                        <span style="font-size: 0.8rem; font-weight: bold;">${runtime.profile.toUpperCase()}</span>
+                    </div>
+                `;
+
+                const serviceList = document.getElementById('service-list');
+                serviceList.innerHTML = runtime.services.map(s => `
+                    <div class="service-item">
+                        <span>${s.name.replace('_', ' ')}</span>
+                        <span class="status-pill ${s.status}">${s.status}</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("Error loading runtime:", e);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadChips();
@@ -1118,9 +1202,11 @@
             loadGraph();
             loadAntimodal();
             loadNodes();
+            loadRuntime();
 
             // Periodicals
             setInterval(loadNodes, 10000);
+            setInterval(loadRuntime, 15000);
             setInterval(loadInsights, 30000);
             setInterval(loadProposals, 45000);
         });

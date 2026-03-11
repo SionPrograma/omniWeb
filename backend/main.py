@@ -122,6 +122,10 @@ async def startup_event():
     from backend.core.distributed_bus.node_health_monitor import node_health_monitor
     await node_health_monitor.start()
 
+    # Initialize New Runtime Foundation
+    from backend.core.omni_runtime.runtime_controller import runtime_controller
+    await runtime_controller.initialize()
+
 @app.get(f"{settings.API_V1_STR}/system/nodes")
 async def get_nodes():
     """Returns list of active nodes in the distributed environment."""
@@ -162,14 +166,10 @@ async def get_system_usage():
 @app.get(f"{settings.API_V1_STR}/system/runtime")
 async def get_system_runtime():
     """Returns the current runtime environment and orchestration mode."""
-    from backend.runtime.runtime_manager import runtime_manager
-    # Initialize runtime if not already done
-    if not runtime_manager.environment:
-         runtime_manager.initialize_runtime()
-         
+    from backend.core.omni_runtime.runtime_controller import runtime_controller
     return {
         "status": "ok",
-        "runtime": runtime_manager.get_status()
+        "runtime": runtime_controller.get_runtime_summary()
     }
 
 @app.get(f"{settings.API_V1_STR}/system/memory")
@@ -260,6 +260,12 @@ async def execute_proposal(proposal_id: int):
     """Executes a system improvement proposal through the stability loop."""
     from backend.core.self_improvement.proposal_engine import proposal_engine
     return await proposal_engine.execute_proposal(proposal_id)
+
+@app.post(f"{settings.API_V1_STR}/system/runtime/profile")
+async def switch_runtime_profile(profile: str):
+    """Switches the active runtime profile using the Stability Loop."""
+    from backend.core.omni_runtime.runtime_controller import runtime_controller
+    return await runtime_controller.switch_profile(profile)
 
 @app.post(f"{settings.API_V1_STR}/system/bus/receive")
 async def receive_distributed_event(request: Request):
