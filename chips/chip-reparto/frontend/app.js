@@ -36,15 +36,26 @@ const btnMarkPending = document.getElementById('btn-mark-pending');
 const btnCloseDetail = document.getElementById('btn-close-detail');
 
 // ---- Initialization ----
-function init() {
+async function init() {
     navigation.navigateTo(CHIP_ID);
 
-    // Try to restore previous state, otherwise use default
-    const savedState = stateManager.restoreState(CHIP_ID);
-    if (savedState && savedState.stops) {
-        stops = savedState.stops;
-    } else {
-        stops = [...defaultStops];
+    try {
+        const response = await fetch('/api/v1/reparto/stops');
+        if (response.ok) {
+            const data = await response.json();
+            stops = data.stops || [...defaultStops];
+        } else {
+            throw new Error('Backend not ready');
+        }
+    } catch (e) {
+        console.warn("Backend connection failed, using local state fallback:", e);
+        // Try to restore previous local state, otherwise use default
+        const savedState = stateManager.restoreState(CHIP_ID);
+        if (savedState && savedState.stops) {
+            stops = savedState.stops;
+        } else {
+            stops = [...defaultStops];
+        }
     }
 
     renderStopsList();
@@ -136,7 +147,7 @@ function updateDetailStatusUI(status) {
     detailStatus.innerText = statusText;
 }
 
-function changeStopStatus(newStatus) {
+async function changeStopStatus(newStatus) {
     if (!currentDetailId) return;
 
     const stopIndex = stops.findIndex(s => s.id === currentDetailId);
@@ -144,7 +155,21 @@ function changeStopStatus(newStatus) {
         stops[stopIndex].status = newStatus;
         updateDetailStatusUI(newStatus);
 
-        // Save state logic
+        // Attempt to sync with backend
+        try {
+            const res = await fetch(`/api/v1/reparto/stops/${currentDetailId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (!res.ok) {
+                console.warn('Backend response was not ok when updating status.');
+            }
+        } catch (e) {
+            console.warn('Backend sync failed, using local persistence only:', e);
+        }
+
+        // Save state logic (Local Fallback)
         stateManager.saveState(CHIP_ID, { stops });
 
         // Re-render hidden list
