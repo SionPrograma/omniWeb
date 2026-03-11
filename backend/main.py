@@ -11,8 +11,12 @@ import os
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.core.auth import get_admin_user
 
+from backend.core.self_check import run_self_checks
+
 # Ensure the root of the project is in the Python path so we can import modules
 sys.path.append(os.getcwd())
+
+run_self_checks()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -56,9 +60,50 @@ app.add_middleware(ChipContextMiddleware)
 async def root():
     return FileResponse("frontend/dashboard/index.html")
 
+import shutil
+import time
+
+START_TIME = time.time()
+
 @app.get(f"{settings.API_V1_STR}/system/health")
 async def health_check():
-    return {"status": "ok", "service": "omniweb-core"}
+    """
+    Enhanced diagnostics for product-grade observability.
+    """
+    # 1. Check Disk
+    total, used, free = shutil.disk_usage(".")
+    disk_ok = free > (100 * 1024 * 1024) # 100MB safety margin
+    
+    # 2. Check DB
+    db_ok = False
+    migration_status = "unknown"
+    try:
+        from backend.core.permissions import set_chip_context
+        with set_chip_context("core"):
+            with db_manager.get_connection() as conn:
+                conn.execute("SELECT 1").fetchone()
+                db_ok = True
+                # Check migrations
+                row = conn.execute("SELECT COUNT(*) as cnt FROM system_migrations").fetchone()
+                migration_status = f"{row['cnt']} applied"
+    except Exception as e:
+        logger.error(f"Health check DB failure: {e}")
+
+    uptime = int(time.time() - START_TIME)
+    
+    status = "ok" if (disk_ok and db_ok) else "degraded"
+    
+    return {
+        "status": status,
+        "service": "omniweb-core",
+        "version": settings.VERSION,
+        "uptime_seconds": uptime,
+        "diagnostics": {
+            "disk_free_mb": free // (1024 * 1024),
+            "db_connected": db_ok,
+            "migrations": migration_status
+        }
+    }
 
 @app.get(f"{settings.API_V1_STR}/system/chips")
 async def get_system_chips():
@@ -96,6 +141,21 @@ async def create_db_backup(admin_user: dict = Security(get_admin_user)):
         try:
             backup_path = db_manager.backup_db()
             return {"status": "success", "backup_path": backup_path}
+        except Exception as e:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=500, detail=str(e))
+
+@app.post(f"{settings.API_V1_STR}/system/db/restore")
+async def restore_db_from_backup(filename: str, admin_user: dict = Security(get_admin_user)):
+    """Triggers a restore from a specific backup file in the backups folder."""
+    from backend.core.permissions import set_chip_context
+    data_dir = os.path.dirname(db_manager.db_path)
+    source_path = os.path.join(data_dir, "backups", filename)
+    
+    with set_chip_context("core"):
+        try:
+            db_manager.restore_db(source_path)
+            return {"status": "success", "message": f"Database restored from {filename}"}
         except Exception as e:
             from fastapi import HTTPException
             raise HTTPException(status_code=500, detail=str(e))

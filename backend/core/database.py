@@ -122,5 +122,22 @@ class DatabaseManager:
         logger.info("DB backup completed successfully.")
         return destination_path
 
+    def restore_db(self, source_path: str):
+        """
+        Restores the main database from a backup file path.
+        Uses the backup API to safely overwrite the current database online.
+        """
+        if not os.path.exists(source_path):
+            raise FileNotFoundError(f"Backup file not found: {source_path}")
+
+        logger.warning(f"Restoring database from {source_path}...")
+        
+        # We use direct connections to bypass permission logic for this critical operation
+        with sqlite3.connect(source_path) as source:
+            with sqlite3.connect(self.db_path) as dest:
+                source.backup(dest)
+                
+        logger.info("Database restoration complete.")
+
 # Global instance for shared access
 db_manager = DatabaseManager()
