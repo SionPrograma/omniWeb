@@ -3,49 +3,74 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chip Reparto | OmniWeb</title>
-    <style>
-        body {
-            background: #050510;
-            color: white;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        .portable-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            border-radius: 20px;
-            text-align: center;
-        }
-
-        .status {
-            color: #00e5ff;
-            font-family: monospace;
-        }
-
-        .back-btn {
-            margin-top: 2rem;
-            color: #aaa;
-            text-decoration: none;
-            border-bottom: 1px solid #333;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for a modern, clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
-    <div class="portable-card">
-        <h1>Chip Reparto</h1>
-        <p class="status">PORTABLE FIRST / MAP OPTIONAL</p>
-        <p>Esperando integración de chip_portable...</p>
+    <div id="app" class="app-container">
+
+        <!-- Header -->
+        <header class="top-nav">
+            <button id="btn-back" class="icon-btn back-btn" aria-label="Volver">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
+            <h1 class="nav-title">Reparto</h1>
+            <div class="nav-spacer"></div>
+        </header>
+
+        <!-- Main View (List of Stops) -->
+        <main id="view-list" class="view active">
+            <div class="status-panel">
+                <p>Progreso: <span id="progress-text">0/0</span></p>
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <ul id="stops-list" class="stops-list">
+                <!-- Stops will be injected here via JS -->
+            </ul>
+        </main>
+
+        <!-- Detail View (Specific Stop) -->
+        <main id="view-detail" class="view hidden">
+            <div class="detail-card">
+                <h2 id="detail-address" class="detail-title">Dirección...</h2>
+                <p id="detail-name" class="detail-subtitle">Cliente...</p>
+
+                <div class="detail-info">
+                    <p><strong>Pedido:</strong> <span id="detail-order-id">#000</span></p>
+                    <p><strong>Estado:</strong> <span id="detail-status" class="badge">Pendiente</span></p>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-success" id="btn-mark-delivered">
+                        Entregado
+                    </button>
+                    <button class="btn btn-warning" id="btn-mark-absent">
+                        Ausente
+                    </button>
+                    <button class="btn btn-secondary" id="btn-mark-pending">
+                        Marcar Pendiente
+                    </button>
+                </div>
+
+                <button class="btn btn-outline" id="btn-close-detail" style="margin-top: 1.5rem; width: 100%;">
+                    Cerrar Detalle
+                </button>
+            </div>
+        </main>
+
     </div>
-    <a href="/" class="back-btn">Volver al Dashboard</a>
+
+    <!-- Modulo de App con importaciones de Core -->
+    <script type="module" src="app.js"></script>
 </body>
 
 </html>
