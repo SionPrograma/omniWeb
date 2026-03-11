@@ -17,10 +17,6 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Mount Lingua UI
-# We mount it at /lingua to serve the HTML/JS/CSS from the module's ui directory
-app.mount("/lingua", StaticFiles(directory="modules/lingua/ui", html=True), name="lingua_ui")
-
 # Set up CORS
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
@@ -39,16 +35,40 @@ async def root():
 async def health_check():
     return {"status": "ok", "service": "omniweb-core"}
 
-# Register active modules
+# Mount Core static resources
+app.mount("/core", StaticFiles(directory="core"), name="core_static")
+
+# Mount Modules UI & Register API Routes
 for module_name in settings.ACTIVE_MODULES:
+    # 1. Mount UI
+    ui_path = None
     if module_name == "lingua":
-        module_registry.register_module(
-            app=app,
-            module_name="lingua",
-            router_import_path="modules.lingua.api.lingua_routes.router",
-            prefix="/api/v1/lingua"
-        )
-    # Future modules can be added here or the registry can be made even more dynamic
+        ui_path = "modules/lingua/ui"
+    else:
+        chip_folder = f"chip-{module_name}"
+        ui_path = f"chips/{chip_folder}/frontend"
+    
+    if ui_path and os.path.exists(ui_path):
+        app.mount(f"/{module_name}", StaticFiles(directory=ui_path, html=True), name=f"{module_name}_ui")
+        print(f"Mounted UI for {module_name} at /{module_name}")
+
+    # 2. Register API Router (if exists)
+    router_path = None
+    if module_name == "lingua":
+        router_path = "modules.lingua.api.lingua_routes.router"
+    else:
+        # Expected pattern for new chips: chips.chip-name.core.router
+        router_path = f"chips.chip-{module_name}.core.router"
+        
+    # Attempt registration (registry handles errors if path doesn't exist)
+    module_registry.register_module(
+        app=app,
+        module_name=module_name,
+        router_import_path=router_path,
+        prefix=f"{settings.API_V1_STR}/{module_name}"
+    )
+
+
 
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

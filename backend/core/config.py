@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
     # Active modules list
-    ACTIVE_MODULES: list[str] = ["lingua"]
+    ACTIVE_MODULES: list[str] = ["lingua", "reparto", "finanzas", "programacion", "musica"]
+
 
     class Config:
         case_sensitive = True
