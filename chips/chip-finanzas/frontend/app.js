@@ -47,16 +47,27 @@ const inputDesc = document.getElementById('input-desc');
 let currentSelectedType = 'expense';
 
 // ---- Initialization ----
-function init() {
+async function init() {
     // Notify nav system
     navigation.navigateTo(CHIP_ID);
 
-    // Try to restore previous state, otherwise use default
-    const savedState = stateManager.restoreState(CHIP_ID);
-    if (savedState && savedState.transactions) {
-        state.transactions = savedState.transactions;
-    } else {
-        state.transactions = [...defaultTransactions];
+    try {
+        const response = await fetch('/api/v1/finanzas/transactions');
+        if (response.ok) {
+            const data = await response.json();
+            state.transactions = data;
+        } else {
+            throw new Error('Servidor respondió con error');
+        }
+    } catch (e) {
+        console.warn('Conexión al backend falló. Usando LocalStorage (Fallback)', e);
+        // Try to restore previous state, otherwise use default
+        const savedState = stateManager.restoreState(CHIP_ID);
+        if (savedState && savedState.transactions && savedState.transactions.length > 0) {
+            state.transactions = savedState.transactions;
+        } else {
+            state.transactions = [...defaultTransactions];
+        }
     }
 
     calculateSummary();
@@ -82,17 +93,33 @@ function calculateSummary() {
     stateManager.saveState(CHIP_ID, state);
 }
 
-function addTransaction(type, amount, desc) {
+async function addTransaction(type, amount, desc) {
     const newTx = {
-        id: Date.now(),
         type,
         amount: parseFloat(amount),
-        desc,
-        date: new Date().toISOString()
+        desc
     };
 
-    // Add to beginning of array
-    state.transactions.unshift(newTx);
+    try {
+        const response = await fetch('/api/v1/finanzas/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newTx)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Backend procesó y devolvió ID/Fecha
+            state.transactions.unshift(data.transaction);
+        } else {
+            throw new Error('No se guardó remoto');
+        }
+    } catch (e) {
+        console.warn('Guardado en backend falló. Guardando localmente...', e);
+        newTx.id = Date.now();
+        newTx.date = new Date().toISOString();
+        state.transactions.unshift(newTx);
+    }
 
     calculateSummary();
     renderDashboard();
@@ -205,7 +232,7 @@ function setupEventListeners() {
         });
     });
 
-    btnSaveTransaction.addEventListener('click', () => {
+    btnSaveTransaction.addEventListener('click', async () => {
         const amount = inputAmount.value;
         const desc = inputDesc.value;
 
@@ -214,7 +241,12 @@ function setupEventListeners() {
             return;
         }
 
-        addTransaction(currentSelectedType, amount, desc.trim());
+        const btnOriginalText = btnSaveTransaction.innerText;
+        btnSaveTransaction.innerText = "Guardando...";
+
+        await addTransaction(currentSelectedType, amount, desc.trim());
+
+        btnSaveTransaction.innerText = btnOriginalText;
         hideAddForm();
     });
 }

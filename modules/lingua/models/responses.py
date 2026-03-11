@@ -18,3 +18,8 @@ class JobDetailResponse(BaseModel):
     message: str
     result_url: Optional[str] = None
     error: Optional[str] = None
+
+class TextTranslateResponse(BaseModel):
+    translation: str
+    transliteration: str
+    pronunciation: str

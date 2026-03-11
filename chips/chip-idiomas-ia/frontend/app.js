@@ -95,11 +95,35 @@ function init() {
 }
 
 // ---- Logic & Actions ----
-function simulateTranslation(text, source, target) {
+async function simulateTranslation(text, source, target) {
     // 1. Clean input
     const cleanText = text.trim().toLowerCase();
 
-    // 2. Check mocks
+    // 2. Intentar llamar al backend real (Conexión Transicional)
+    try {
+        const response = await fetch('/api/v1/lingua/process/text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: cleanText,
+                source_lang: source,
+                target_lang: target
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return {
+                t: data.translation,
+                tr: data.transliteration,
+                pr: data.pronunciation
+            };
+        }
+    } catch (e) {
+        console.warn('Backend connection failed, returning local fallback.', e);
+    }
+
+    // 3. Fallback to local offline mocks if backend is unreachable
     let resultObj = null;
 
     // Exact match in our mock DB
@@ -108,24 +132,26 @@ function simulateTranslation(text, source, target) {
     } else {
         // Fallback generic response to show structure without failing
         resultObj = {
-            t: `[${target.toUpperCase()}] ${text}`, // Fake translation
+            t: `[LOCAL ${target.toUpperCase()}] ${text}`, // Fake translation
             tr: text.split(' ').join('-') + "-[syl]", // Fake syllables
-            pr: `/${cleanText.toLowerCase()}/` // Fake pronunciation
+            pr: `/${cleanText}/` // Fake pronunciation
         };
     }
 
     return resultObj;
 }
 
-function handleTranslation() {
+async function handleTranslation() {
     const text = textInput.value;
     if (!text.trim()) return;
 
     const source = selSource.value;
     const target = selTarget.value;
 
-    // Simulate backend call (sync for now)
-    const result = simulateTranslation(text, source, target);
+    labelTraduccion.innerText = "Conectando al backend...";
+
+    // Simulate backend call (sync for now -> now async transicional)
+    const result = await simulateTranslation(text, source, target);
 
     // Update State
     state.sourceLang = source;

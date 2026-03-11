@@ -6,6 +6,11 @@ class TranslationRequest(BaseModel):
     target_lang: str = "es"
     voice_clone: bool = False
 
+class TextTranslateRequest(BaseModel):
+    text: str
+    source_lang: str
+    target_lang: str
+
 class JobStatusResponse(BaseModel):
     job_id: str
     status: str

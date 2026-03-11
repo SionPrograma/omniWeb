@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form, HTTPException
-from ..models.requests import TranslationRequest
-from ..models.responses import JobResponse, JobDetailResponse
+from ..models.requests import TranslationRequest, TextTranslateRequest
+from ..models.responses import JobResponse, JobDetailResponse, TextTranslateResponse
 from ..services.job_manager import job_manager
 from ..services.lingua_pipeline import processing_service
 from ..models.lingua_config import settings
@@ -56,3 +56,17 @@ async def get_status(job_id: str):
         raise HTTPException(status_code=404, detail="El ID del trabajo no existe.")
     
     return JobDetailResponse(**job)
+
+@router.post("/text", response_model=TextTranslateResponse)
+async def translate_text(req: TextTranslateRequest):
+    """
+    Endpoint de transición v0.2.0 para habilitar la interfaz de Chip-Idiomas-IA.
+    Por ahora realiza un procesamiento local en backend (mock) como prueba de conexión
+    red/arquitectura, preparando el terreno para conectar la IA (Ollama/Groq) real.
+    """
+    clean_text = req.text.strip().lower()
+    return TextTranslateResponse(
+        translation=f"[Backend {req.target_lang.upper()}] {req.text}",
+        transliteration="-".join(req.text.split()) + "-[syl]",
+        pronunciation=f"/{clean_text}/"
+    )
