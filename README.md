@@ -1,11 +1,25 @@
 # OmniWeb 🌐
-**Version:** v0.2.0
+**Version:** v0.2.1
 
 OmniWeb es un **Sistema Operativo Personal Web** en fase de desarrollo activo. Fue diseñado para centralizar y orquestar múltiples servicios, aplicaciones y dominios de conocimiento (finanzas, aprendizaje, gestión de ideas) bajo un único ecosistema digital ligero y unificado.
 
 El enfoque técnico principal del proyecto es proveer un portafolio de arquitectura robusta, priorizando el agnosticismo de frameworks de frontend y el crecimiento incremental seguro por encima del sobre-diseño (*over-engineering*).
 
-## 🏗 Arquitectura (v0.2.0)
+## 🚀 Quick Start (Arranque Automático)
+
+Para levantar el entorno completo de OmniWeb en local (Backend Orquestador + UI Frontend + APIs):
+
+1. Clona el repositorio.
+2. Asegúrate de tener dependencias básicas inicializadas (`pip install fastapi uvicorn pydantic-settings`).
+3. Ejecuta desde la raíz del proyecto:
+   ```bash
+   python backend/main.py
+   ```
+4. Abre tu navegador en `http://localhost:8000`.
+
+*Nota: La plataforma es "Portable First". Si un endpoint falla o la conexión a red se interrumpe, la mayoría de los "Chips" poseen un fallback local a StateManager/LocalStorage para no bloquear el progreso del usuario.*
+
+## 🏗 Arquitectura (v0.2.1)
 
 OmniWeb rompe deliberadamente con la tendencia predominante de las *Single Page Applications* (SPA) monolíticas en React o Vue. En su lugar, opera como una **Multi-Page Application (MPA)** híbrida:
 
@@ -26,7 +40,7 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 - `chips/`: El estándar activo para crear módulos.
 - `modules/`: Código **Legacy**. Alberga servicios complejos, pesados o transicionales desarrollados en las fases pre-chips de OmniWeb (Servicios Pydantic, Whisper AI, inferencias).
 
-## 🔋 Estado Actual del Ecosistema (v0.2.0)
+## 🔋 Estado Actual del Ecosistema (v0.2.1)
 
 ### 📌 Implementado y Estándar
 - **Dashboard Central**: Activo. Realiza tracking inteligente mediante el `state-manager` para resaltar de qué chip provino el usuario.
@@ -39,7 +53,7 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 - **Lingua (`modules/lingua`)**: Es el backend poderoso en Python que orquesta IA de voz pero cuyo Front original ya no condice con la arquitectura. Su uso visual está **depreciado**.
 
 ### 🔭 Roadmap y Visión Futura (Documentado, Ejecución Pendiente)
-- **Persistencia en Base de Datos**: Actualmente, OmniWeb v0.2.0 delega responsablemente el guardado de sesiones temporales y progresos al `LocalStorage` o `SessionStorage` puro de cada componente a fin de no bloquear la creación de UI. En el futuro, el orquestador FastApi abrirá endpoints de resguardo persistente.
+- **Persistencia en Base de Datos**: Actualmente, OmniWeb v0.2.1 delega responsablemente el guardado de sesiones temporales y progresos al `LocalStorage` o `SessionStorage` puro de cada componente a fin de no bloquear la creación de UI. En el futuro, el orquestador FastAPI abrirá endpoints de resguardo persistente definitivo (SQLite/PosgreSQL).
 - **Migración de Backend de IA**: Extraer los endpoints asíncronos y rutinas LLM pesadas que viven apagadas hoy en `modules/lingua/services` e inyectarlas dentro de la api oficial del `chips/chip-idiomas-ia/api/`.
 - **Chip Música**: En estado de *Placeholder*. Existe organización de ideas lógicas pero falta desarrollar su interfaz visual.
 - **Multiusuario & Identidad**: Hoy la plataforma es intrínsecamente monousuario (pensada como herramienta personal del desarrollador). A futuro, implementará _Auth_ centralizado.

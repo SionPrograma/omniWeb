@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "OmniWeb Platform"
-    VERSION: str = "0.2.0"
+    VERSION: str = "0.2.1"
     API_V1_STR: str = "/api/v1"
     
     # Cors configuration
