@@ -1,9 +1,9 @@
-# OmniWeb v1.0 Architecture (ADR-001)
+# OmniWeb v0.2.0 Architecture (ADR-001)
 
 ## Contexto y Decisión Estratégica
 OmniWeb ha evolucionado orgánicamente desde pequeños experimentos hasta convertirse en un ecosistema de aplicaciones (Chips). Durante la maduración del repositorio, surgió la necesidad de definir un marco de trabajo estable.
 
-Se decidió formalizar la **Arquitectura v1.0** bajo los siguientes principios innegociables:
+Se decidió formalizar la **Arquitectura v0.2.0** bajo los siguientes principios innegociables:
 1. **Multi-Page Application (MPA) basada en Módulos:** No se migrará a Single Page Application (SPA), React o Vite. La separación de páginas/chips es natural y robusta. FastApi actúa como orquestador.
 2. **Vanilla First:** El frontend se mantiene en Vanilla JS, HTML y CSS para garantizar cero dependencias agresivas, alta durabilidad y un claro principio pedagógico.
 3. **Persistencia Local Desacoplada:** El uso del state-manager y nav-system nativos ha probado ser suficiente para la fase actual.
@@ -31,4 +31,4 @@ Existen dos directorios llamados `core` con propósitos radicalmente opuestos. E
 - El backend (`backend/main.py`) es agnóstico del chip: si está en `config.py -> ACTIVE_MODULES`, simplemente lo monta.
 
 ---
-*OmniWeb Architecture v1.0 - Decisión Consolidada*
+*OmniWeb Architecture v0.2.0 - Decisión Consolidada*

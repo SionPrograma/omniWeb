@@ -1,9 +1,9 @@
 # OmniWeb
-**Version:** 1.0.0
+**Version:** 0.2.0
 
 OmniWeb is a modular personal platform designed to centralize and integrate multiple services, applications, and artificial intelligence instances under a single, unified ecosystem.
 
-## 🏗 Architecture (v1.0)
+## 🏗 Architecture (v0.2.0)
 The platform operates as a modular **Multi-Page Application (MPA)** orchestrated by FastAPI, utilizing Vanilla JS for minimal-dependency frontend isolation.
 
 To avoid structural ambiguities, the repository conventions are strict:
@@ -18,7 +18,7 @@ To avoid structural ambiguities, the repository conventions are strict:
 - `docs/`: Official documentation, Architectural Decision Records (ADRs), and sprint logs.
 - `scripts/`: Utilities for DevOps.
 
-> **Note:** For deep architectural decisions, check `docs/fase06_arquitectura_v1.md`.
+> **Note:** For deep architectural decisions, check `docs/fase08_arquitectura_v0.2.0.md`.
 
 ## 🚀 Vision
 This repository formalizes the foundation of the OmniWeb architecture. It transitions legacy isolated projects into a powerful, interconnected digital ecosystem without relying on SPA bloat.

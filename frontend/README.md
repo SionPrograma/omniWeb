@@ -1,7 +1,7 @@
 # Frontend Global Dashboard (`frontend/`)
 
 > **⚠️ AVISO ESTRUCTURAL IMPORTANTE:**
-> A diferencia de proyectos React/SPA donde esta carpeta contaría TODAS las páginas e interfaces de las apps, **en la arquitectura de OmniWeb v1.0, esta carpeta SOLO tiene bajo responsabilidad el Dashboard o Portal Central de Entrada o Shell UI (que levanta `/`)**.
+> A diferencia de proyectos React/SPA donde esta carpeta contaría TODAS las páginas e interfaces de las apps, **en la arquitectura de OmniWeb v0.2.0, esta carpeta SOLO tiene bajo responsabilidad el Dashboard o Portal Central de Entrada o Shell UI (que levanta `/`)**.
 
 ## Convenciones de Uso
 1. **Punto Único**: Este directorio tiene esencialmente un `index.html` estático del menú raíz (portal galáctico o hub).

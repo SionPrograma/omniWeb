@@ -3,7 +3,7 @@
 > **⚠️ AVISO ESTRUCTURAL IMPORTANTE:** 
 > Esta carpeta (`modules/`) marca el historial arquitectónico inicial del proyecto, cuando las funcionalidades de backend estaban estructuradas como `lingua`, `assistant`, `planner`, etc.
 >
-> **Bajo la Arquitectura v1.0, NO debes crear nuevos proyectos funcionales aquí.**
+> **Bajo la Arquitectura v0.2.0, NO debes crear nuevos proyectos funcionales aquí.**
 
 ## Convención Actualizada (OmniWeb Chips)
 La nueva convención del repositorio integra el *frontend y el backend asociado a dicho dominio* juntos dentro de la raiz directoria: `chips/chip-{nombre}/`.

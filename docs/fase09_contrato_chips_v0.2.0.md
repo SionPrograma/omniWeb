@@ -1,10 +1,10 @@
-# Contrato Mínimo de Chips (OmniWeb v1.0)
+# Contrato Mínimo de Chips (OmniWeb v0.2.0)
 ADR-002: Definición del Estándar de Módulo
 
 ## Contexto
 Para evitar que cada macro-aplicación (chip) se construya con interfaces, lógicas de navegación o persistencia totalmente dispares, es imperativo establecer un contrato mínimo realista basado en el código ya funcional en el repositorio. Este contrato dicta qué convierte a una carpeta dentro de `chips/` en un verdadero "Chip OmniWeb".
 
-## El Contrato Estándar v1.0
+## El Contrato Estándar v0.2.0
 Todo nuevo chip en `chips/chip-{nombre}/` debe contar, como mínimo, con la siguiente estructura y comportamiento:
 
 ### Estructura de Directorios Clave

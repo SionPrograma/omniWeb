@@ -1,4 +1,4 @@
-# OmniWeb Chips (Arquitectura v1.0)
+# OmniWeb Chips (Arquitectura v0.2.0)
 Estructura modular de funcionalidades ("chips") independientes. 
 
 > **CONVENCIÓN ACTUAL:** Un **Chip** funge como la macro-aplicación principal de un micro-dominio operativo del ecosistema. Reemplazan el diseño legacy de `/modules/`.
