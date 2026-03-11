@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
     # Active modules list
-    ACTIVE_MODULES: list[str] = ["lingua", "reparto", "finanzas", "programacion", "musica"]
+    ACTIVE_MODULES: list[str] = ["idiomas-ia", "lingua", "reparto", "finanzas", "programacion", "musica"]
 
 
     class Config:

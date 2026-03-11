@@ -10,5 +10,6 @@ Módulo para el aprendizaje de idiomas con inteligencia artificial.
 - `playback/`: Reproducción y TTS.
 - `learning-mode/`: Actividades de práctica.
 - `shared/`: Diccionarios y lógica común.
+- `frontend/`: (Nuevo) Interfaz visual de mentoría bilingüe. Contiene el input con selectores de idiomas y el dashboard de resultados.
 
 *Basado en el módulo legacy `modules/lingua`.*
