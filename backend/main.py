@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from backend.core.config import settings
 from backend.core.module_registry import module_registry
+from backend.core.database import db_manager
 import uvicorn
 import sys
 import os
@@ -42,6 +43,9 @@ async def get_system_chips():
 
 # Mount Core static resources
 app.mount("/core", StaticFiles(directory="core"), name="core_static")
+
+# Initialize Persistence Layer
+db_manager.init_db()
 
 # Mount Modules UI & Register API Routes
 for module_name in settings.ACTIVE_MODULES:

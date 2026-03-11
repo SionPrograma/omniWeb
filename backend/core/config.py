@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     # Active modules list
     ACTIVE_MODULES: list[str] = ["idiomas-ia", "lingua", "reparto", "finanzas", "programacion", "musica"]
 
+    # Database & Storage
+    DATA_DIR: str = "backend/data"
+    DATABASE_NAME: str = "omniweb.db"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return os.path.join(self.DATA_DIR, self.DATABASE_NAME)
+
 
     class Config:
         case_sensitive = True
