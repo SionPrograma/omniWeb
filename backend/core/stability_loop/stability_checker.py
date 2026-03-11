@@ -19,25 +19,38 @@ class StabilityChecker:
             "stats": await self.check_stats(),
             "database": self.check_db(),
             "chips": await self.check_chips(),
+            "distributed": await self.check_distributed_sync()
         }
         
         is_stable = all(results.values())
         return {"is_stable": is_stable, "details": results}
 
-    async def check_health(self) -> bool:
-        import requests
+    async def check_distributed_sync(self) -> bool:
         try:
-            resp = requests.get(f"{self.base_url}/api/v1/system/health", timeout=5.0)
-            return resp.status_code == 200 and resp.json().get("status") == "ok"
+            from backend.core.distributed_bus.node_registry import node_registry
+            # Basic verification that registry is responsive
+            node_registry.get_active_nodes()
+            return True
+        except Exception:
+            return False
+
+    async def check_health(self) -> bool:
+        # Avoid HTTP call to self to prevent deadlock in single-threaded uvicorn
+        try:
+            import shutil
+            total, used, free = shutil.disk_usage(".")
+            disk_ok = free > (100 * 1024 * 1024)
+            return disk_ok and self.check_db()
         except Exception as e:
-            logger.error(f"Stability check failed: Health endpoint unreachable: {e}")
+            logger.error(f"Internal health check failed: {e}")
             return False
 
     async def check_stats(self) -> bool:
-        import requests
         try:
-            resp = requests.get(f"{self.base_url}/api/v1/system/stats", timeout=5.0)
-            return resp.status_code == 200
+            from backend.core.module_registry import module_registry
+            from backend.core.permissions import set_chip_context
+            active_chips = module_registry.get_active_modules()
+            return len(active_chips) > 0
         except Exception:
             return False
 
@@ -52,13 +65,10 @@ class StabilityChecker:
             return False
 
     async def check_chips(self) -> bool:
-        import requests
         try:
-            resp = requests.get(f"{self.base_url}/api/v1/system/chips", timeout=5.0)
-            if resp.status_code == 200:
-                chips = resp.json()
-                return len(chips) > 0
-            return False
+            from backend.core.module_registry import module_registry
+            chips = module_registry.discover_all_chips()
+            return len(chips) > 0
         except Exception:
             return False
 

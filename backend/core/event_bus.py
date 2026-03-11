@@ -91,6 +91,18 @@ class EventBus:
             # We use gather to run them concurrently. Exceptions are handled inside _run_async_handler
             await asyncio.gather(*tasks)
 
+        # Distributed Routing (Trigger outgoing distribution)
+        # Only if not already coming from another node
+        if not (isinstance(payload, dict) and payload.get("_distributed_ignore")):
+            try:
+                from backend.core.distributed_bus.distributed_event_router import distributed_event_router
+                from backend.core.permissions import get_current_chip
+                asyncio.create_task(distributed_event_router.route_outgoing(
+                    event_name, payload, chip_context=get_current_chip()
+                ))
+            except Exception as e:
+                logger.warning(f"EventBus: Distributed routing failed for '{event_name}': {e}")
+
     async def _run_async_handler(self, handler: Callable, event_name: str, payload: Any, chip_slug: Optional[str]):
         """Internal helper to wrap async handlers with error logging and context propagation."""
         from backend.core.permissions import set_chip_context

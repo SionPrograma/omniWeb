@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Security, Depends
+from fastapi import FastAPI, Security, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -115,6 +115,18 @@ async def get_system_chips():
         if chip.get("metadata", {}).get("dashboard_visible", True):
             filtered_chips.append(chip)
     return filtered_chips
+
+@app.on_event("startup")
+async def startup_event():
+    # Initialize Node Monitoring
+    from backend.core.distributed_bus.node_health_monitor import node_health_monitor
+    await node_health_monitor.start()
+
+@app.get(f"{settings.API_V1_STR}/system/nodes")
+async def get_nodes():
+    """Returns list of active nodes in the distributed environment."""
+    from backend.core.distributed_bus.node_registry import node_registry
+    return node_registry.get_active_nodes()
 
 @app.get(f"{settings.API_V1_STR}/system/stats")
 async def get_system_stats():
@@ -248,6 +260,14 @@ async def execute_proposal(proposal_id: int):
     """Executes a system improvement proposal through the stability loop."""
     from backend.core.self_improvement.proposal_engine import proposal_engine
     return await proposal_engine.execute_proposal(proposal_id)
+
+@app.post(f"{settings.API_V1_STR}/system/bus/receive")
+async def receive_distributed_event(request: Request):
+    """Receives an event from a remote OmniWeb node."""
+    from backend.core.distributed_bus.distributed_event_router import distributed_event_router
+    body = await request.body()
+    await distributed_event_router.route_incoming(body.decode())
+    return {"status": "success"}
 
 @app.post(f"{settings.API_V1_STR}/system/db/backup")
 async def create_db_backup(admin_user: dict = Security(get_admin_user)):
