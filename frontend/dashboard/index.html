@@ -306,6 +306,30 @@
             opacity: 0.6;
         }
 
+        /* Improvement Proposals Panel */
+        .proposals-panel {
+            position: fixed;
+            top: 21rem;
+            /* Below insights */
+            left: 2rem;
+            width: 300px;
+            background: rgba(40, 30, 60, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+        }
+
+        .proposal-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--accent-color);
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 600px) {
             .chips-container {
@@ -323,7 +347,8 @@
                 height: 350px;
             }
 
-            .insights-panel {
+            .insights-panel,
+            .proposals-panel {
                 display: none;
                 /* Hide on small screens for clarity */
             }
@@ -347,6 +372,15 @@
         <div id="insights-content">
             <div class="insight-item">
                 <span class="insight-label">Analizando...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proposals Panel -->
+    <div class="proposals-panel">
+        <div class="insights-title">AI Suggestions</div>
+        <div id="proposals-content">
+            <div style="font-size: 0.8rem; opacity: 0.6;">Sin sugerencias por ahora. El sistema está observando tu uso.
             </div>
         </div>
     </div>
@@ -477,8 +511,9 @@
         const aiInput = document.getElementById('ai-input');
         const sendBtn = document.getElementById('send-btn');
 
-        // Insights Logic
+        // Insights & Proposals Logic
         const insightsContent = document.getElementById('insights-content');
+        const proposalsContent = document.getElementById('proposals-content');
 
         async function loadInsights() {
             try {
@@ -500,7 +535,7 @@
                     usage.top_chips.forEach(chip => {
                         html += `
                             <div class="insight-item">
-                                <span class="insight-label">${chip.slug}</span>
+                                <span class="insight-label">${chip.slug || 'system'}</span>
                                 <span>${chip.count}</span>
                             </div>
                         `;
@@ -510,6 +545,35 @@
                 insightsContent.innerHTML = html;
             } catch (error) {
                 console.warn('Insights failed:', error);
+            }
+        }
+
+        async function loadProposals() {
+            try {
+                const response = await fetch('/api/v1/system/proposals');
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const proposals = data.proposals;
+
+                if (proposals.length === 0) {
+                    proposalsContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin sugerencias por ahora. El sistema está observando tu uso.</div>';
+                    return;
+                }
+
+                let html = '';
+                proposals.forEach(p => {
+                    html += `
+                        <div class="proposal-card">
+                            <strong>${p.proposal_type.replace('_', ' ').toUpperCase()}</strong>
+                            <p style="margin: 5px 0;">${p.description}</p>
+                            <span style="font-size: 0.7rem; color: var(--accent-color); cursor: pointer; text-decoration: underline;">Detalles</span>
+                        </div>
+                    `;
+                });
+                proposalsContent.innerHTML = html;
+            } catch (error) {
+                console.warn('Proposals failed:', error);
             }
         }
 
@@ -542,6 +606,7 @@
                     setTimeout(() => {
                         loadChips();
                         loadInsights();
+                        loadProposals();
                     }, 1000);
                 } else {
                     addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
@@ -568,6 +633,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadChips();
             loadInsights();
+            loadProposals();
         });
     </script>
 </body>

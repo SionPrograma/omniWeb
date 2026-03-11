@@ -22,7 +22,8 @@ class CommandRouter:
             "deactivate": self._handle_deactivate,
             "status": self._handle_status,
             "list": self._handle_list,
-            "workflow": self._handle_workflow
+            "workflow": self._handle_workflow,
+            "insights": self._handle_insights
         }
 
     async def route(self, message: str) -> AICommandResponse:
@@ -44,6 +45,8 @@ class CommandRouter:
              res = await self.intents["list"](msg)
         elif "workflow" in msg or "flujo" in msg or "sesión" in msg:
              res = await self.intents["workflow"](msg)
+        elif "insight" in msg or "mejorar" in msg or "optimizar" in msg or "sugerencia" in msg or "mejora" in msg:
+             res = await self.intents["insights"](msg)
         
         if not res:
             res = AICommandResponse(
@@ -121,5 +124,26 @@ class CommandRouter:
 
     async def _handle_workflow(self, msg: str) -> AICommandResponse:
         return AICommandResponse(intent="workflow_execute", status="pending", message="Motor de workflows en desarrollo.")
+
+    async def _handle_insights(self, msg: str) -> AICommandResponse:
+        from backend.core.self_improvement.proposal_engine import proposal_engine
+        new_found = proposal_engine.generate_proposals()
+        proposals = proposal_engine.get_pending_proposals()
+        
+        if not proposals:
+            return AICommandResponse(
+                intent="system_insights",
+                status="success",
+                message="No se detectaron nuevas áreas de mejora por ahora. ¡Tu sistema está optimizado!",
+                payload={}
+            )
+        
+        desc = "He detectado algunas oportunidades de optimización:\n" + "\n".join([f"- {p['description']}" for p in proposals])
+        return AICommandResponse(
+            intent="system_insights",
+            status="success",
+            message=desc,
+            payload={"proposals": proposals}
+        )
 
 ai_command_router = CommandRouter()

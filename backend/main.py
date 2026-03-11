@@ -147,6 +147,20 @@ async def get_system_usage():
         "usage": stats
     }
 
+@app.get(f"{settings.API_V1_STR}/system/proposals")
+async def get_system_proposals():
+    """Returns pending system improvement proposals."""
+    from backend.core.self_improvement.proposal_engine import proposal_engine
+    from backend.core.permissions import set_chip_context
+    
+    with set_chip_context("core"):
+        proposals = proposal_engine.get_pending_proposals()
+        
+    return {
+        "status": "ok",
+        "proposals": proposals
+    }
+
 @app.post(f"{settings.API_V1_STR}/system/db/backup")
 async def create_db_backup(admin_user: dict = Security(get_admin_user)):
     """Triggers an online backup of the SQLite database."""
