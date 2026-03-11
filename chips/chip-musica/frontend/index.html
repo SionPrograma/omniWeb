@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniWeb | Música</title>
+    <link rel="stylesheet" href="/core/shared.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+<body class="space-theme">
+    <div class="stars" id="stars"></div>
+
+    <nav class="glass-nav">
+        <a href="/" class="back-link">
+            <span class="icon">←</span> Dashboard
+        </a>
+        <div class="chip-title">
+            <span class="chip-icon">🎵</span>
+            <h1>Teoría & Impro</h1>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <div class="music-card glass">
+            <header class="card-header">
+                <h2>Explorador de Escalas</h2>
+                <p>Visualiza intervalos y estructuras armónicas en tiempo real.</p>
+            </header>
+
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Tónica</label>
+                    <select id="root-note">
+                        <option value="C">C</option>
+                        <option value="C#">C# / Db</option>
+                        <option value="D">D</option>
+                        <option value="D#">D# / Eb</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F# / Gb</option>
+                        <option value="G">G</option>
+                        <option value="G#">G# / Ab</option>
+                        <option value="A">A</option>
+                        <option value="A#">A# / Bb</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Modos / Escala</label>
+                    <select id="scale-type">
+                        <option value="major">Mayor (Jónico)</option>
+                        <option value="dorian">Dórico</option>
+                        <option value="phrygian">Frigio</option>
+                        <option value="lydian">Lidio</option>
+                        <option value="mixolydian">Mixolidio</option>
+                        <option value="minor">Menor (Eólico)</option>
+                        <option value="locrian">Locrio</option>
+                        <option value="pentatonic">Pentatónica Mayor</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="visualization-area">
+                <div class="scale-display" id="scale-display">
+                    <!-- Notas generadas dinámicamente -->
+                </div>
+            </div>
+
+            <div class="chords-area">
+                <h3>Acordes Diatónicos</h3>
+                <div class="chords-grid" id="chords-grid">
+                    <!-- Acordes generados dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js" type="module"></script>
+</body>
+
+</html>
