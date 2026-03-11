@@ -20,8 +20,14 @@ def run_self_checks():
     os.makedirs(os.path.join(data_dir, "migrations"), exist_ok=True)
     
     # 3. Security Checks
-    if settings.ADMIN_TOKEN == "omniweb-dev-secret-token":
-        logger.warning("SECURITY: Using default ADMIN_TOKEN. Please change this in production.")
+    if not settings.IS_ADMIN_TOKEN_SAFE:
+        logger.warning("!!! SECURITY CRITICAL !!!")
+        logger.warning("Using default ADMIN_TOKEN. This makes the system extremely vulnerable.")
+        logger.warning("Please set OMNIWEB_ADMIN_TOKEN environment variable immediately.")
+        
+        if os.getenv("OMNIWEB_STRICT_SECURITY", "0") == "1":
+            logger.error("STRICT SECURITY MODE: Refusing to start with insecure credentials.")
+            sys.exit(1)
     
     # 4. Storage Checks
     total, used, free = shutil.disk_usage(".")

@@ -223,7 +223,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     from backend.core.auth import get_user_by_username, verify_password, create_session
     from fastapi import HTTPException
     
-    # 1. Fetch user hash from DB
+    # 2. Verify and potentially upgrade hash
     with set_chip_context("core"):
         with db_manager.get_connection() as conn:
             row = conn.execute(
@@ -235,8 +235,20 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 raise HTTPException(status_code=400, detail="Incorrect username or password")
             
             user_id = row["id"]
+            current_hash = row["hashed_password"]
 
-    # 2. Create persistent session
+            # Lazy Hash Upgrade: If it's not bcrypt, update it now
+            from backend.core.auth import get_password_hash
+            if not (current_hash.startswith("$2b$") or current_hash.startswith("$2a$")):
+                new_hash = get_password_hash(form_data.password)
+                conn.execute(
+                    "UPDATE users SET hashed_password = ? WHERE id = ?",
+                    (new_hash, user_id)
+                )
+                conn.commit()
+                print(f"DEBUG: Upgraded password hash for user {form_data.username}")
+
+    # 3. Create persistent session
     token = create_session(user_id)
     
     return {"access_token": token, "token_type": "bearer"}

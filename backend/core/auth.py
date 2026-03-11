@@ -1,3 +1,4 @@
+import logging
 from fastapi import Depends, HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
@@ -8,6 +9,10 @@ import secrets
 from backend.core.config import settings
 from backend.core.database import db_manager
 from backend.core.permissions import set_chip_context
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token", auto_error=False)
 
@@ -43,14 +48,31 @@ def get_user_by_username(username: str) -> Optional[OmniUser]:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verifies a password against its hash. 
-    Currently uses simple comparison for the migration seed, 
-    should be upgraded to passlib/bcrypt for v1.0.
+    Supports bcrypt and provides a safe fallback for dev-mock hashes.
     """
-    # Fallback for the simple seed 'admin' -> 'admin-hash'
+    # 1. Standard Bcrypt verification
+    if hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$"):
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            return False
+
+    # 2. Legacy fallback for the simple seed 'admin' -> 'admin-hash'
     if hashed_password == "admin-hash" and plain_password == "admin":
+        logger.warning("Using legacy 'admin-hash'. Please update your password.")
         return True
-    # For now, we use a simple 'hash' prefix for simulation
-    return hashed_password == f"hash_{plain_password}" or hashed_password == plain_password
+        
+    # 3. Fallback for the development mock 'hash_' prefix
+    if hashed_password.startswith("hash_"):
+        return hashed_password == f"hash_{plain_password}"
+        
+    return hashed_password == plain_password
+
+def get_password_hash(password: str) -> str:
+    """
+    Generates a secure bcrypt hash for a plain text password.
+    """
+    return pwd_context.hash(password)
 
 def create_session(user_id: str) -> str:
     """Creates a new session in the database and returns the token."""

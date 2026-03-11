@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "OmniWeb Platform"
-    VERSION: str = "0.6.0"
+    VERSION: str = "0.6.1"
     API_V1_STR: str = "/api/v1"
     
     # Cors configuration
@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> str:
         return os.path.join(self.DATA_DIR, self.DATABASE_NAME)
+
+    @property
+    def IS_ADMIN_TOKEN_SAFE(self) -> bool:
+        """Checks if the current ADMIN_TOKEN is the default insecure one."""
+        return self.ADMIN_TOKEN != "omniweb-dev-secret-token"
 
 
     class Config:
