@@ -71,20 +71,33 @@ class EventBus:
             logger.error(f"EventBus: Error in async listener '{handler.__name__}' for '{event_name}': {e}")
 
     async def _persist_event(self, event_name: str, payload: Any):
-        """Saves interest events to SQLite for audit."""
+        """
+        Saves interest events to SQLite for audit.
+        Ensures that failures in persistence do not affect the main event flow.
+        """
         try:
-            payload_json = json.dumps(payload) if payload else None
-            # Extract source if available in payload
-            source = payload.get("source_chip") if isinstance(payload, dict) else None
-            
+            # 1. Safe JSON Serialization
+            try:
+                payload_json = json.dumps(payload) if payload is not None else None
+            except (TypeError, ValueError) as json_err:
+                logger.warning(f"EventBus: Could not serialize payload for '{event_name}': {json_err}")
+                payload_json = f"<Non-serializable: {type(payload).__name__}>"
+
+            # 2. Safe Source Extraction
+            source = None
+            if isinstance(payload, dict):
+                source = payload.get("source_chip")
+
+            # 3. Database Insertion
             with db_manager.get_connection() as conn:
                 conn.execute(
                     "INSERT INTO system_events (event_name, payload, source_chip) VALUES (?, ?, ?)",
                     (event_name, payload_json, source)
                 )
                 conn.commit()
+                
         except Exception as e:
-            logger.error(f"EventBus: Persistence failed for '{event_name}': {e}")
+            logger.error(f"EventBus: Critical persistence failure for '{event_name}': {e}")
 
 # Singleton instance for global use
 event_bus = EventBus()
