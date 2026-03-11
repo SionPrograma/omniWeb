@@ -1,6 +1,8 @@
 from typing import Dict, Any, Optional, List
-import logging
 from pydantic import BaseModel
+import logging
+from backend.core.multimodal.multimodal_router import multimodal_router, MultimodalInput
+from backend.core.multimodal.visual_response import VisualResponseEngine
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +32,12 @@ class CommandRouter:
             "graph": self._handle_graph
         }
 
-    async def route(self, message: str) -> AICommandResponse:
-        msg = message.lower()
+    async def route(self, message: str, modality: str = "text") -> AICommandResponse:
+        # Multimodal Entrance
+        input_v = MultimodalInput(modality=modality, raw_data=message)
+        msg = await multimodal_router.handle_input(input_v)
+        msg = msg.lower()
+        
         res = None
         
         # Simple rule-based intent classification
@@ -312,13 +318,21 @@ class CommandRouter:
                 related = query_engine.get_related_topics(topic)
                 if related:
                     topics_str = ", ".join([f"{r['name']} ({r['relationship']})" for r in related])
+                    
+                    # Add Visual Graph Payload
+                    visual = VisualResponseEngine.create_table(
+                        f"Relaciones de {topic}",
+                        ["Destino", "Tipo", "Relación"],
+                        [[r["name"], r["type"], r["relationship"]] for r in related]
+                    )
+                    
                     return AICommandResponse(
                         intent="graph_explore",
                         status="success",
                         message=f"Explorando '{topic}'. Temas relacionados: {topics_str}.",
-                        payload={"root": topic, "related": related}
+                        payload={"root": topic, "related": related, "visual": visual}
                     )
-                return AICommandResponse(intent="graph_explore", status="error", message=f"No encontré conexiones para '{topic}'. Prueba sincronizar el grafo.")
+                return AICommandResponse(intent="graph_explore", status="error", message=f"No encontré conexiones for '{topic}'. Prueba sincronizar el grafo.")
 
         # 2. Learning Path
         if "camino" in msg or "path" in msg or "aprender" in msg or "learn" in msg:

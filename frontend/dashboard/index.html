@@ -767,19 +767,40 @@
 
             const card = document.createElement('div');
             card.style.background = 'rgba(255,255,255,0.05)';
-            card.style.border = '1px dashed var(--accent-color)';
+            card.style.border = '1px solid var(--accent-color)';
             card.style.borderRadius = '12px';
-            card.style.padding = '10px';
-            card.style.fontSize = '0.8rem';
+            card.style.padding = '12px';
+            card.style.fontSize = '0.85rem';
+            card.style.marginTop = '10px';
+            card.style.maxHeight = '200px';
+            card.style.overflowY = 'auto';
+
+            let content = `<strong style="color: var(--accent-color); display: block; margin-bottom: 8px;">${payload.title || 'Información de Sistema'}</strong>`;
 
             if (payload.type.startsWith('chart')) {
-                card.innerHTML = `<strong>${payload.title}</strong><div style="height: 5px; background: var(--accent-color); width: 80%; margin: 10px 0; border-radius: 5px;"></div>`;
+                const values = payload.data?.values || [];
+                const labels = payload.data?.labels || [];
+                content += `<div style="display: flex; gap: 5px; align-items: flex-end; height: 60px; margin-top: 10px;">`;
+                values.forEach((v, i) => {
+                    const height = Math.min(v * 50, 60);
+                    content += `<div title="${labels[i]}: ${v}" style="flex: 1; background: var(--accent-color); height: ${height}px; border-radius: 2px;"></div>`;
+                });
+                content += `</div>`;
+            } else if (payload.type === 'table') {
+                const headers = payload.data?.headers || [];
+                const rows = payload.data?.rows || [];
+                content += `<table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">`;
+                content += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.1); opacity: 0.7;">${headers.map(h => `<th style="padding: 4px;">${h}</th>`).join('')}</tr>`;
+                rows.forEach(row => {
+                    content += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">${row.map(cell => `<td style="padding: 4px;">${cell}</td>`).join('')}</tr>`;
+                });
+                content += `</table>`;
             } else {
-                card.innerHTML = `<strong>${payload.title || 'Visual'}</strong><p>${payload.data || ''}</p>`;
+                content += `<p style="opacity: 0.8;">${typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data)}</p>`;
             }
 
+            card.innerHTML = content;
             visualArea.appendChild(card);
-            setTimeout(() => card.style.opacity = "1", 100);
         }
 
         async function sendToAI() {
@@ -791,7 +812,7 @@
             aiInput.value = '';
 
             try {
-                const token = localStorage.getItem('omniweb_token') || 'local-os-admin-token';
+                const token = localStorage.getItem('omniweb_token') || 'omniweb-dev-secret-token';
 
                 const response = await fetch('/api/v1/ai-host/process', {
                     method: 'POST',

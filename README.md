@@ -1,5 +1,5 @@
 # OmniWeb 🌐
-**Version:** v0.6.3
+**Version:** v0.6.4
 
 OmniWeb es un **Sistema Operativo Personal Web** en fase de desarrollo activo. Fue diseñado para centralizar y orquestar múltiples servicios, aplicaciones y dominios de conocimiento (finanzas, aprendizaje, gestión de ideas) bajo un único ecosistema digital ligero y unificado.
 
@@ -19,7 +19,7 @@ Para levantar el entorno completo de OmniWeb en local (Backend Orquestador + UI 
 
 *Nota: La plataforma es "Portable First". Si un endpoint falla o la conexión a red se interrumpe, la mayoría de los "Chips" poseen un fallback local a StateManager/LocalStorage para no bloquear el progreso del usuario.*
 
-## 🏗 Arquitectura (v0.6.3)
+## 🏗 Arquitectura (v0.6.4)
 
 OmniWeb rompe deliberadamente con la tendencia predominante de las *Single Page Applications* (SPA) monolíticas en React o Vue. En su lugar, opera como una **Multi-Page Application (MPA)** híbrida:
 
@@ -48,6 +48,7 @@ OmniWeb exige un respeto estricto a las responsabilidades por directorio:
 - **AI Developer**: Motor de auto-modificación de código y parcheo dinámico.
 - **Long Term Memory**: Persistencia de experiencias y contextos históricos.
 - **Knowledge Graph**: Red relacional de conceptos, proyectos y caminos de aprendizaje.
+- **Multimodal Interface**: Soporte para entrada de voz, gestos y salidas visuales estructuradas.
 - **Personal Context**: Detector de hábitos y rutinas para anticipación de necesidades.
 - **Self Improvement**: Generador de propuestas de optimización del sistema.
 - **Secure Auth & Zero Trust**: Sistema de permisos granular para chips y usuarios.
