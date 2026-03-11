@@ -15,19 +15,23 @@ class InterfaceAdapter:
 
     def format_response(self, text: str, data: Optional[dict] = None) -> dict:
         """
-        Adapts the response based on the current mode.
+        Adapts the response based on the current mode and adds multimodal logic.
         """
         response = {
             "mode": self.mode.value,
-            "text": text
+            "text": text,
+            "payload": data or {}
         }
+        
+        # Multimodal Layer: Visual response generation (Phase J)
+        if data and "visual" in data:
+             response["visual"] = data["visual"]
         
         if self.mode == InterfaceMode.TEXT:
             response["display_data"] = data or {}
         elif self.mode == InterfaceMode.VOICE:
-            response["speech"] = text # Simple placeholder
+            response["speech"] = text
             
         return response
 
-# Default global adapter
 adapter = InterfaceAdapter(InterfaceMode.TEXT)

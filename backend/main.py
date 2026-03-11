@@ -147,6 +147,19 @@ async def get_system_usage():
         "usage": stats
     }
 
+@app.get(f"{settings.API_V1_STR}/system/runtime")
+async def get_system_runtime():
+    """Returns the current runtime environment and orchestration mode."""
+    from backend.runtime.runtime_manager import runtime_manager
+    # Initialize runtime if not already done
+    if not runtime_manager.environment:
+         runtime_manager.initialize_runtime()
+         
+    return {
+        "status": "ok",
+        "runtime": runtime_manager.get_status()
+    }
+
 @app.get(f"{settings.API_V1_STR}/system/proposals")
 async def get_system_proposals():
     """Returns pending system improvement proposals."""

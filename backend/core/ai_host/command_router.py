@@ -24,7 +24,8 @@ class CommandRouter:
             "list": self._handle_list,
             "workflow": self._handle_workflow,
             "insights": self._handle_insights,
-            "suggest": self._handle_suggest
+            "suggest": self._handle_suggest,
+            "modify": self._handle_modify
         }
 
     async def route(self, message: str) -> AICommandResponse:
@@ -50,6 +51,8 @@ class CommandRouter:
              res = await self.intents["insights"](msg)
         elif "workflow" in msg or "flujo" in msg:
              res = await self.intents["workflow"](msg)
+        elif "modificar" in msg or "modify" in msg or "parche" in msg:
+             res = await self.intents["modify"](msg)
         
         if not res:
             res = AICommandResponse(
@@ -193,6 +196,58 @@ class CommandRouter:
             status="success",
             message="No encontré una rutina específica para este momento, pero puedo abrir tus favoritos si lo deseas.",
             payload={}
+        )
+
+    async def _handle_modify(self, msg: str) -> AICommandResponse:
+        from backend.core.ai_developer.code_analyzer import code_analyzer
+        from backend.core.ai_developer.patch_generator import patch_generator
+        from backend.core.ai_developer.chip_editor import chip_editor
+        from backend.core.ai_developer.module_reloader import module_reloader
+        
+        # Determine target chip
+        from backend.core.module_registry import module_registry
+        chips = module_registry.discover_all_chips()
+        target = None
+        for c in chips:
+            if c["slug"] in msg:
+                target = c["slug"]
+                break
+        
+        if not target:
+            return AICommandResponse(intent="modify_chip", status="error", message="Debes especificar un chip válido para modificar.")
+            
+        # 1. Analyze
+        analysis = code_analyzer.analyze_chip(target)
+        
+        # 2. Generate Patch
+        patches = patch_generator.generate_patch(msg, analysis)
+        if not patches:
+             return AICommandResponse(intent="modify_chip", status="error", message="No pude determinar los cambios necesarios para tu solicitud.")
+             
+        # 3. Apply
+        result = chip_editor.apply_patches(target, patches)
+        if result["status"] == "error":
+             return AICommandResponse(intent="modify_chip", status="error", message=f"Error al aplicar cambios: {result['message']}")
+             
+        # 4. Reload
+        module_reloader.reload_chip(target)
+        
+        from backend.core.interface.visual_interface import visual_interface
+        visual = visual_interface.create_visual_payload(
+            "chip-modification-success",
+            f"Modificado {len(result['applied'])} archivos en {target}",
+            f"AI Developer: {target}"
+        )
+
+        return AICommandResponse(
+            intent="modify_chip",
+            status="success",
+            message=f"El chip '{target}' ha sido modificado y recargado con éxito.",
+            payload={
+                "applied": result["applied"], 
+                "backup": result["backup"],
+                "visual": visual
+            }
         )
 
 ai_command_router = CommandRouter()

@@ -387,7 +387,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.4.9-stable</div>
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.0-stable</div>
     </header>
 
     <!-- Insights Panel -->
@@ -426,11 +426,18 @@
         <div class="ai-header">
             <div class="ai-status-dot"></div>
             <span style="font-weight: 600; font-size: 0.9rem;">AI HOST</span>
+            <div id="ai-multimodal-indicator"
+                style="margin-left: auto; font-size: 0.7rem; color: var(--accent-color); opacity: 0;">Escuchando...
+            </div>
         </div>
         <div class="ai-chat-history" id="chat-history">
             <div class="message ai">¡Hola! Soy tu asistente de OmniWeb. ¿En qué puedo ayudarte hoy?</div>
         </div>
+        <div id="ai-visual-response" style="padding: 0 1rem; margin-bottom: 10px;"></div>
         <div class="ai-input-area">
+            <button id="voice-btn" title="Voice Input"
+                style="background: none; border: 1px solid var(--glass-border); border-radius: 50%; width: 40px; height: 40px; color: white; cursor: pointer; transition: 0.3s;"><i
+                    class="fas fa-microphone"></i>🎤</button>
             <input type="text" id="ai-input" placeholder="Escribe un comando...">
             <button id="send-btn">→</button>
         </div>
@@ -644,6 +651,62 @@
             }
         }
 
+        const voiceBtn = document.getElementById('voice-btn');
+        const visualArea = document.getElementById('ai-visual-response');
+        const multimodalIndicator = document.getElementById('ai-multimodal-indicator');
+
+        // Voice Simulation
+        let isListening = false;
+        voiceBtn.addEventListener('click', () => {
+            isListening = !isListening;
+            if (isListening) {
+                voiceBtn.style.background = 'rgba(0, 212, 255, 0.2)';
+                multimodalIndicator.style.opacity = '1';
+                aiInput.placeholder = "Escuchando...";
+
+                // Simulate voice command after 2 seconds
+                setTimeout(() => {
+                    if (isListening) {
+                        aiInput.value = "Abrir chip-finanzas y añadir boton pdf";
+                        stopListening();
+                        sendToAI();
+                    }
+                }, 2000);
+            } else {
+                stopListening();
+            }
+        });
+
+        function stopListening() {
+            isListening = false;
+            voiceBtn.style.background = 'none';
+            multimodalIndicator.style.opacity = '0';
+            aiInput.placeholder = "Escribe un comando...";
+        }
+
+        function renderVisualResponse(payload) {
+            if (!payload || !payload.type) return;
+
+            // Clear previous visual
+            visualArea.innerHTML = '';
+
+            const card = document.createElement('div');
+            card.style.background = 'rgba(255,255,255,0.05)';
+            card.style.border = '1px dashed var(--accent-color)';
+            card.style.borderRadius = '12px';
+            card.style.padding = '10px';
+            card.style.fontSize = '0.8rem';
+
+            if (payload.type.startsWith('chart')) {
+                card.innerHTML = `<strong>${payload.title}</strong><div style="height: 5px; background: var(--accent-color); width: 80%; margin: 10px 0; border-radius: 5px;"></div>`;
+            } else {
+                card.innerHTML = `<strong>${payload.title || 'Visual'}</strong><p>${payload.data || ''}</p>`;
+            }
+
+            visualArea.appendChild(card);
+            setTimeout(() => card.style.opacity = "1", 100);
+        }
+
         async function sendToAI() {
             const message = aiInput.value.trim();
             if (!message) return;
@@ -653,7 +716,6 @@
             aiInput.value = '';
 
             try {
-                // Determine Auth Token (Legacy fallback for dev)
                 const token = localStorage.getItem('omniweb_token') || 'local-os-admin-token';
 
                 const response = await fetch('/api/v1/ai-host/process', {
@@ -669,6 +731,12 @@
 
                 if (response.ok) {
                     addMessage('ai', data.message || "Comando procesado correctamente.");
+
+                    // Handle Visual Payload if present
+                    if (data.payload && data.payload.visual) {
+                        renderVisualResponse(data.payload.visual);
+                    }
+
                     // Reload both chips and insights
                     setTimeout(() => {
                         loadChips();
