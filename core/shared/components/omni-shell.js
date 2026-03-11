@@ -1,5 +1,5 @@
 /**
- * OmniWeb Shell v1
+ * OmniWeb Shell v0.2.0
  * A lightweight, reusable UI wrapper injecting system-level identity and navigation
  * over isolated MPAs (chips) without modifying their HTML.
  */
