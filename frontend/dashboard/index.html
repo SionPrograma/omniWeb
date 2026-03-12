@@ -649,6 +649,62 @@
                 /* Hide on small screens for clarity */
             }
         }
+
+        /* SuperCommand Panel */
+        .supercommand-panel {
+            position: fixed;
+            top: 10rem;
+            right: 2rem;
+            width: 320px;
+            background: rgba(40, 40, 70, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+            display: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.1);
+        }
+
+        .task-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            opacity: 0.6;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .task-step.active {
+            opacity: 1;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            color: var(--accent-color);
+        }
+
+        .task-step.completed {
+            opacity: 1;
+            color: #44ff44;
+        }
+
+        .task-progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .task-progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
 
@@ -659,7 +715,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.8.0-network
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.7.2-autonomy
         </div>
     </header>
 
@@ -734,14 +790,26 @@
     </div>
     </aside>
 
-    <!-- Execution Loop Status -->
-    <div class="loop-panel" id="loop-panel">
-        <div class="insights-title">Stability Loop</div>
-        <div id="loop-task-info" style="font-size: 0.75rem; margin-bottom: 10px; opacity: 0.8;"></div>
-        <div id="loop-steps">
+    <!-- SuperCommand Execution Monitor -->
+    <div class="supercommand-panel" id="supercommand-panel">
+        <div class="insights-title">SuperCommand Monitor</div>
+        <div id="super-task-title"
+            style="font-weight: bold; font-size: 0.9rem; color: var(--accent-color); margin-bottom: 5px;"></div>
+        <div id="super-task-desc" style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 15px;"></div>
+
+        <div id="super-task-steps">
             <!-- Steps will appear here -->
         </div>
-        <div id="loop-cycle" style="margin-top: 10px; font-size: 0.7rem; color: var(--accent-color);"></div>
+
+        <div style="margin-top: 15px;">
+            <div style="font-size: 0.7rem; opacity: 0.6; display: flex; justify-content: space-between;">
+                <span>Progreso de Orquestación</span>
+                <span id="super-task-progress-text">0%</span>
+            </div>
+            <div class="task-progress-bar">
+                <div class="task-progress-fill" id="super-task-progress-fill"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Antimodal Panel -->
@@ -1448,6 +1516,10 @@
                         renderKnowledge(data);
                     }
 
+                    if (data.payload && data.payload.is_supercommand) {
+                        trackSuperCommand(data.payload);
+                    }
+
                     setTimeout(() => {
                         loadChips();
                         loadInsights();
@@ -1462,6 +1534,40 @@
                 console.error(error);
                 addMessage('ai', "Error al conectar con el AI Host.");
             }
+        }
+
+        function trackSuperCommand(payload) {
+            const panel = document.getElementById('supercommand-panel');
+            const titleElem = document.getElementById('super-task-title');
+            const descElem = document.getElementById('super-task-desc');
+            const stepsContainer = document.getElementById('super-task-steps');
+            const progressFill = document.getElementById('super-task-progress-fill');
+            const progressText = document.getElementById('super-task-progress-text');
+
+            panel.style.display = 'block';
+            titleElem.innerText = payload.display_data?.task_title || "Tarea Desconocida";
+            descElem.innerText = payload.display_data?.description || "Iniciando proceso autónomo...";
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 20;
+                if (progress > 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        panel.style.boxShadow = payload.status === 'completed' ? '0 0 30px rgba(0, 255, 136, 0.2)' : '0 0 30px rgba(255, 68, 68, 0.2)';
+                    }, 500);
+                }
+                progressFill.style.width = `${progress}%`;
+                progressText.innerText = `${progress}%`;
+            }, 300);
+
+            stepsContainer.innerHTML = (payload.actions || ["Audit initialization", "System stabilization"]).map((a, i) => `
+                <div class="task-step completed">
+                    <span style="margin-right: 10px;">✓</span>
+                    <span>${a}</span>
+                </div>
+            `).join('');
         }
 
         // Event Listeners

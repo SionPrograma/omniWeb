@@ -11,6 +11,7 @@ from backend.core.multimodal.multimodal_router import multimodal_router, Multimo
 from backend.core.multimodal.visual_response import VisualResponseEngine
 from backend.core.antimodal.antimodal_controller import antimodal_controller
 from backend.core.antimodal.antimodal_models import AntimodalMode
+from .processors.supercommand_processor import SuperCommandProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class CommandRouter:
         self.registry.register("knowledge", KnowledgeProcessor())
         self.registry.register("memory", MemoryProcessor())
         self.registry.register("graph", GraphProcessor())
+        self.registry.register("supercommand", SuperCommandProcessor())
 
         self.intents = {
             "open": self._handle_open,
@@ -57,7 +59,20 @@ class CommandRouter:
         
         res = None
         
-        # Intent classification through decoupled component (Phase T readiness)
+        # 1. Check for SuperCommand (Phase X)
+        super_proc = self.registry.get_processor("supercommand")
+        logger.info(f"CommandRouter: SuperProcessor found: {super_proc is not None}")
+        if super_proc and await super_proc.can_handle(msg):
+            logger.info(f"CommandRouter: Routing to SuperCommand Engine: {msg}")
+            proc_res = await super_proc.process(msg)
+            return AICommandResponse(
+                intent=proc_res.intent,
+                status="success",
+                message=proc_res.message,
+                payload=proc_res.payload
+            )
+
+        # 2. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:
