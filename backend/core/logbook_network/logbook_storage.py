@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict
+from typing import Dict, Optional
 from .logbook_models import Logbook
 
 class LogbookStorage:

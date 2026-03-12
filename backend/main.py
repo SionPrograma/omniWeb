@@ -23,6 +23,7 @@ from backend.core.knowledge_domains import domain_router
 from backend.core.collaboration_spaces import collaboration_router
 from backend.core.user_onboarding import onboarding_router
 from backend.core.logbook_network import logbook_router
+from backend.core.user_context.router import router as context_router
 from backend.core.ai_host.router import router as aihost_router
 from backend.core.stability_loop.router import router as stability_router
 from backend.core.master_logbook.router import router as master_logbook_router
@@ -83,6 +84,7 @@ app.include_router(domain_router, prefix=f"{settings.API_V1_STR}/domains", tags=
 app.include_router(collaboration_router, prefix=f"{settings.API_V1_STR}/collab", tags=["collaboration"])
 app.include_router(onboarding_router, prefix=f"{settings.API_V1_STR}/onboarding", tags=["onboarding"])
 app.include_router(logbook_router, prefix=f"{settings.API_V1_STR}/logbook", tags=["logbook"])
+app.include_router(context_router, prefix=f"{settings.API_V1_STR}/user", tags=["user"])
 app.include_router(aihost_router, prefix=f"{settings.API_V1_STR}/ai-host", tags=["ai-host"])
 app.include_router(stability_router, prefix=f"{settings.API_V1_STR}/system/loop", tags=["stability"])
 app.include_router(master_logbook_router, prefix=f"{settings.API_V1_STR}/system/logbook", tags=["master-logbook"])
