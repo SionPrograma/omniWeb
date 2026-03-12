@@ -15,7 +15,11 @@ class SpatialProcessor(CommandProcessor):
         # 1. Project Hologram
         if "proyectar" in msg or "project" in msg:
             obj_type = "tool"
-            if "agente" in msg or "agent" in msg: obj_type = "agent"
+            if "agente" in msg or "agent" in msg: 
+                obj_type = "agent"
+                if "investigaci" in msg or "research" in msg: name = "Investigador Holográfico"
+                elif "tutor" in msg or "edu" in msg: name = "Tutor Virtual"
+                elif "ingeniero" in msg or "engineer" in msg: name = "Ingeniero de Sistema"
             elif "mapa" in msg or "map" in msg: obj_type = "knowledge_map"
             elif "web" in msg: obj_type = "web_page"
             

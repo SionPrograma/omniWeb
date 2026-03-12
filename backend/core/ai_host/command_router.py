@@ -114,7 +114,15 @@ class CommandRouter:
             from backend.core.ai_host.processors.spatial_processor import spatial_processor
             return await spatial_processor.process(msg, "default_user")
 
-        # 6. Existing intent classification
+        # 6. Swarm Engine Detection (Phase AD)
+        swarm_keywords = ["enjambre", "swarm", "investiga", "research", "analiza", "multi"]
+        is_swarm = any(k in msg for k in swarm_keywords) and len(msg) > 15
+        
+        if is_swarm:
+            from backend.core.ai_host.processors.swarm_processor import swarm_processor
+            return await swarm_processor.process(msg, "default_user")
+
+        # 7. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:
