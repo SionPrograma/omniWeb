@@ -138,7 +138,15 @@ class CommandRouter:
             from backend.core.ai_host.processors.bridge_processor import bridge_processor
             return await bridge_processor.process(msg, "default_user")
 
-        # 9. Existing intent classification
+        # 9. Global Communication Detection (Phase AI)
+        comm_keywords = ["llamada", "call", "sesion", "unirse", "comunicacion", "participantes"]
+        is_comm = any(k in msg for k in comm_keywords)
+        
+        if is_comm:
+            from backend.core.ai_host.processors.comm_processor import comm_processor
+            return await comm_processor.process(msg, "default_user")
+
+        # 10. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

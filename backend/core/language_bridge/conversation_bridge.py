@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from typing import Dict, Any, List
-from .language_bridge_models import Speaker, BridgeUserConfig, LanguageCode, TranslatedSegment
+from .language_bridge_models import Speaker, BridgeUserConfig, LanguageCode, TranslatedSegment, VoiceStyle
 from .speech_capture import speech_capture
 from .translation_engine import translation_engine
 from .voice_adapter import voice_adapter
@@ -50,7 +50,7 @@ class ConversationBridge:
         ui_payload = {
             "speaker_info": speaker_indicator.get_indicator_data(speaker),
             "subtitles": subtitle_engine.generate_display_data(translated, config or BridgeUserConfig(user_id=recipient_user_id, preferred_listening_language=target_lang)),
-            "voice_params": await voice_adapter.generate_speech_metadata(translated, config.voice_adaptation_style if config else "friendly"),
+            "voice_params": await voice_adapter.generate_speech_metadata(translated, config.voice_adaptation_style if config else VoiceStyle.FRIENDLY),
             "translated_text": translated.translated_text,
             "pronunciation": translated.pronunciation_guide
         }

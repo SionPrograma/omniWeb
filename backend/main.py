@@ -454,6 +454,31 @@ async def process_bridge_utterance(data: dict):
     )
     return {"status": "ok", "payload": res}
 
+# --- Phase AI - Global Communication ---
+
+@app.get(f"{settings.API_V1_STR}/comm/active")
+async def get_active_sessions():
+    """Lists all currently active global translation sessions."""
+    from backend.core.global_communication.session_manager import session_manager
+    sessions = session_manager.get_active_sessions()
+    return {"status": "ok", "sessions": [s.model_dump() for s in sessions]}
+
+@app.post(f"{settings.API_V1_STR}/comm/sessions")
+async def create_comm_session(data: dict):
+    """Initializes a new global communication session."""
+    from backend.core.global_communication.session_manager import session_manager, Participant
+    from backend.core.language_bridge.language_bridge_models import LanguageCode
+    
+    creator_data = data.get("creator", {})
+    creator = Participant(
+        user_id=creator_data.get("user_id", "default"),
+        name=creator_data.get("name", "User"),
+        native_language=LanguageCode(creator_data.get("lang", "es")),
+        listening_language=LanguageCode(creator_data.get("listen", "es"))
+    )
+    session = session_manager.create_session(data.get("title", "Call"), creator)
+    return {"status": "ok", "session": session.model_dump()}
+
 # --- Distributed Network Endpoints (Phase V) ---
 
 @app.get(f"{settings.API_V1_STR}/network/nodes")
