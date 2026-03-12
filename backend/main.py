@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Security, Depends, Request
-from typing import List
+from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -478,6 +478,17 @@ async def create_comm_session(data: dict):
     )
     session = session_manager.create_session(data.get("title", "Call"), creator)
     return {"status": "ok", "session": session.model_dump()}
+
+# --- Phase AJ - Global Knowledge Collaboration & Onboarding ---
+from backend.core.knowledge_domains import domain_router
+from backend.core.collaboration_spaces import collaboration_router
+from backend.core.user_onboarding import onboarding_router
+from backend.core.logbook_network import logbook_router
+
+app.include_router(domain_router, prefix=f"{settings.API_V1_STR}/domains", tags=["domains"])
+app.include_router(collaboration_router, prefix=f"{settings.API_V1_STR}/collab", tags=["collaboration"])
+app.include_router(onboarding_router, prefix=f"{settings.API_V1_STR}/onboarding", tags=["onboarding"])
+app.include_router(logbook_router, prefix=f"{settings.API_V1_STR}/logbook", tags=["logbook"])
 
 # --- Distributed Network Endpoints (Phase V) ---
 

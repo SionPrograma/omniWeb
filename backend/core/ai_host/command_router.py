@@ -146,7 +146,23 @@ class CommandRouter:
             from backend.core.ai_host.processors.comm_processor import comm_processor
             return await comm_processor.process(msg, "default_user")
 
-        # 10. Existing intent classification
+        # 10. Knowledge Domains Detection (Phase AJ)
+        domain_keywords = ["dominio", "ciencia", "historia", "filosofia", "desarrollo humano"]
+        is_domain = any(k in msg for k in domain_keywords)
+        
+        if is_domain:
+            from backend.core.ai_host.processors.domain_processor import domain_processor
+            return await domain_processor.process(msg, "default_user")
+
+        # 11. Collaboration Spaces Detection (Phase AJ)
+        collab_keywords = ["proyecto", "colaboracion", "investigacion", "nota", "espacio"]
+        is_collab = any(k in msg for k in collab_keywords)
+        
+        if is_collab:
+            from backend.core.ai_host.processors.collab_processor import collab_processor
+            return await collab_processor.process(msg, "default_user")
+
+        # 12. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:
