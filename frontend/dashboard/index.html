@@ -532,6 +532,54 @@
             display: inline-block;
         }
 
+        /* Human Development Network Panels */
+        .human-dev-panel {
+            position: fixed;
+            top: 2rem;
+            left: 20rem;
+            /* Left side to balance */
+            width: 320px;
+            background: rgba(10, 30, 50, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+            box-shadow: 0 0 30px rgba(0, 200, 255, 0.1);
+        }
+
+        .metric-radar {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-item {
+            font-size: 0.65rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 5px 8px;
+            border-radius: 8px;
+            text-align: center;
+            border-bottom: 2px solid #00c8ff;
+        }
+
+        .opp-card {
+            font-size: 0.7rem;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.05);
+            border-radius: 12px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .opp-tag {
+            font-size: 0.55rem;
+            color: #ffd700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
         /* Runtime Foundation Panel */
         .runtime-panel {
             position: fixed;
@@ -806,7 +854,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v1.0.0-universal
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v1.2.0-human-dev
         </div>
     </header>
 
@@ -900,6 +948,22 @@
             <div class="task-progress-bar">
                 <div class="task-progress-fill" id="super-task-progress-fill"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Human Development Network (Phase AA) -->
+    <div class="human-dev-panel">
+        <div class="insights-title" style="color: #00c8ff;">Human Development</div>
+        <div id="cognitive-metrics-content">
+            <div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 5px;">COGNITIVE PROFILE</div>
+            <div id="metrics-radar-list" class="metric-radar">
+                <div style="font-size: 0.6rem; opacity: 0.5; grid-column: span 2;">Discovering patterns...</div>
+            </div>
+        </div>
+        <div id="opportunities-content"
+            style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            <div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 8px;">TARGET OPPORTUNITIES</div>
+            <div id="opps-list"></div>
         </div>
     </div>
 
@@ -1523,6 +1587,49 @@
             }
         }
 
+        async function loadSkillProfile() {
+            try {
+                const response = await fetch('/api/v1/development/profile');
+                if (!response.ok) return;
+                const data = await response.json();
+                const container = document.getElementById('metrics-radar-list');
+                const metrics = data.profile.cognitive_metrics;
+                if (Object.keys(metrics).length === 0) return;
+
+                container.innerHTML = Object.values(metrics).slice(0, 4).map(m => `
+                    <div class="metric-item">
+                        <div style="font-weight: bold;">${m.name.replace('_', ' ').toUpperCase()}</div>
+                        <div style="color: #00c8ff;">${(m.score * 100).toFixed(0)}%</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.warn("Skill profile failed:", e);
+            }
+        }
+
+        async function loadOpportunities() {
+            try {
+                const response = await fetch('/api/v1/development/opportunities');
+                if (!response.ok) return;
+                const data = await response.json();
+                const container = document.getElementById('opps-list');
+                if (!data.opportunities || data.opportunities.length === 0) {
+                    container.innerHTML = '<div style="font-size: 0.6rem; opacity: 0.5;">Analizando mercado...</div>';
+                    return;
+                }
+
+                container.innerHTML = data.opportunities.slice(0, 3).map(opp => `
+                    <div class="opp-card">
+                        <div class="opp-tag">${opp.type}</div>
+                        <div style="font-weight: bold; margin: 3px 0;">${opp.title}</div>
+                        <div style="font-size: 0.6rem; opacity: 0.8;">Matching: ${(opp.match_score * 100).toFixed(0)}%</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.warn("Opportunities failed:", e);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadChips();
@@ -1538,6 +1645,8 @@
             loadClusters();
             loadEducationProfile();
             loadCertifications();
+            loadSkillProfile();
+            loadOpportunities();
 
             // Periodicals
             setInterval(loadNodes, 10000);
@@ -1549,6 +1658,8 @@
             setInterval(loadClusters, 25000);
             setInterval(loadEducationProfile, 20000);
             setInterval(loadCertifications, 40000);
+            setInterval(loadSkillProfile, 15000);
+            setInterval(loadOpportunities, 30000);
         });
 
         async function loadSemanticSummary() {

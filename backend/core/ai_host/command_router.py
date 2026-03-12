@@ -56,6 +56,13 @@ class CommandRouter:
         input_v = MultimodalInput(modality=modality, raw_data=message)
         msg = await multimodal_router.handle_input(input_v)
         msg = msg.lower()
+
+        # Phase AA: Automatic Skill Discovery
+        try:
+            from backend.core.skill_engine.skill_detector import skill_detector
+            skill_detector.detect_from_input("default_user", msg)
+        except Exception as e:
+            logger.error(f"CommandRouter: Skill Discovery Error: {e}")
         
         res = None
         
@@ -83,7 +90,15 @@ class CommandRouter:
             topic = topic.strip().strip(" sobre ").strip(" sobre el ").strip(" sobre la ")
             return await education_processor.process(topic, "default_user")
 
-        # 3. Existing intent classification
+        # 3. Opportunity Engine Detection (Phase AA)
+        opportunity_keywords = ["oportunidad", "empleo", "trabajo", "carrera", "opportunity", "job", "career"]
+        is_opportunity = any(k in msg for k in opportunity_keywords)
+        
+        if is_opportunity:
+            from backend.core.ai_host.processors.opportunity_processor import opportunity_processor
+            return await opportunity_processor.process(msg, "default_user")
+
+        # 4. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

@@ -335,6 +335,31 @@ async def get_certifications(current_user: OmniUser = Depends(get_current_user))
     certs = certification_engine.get_user_certifications(str(current_user.id))
     return {"status": "ok", "certifications": [c.model_dump() for c in certs]}
 
+# --- Human Development Network (Phase AA) ---
+
+@app.get(f"{settings.API_V1_STR}/development/profile")
+async def get_skill_profile(user_id: str = "default_user"):
+    """Returns the unified skill and cognitive profile."""
+    from backend.core.skill_engine.skill_profile_builder import skill_profile_builder
+    profile = skill_profile_builder.get_profile(user_id)
+    return {"status": "ok", "profile": profile.model_dump()}
+
+@app.get(f"{settings.API_V1_STR}/development/opportunities")
+async def get_opportunities(user_id: str = "default_user"):
+    """Analyzes market demand and matches with user skills."""
+    from backend.core.skill_engine.skill_profile_builder import skill_profile_builder
+    from backend.core.opportunity_engine.opportunity_matcher import opportunity_matcher
+    profile = skill_profile_builder.get_profile(user_id)
+    matches = opportunity_matcher.find_matches(profile.top_skills)
+    return {"status": "ok", "opportunities": [m.model_dump() for m in matches]}
+
+@app.post(f"{settings.API_V1_STR}/development/award-cert")
+async def award_certificate(title: str, skills: list[str], level: str = "Foundation"):
+    """Manually awards a certification (Admin/Verified source)."""
+    from backend.core.certification_engine.certification_generator import certification_generator
+    cert = certification_generator.award_certification("default_user", title, skills, level)
+    return {"status": "ok", "certification": cert.model_dump()}
+
 # --- Distributed Network Endpoints (Phase V) ---
 
 @app.get(f"{settings.API_V1_STR}/network/nodes")
