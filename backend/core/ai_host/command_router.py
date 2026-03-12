@@ -122,7 +122,15 @@ class CommandRouter:
             from backend.core.ai_host.processors.swarm_processor import swarm_processor
             return await swarm_processor.process(msg, "default_user")
 
-        # 7. Existing intent classification
+        # 7. Knowledge OS Detection (Phase AG - v2.0.0)
+        os_keywords = ["sistema", "kernel", "modo", "os", "econom", "mercado", "evolucion"]
+        is_os = any(k in msg for k in os_keywords)
+        
+        if is_os:
+            from backend.core.ai_host.processors.os_processor import os_processor
+            return await os_processor.process(msg, "default_user")
+
+        # 8. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

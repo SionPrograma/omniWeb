@@ -404,6 +404,29 @@ async def process_spatial_gesture(gesture: str, obj_id: str = None):
     res = gesture_processor.process_gesture(gesture, obj_id)
     return res
 
+# --- V2.0 Universal Knowledge OS & Economy ---
+
+@app.get(f"{settings.API_V1_STR}/economy/trends")
+async def get_market_trends():
+    """Returns global skill demand and economic trends."""
+    from backend.core.knowledge_economy.skill_market_engine import skill_market_engine
+    return {"status": "ok", "trends": [t.model_dump() for t in skill_market_engine.get_market_trends()]}
+
+@app.post(f"{settings.API_V1_STR}/factory/evolve")
+async def trigger_chip_evolution(topics: List[str]):
+    """Analyzes topics to automatically design new chips."""
+    from backend.core.self_evolving_factory.idea_cluster_analyzer import idea_cluster_analyzer
+    from backend.core.self_evolving_factory.automatic_chip_designer import automatic_chip_designer
+    clusters = idea_cluster_analyzer.analyze_emergence(topics)
+    blueprints = [automatic_chip_designer.design_from_cluster(c) for c in clusters]
+    return {"status": "ok", "evolved_blueprints": [b.model_dump() for b in blueprints]}
+
+@app.get(f"{settings.API_V1_STR}/system/kernel/state")
+async def get_kernel_state():
+    """Returns the unified Knowledge OS workspace state."""
+    from backend.core.knowledge_os.workspace_manager import workspace_manager
+    return {"status": "ok", "state": workspace_manager.state.model_dump()}
+
 # --- Distributed Network Endpoints (Phase V) ---
 
 @app.get(f"{settings.API_V1_STR}/network/nodes")
