@@ -81,8 +81,8 @@ class ProposalEngine:
 
         loop_state, result = await loop_controller.execute_task(
             "improvement_proposal",
-            {"proposal_id": proposal_id, "description": proposal["description"]},
-            execution_action
+            execution_action,
+            {"proposal_id": proposal_id, "description": proposal["description"]}
         )
         
         if loop_state.current_step == LoopStep.COMPLETE:

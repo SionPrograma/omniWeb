@@ -20,31 +20,35 @@ class RuntimeController:
         if self._initialized:
             return
             
-        logger.info("OmniWeb Runtime Foundation: Initializing...")
-        
-        # 1. Detect Environment
-        env_type = environment_detector.detect()
-        self.state.environment = env_type
-        self.state.hostname = environment_detector.get_hostname()
-        self.state.is_portable = (env_type == EnvironmentType.PORTABLE)
-        
-        # 2. Select and Apply Profile
-        profile = device_profile_manager.get_profile(env_type)
-        device_profile_manager.apply_profile(profile)
-        self.state.profile_name = profile.name
-        
-        # 3. Register and Start Core Services
-        core_services = [
-            "ai_host", "event_bus", "knowledge_graph", 
-            "long_memory", "self_improvement", "usage_analytics"
-        ]
-        for svc in core_services:
-            service_manager.register_service(svc)
-            await service_manager.start_service(svc)
-            self.state.active_services.append(svc)
+        from backend.core.stability_loop.loop_controller import loop_controller
+
+        async def do_boot():
+            logger.info("OmniWeb Runtime Foundation: Initializing...")
+            # 1. Detect Environment
+            env_type = environment_detector.detect()
+            self.state.environment = env_type
+            self.state.hostname = environment_detector.get_hostname()
+            self.state.is_portable = (env_type == EnvironmentType.PORTABLE)
             
-        self._initialized = True
-        logger.info(f"OmniWeb Runtime Foundation: Ready. Mode: {profile.name.upper()} on {env_type.value.upper()}")
+            # 2. Select and Apply Profile
+            profile = device_profile_manager.get_profile(env_type)
+            device_profile_manager.apply_profile(profile)
+            self.state.profile_name = profile.name
+            
+            # 3. Register and Start Core Services
+            core_services = ["ai_host", "event_bus", "knowledge_graph", "long_memory"]
+            for svc in core_services:
+                service_manager.register_service(svc)
+                await service_manager.start_service(svc)
+                if svc not in self.state.active_services:
+                    self.state.active_services.append(svc)
+            
+            self._initialized = True
+            logger.info(f"OmniWeb Runtime Foundation: Ready. Mode: {profile.name.upper()} on {env_type.value.upper()}")
+            return {"status": "success", "mode": profile.name}
+
+        # Boot via stability loop for verified startup
+        await loop_controller.execute_task("system_boot", do_boot)
 
     def get_runtime_summary(self) -> dict:
         return {
@@ -73,10 +77,11 @@ class RuntimeController:
             raise ValueError(f"Profile {profile_name} not found")
 
         # Execute via stability loop
-        result = await loop_controller.execute_task(
-            task_name=f"Profile Switch to {profile_name}",
-            action=do_switch
+        loop_state, result = await loop_controller.execute_task(
+            "switch_profile",
+            do_switch,
+            {"profile": profile_name}
         )
-        return result
+        return loop_state, result
 
 runtime_controller = RuntimeController()

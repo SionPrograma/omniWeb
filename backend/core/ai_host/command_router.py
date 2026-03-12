@@ -265,8 +265,8 @@ class CommandRouter:
 
         loop_state, result = await loop_controller.execute_task(
             "modify_chip",
-            {"chip_slug": target, "message": msg},
-            modify_action
+            modify_action,
+            {"chip_slug": target, "message": msg}
         )
         
         if loop_state.current_step == LoopStep.COMPLETE:

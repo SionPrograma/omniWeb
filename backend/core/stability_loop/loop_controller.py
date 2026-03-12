@@ -15,7 +15,7 @@ class LoopController:
     def __init__(self):
         self.active_tasks: Dict[str, TaskState] = {}
 
-    async def execute_task(self, task_type: str, payload: dict, core_action: Callable[[], Coroutine]) -> tuple[TaskState, Any]:
+    async def execute_task(self, task_type: str, core_action: Callable[[], Coroutine], payload: Optional[dict] = None) -> tuple[TaskState, Any]:
         """
         Main entry point for Stability Loop execution.
         """
@@ -25,6 +25,8 @@ class LoopController:
         
         cycle = ExecutionCycle(state)
         last_result = None
+        
+        payload = payload or {}
         
         try:
             # 1. AUDIT_SYSTEM

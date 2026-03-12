@@ -1,0 +1,416 @@
+/* ===============================
+   Global Variables & Reset
+   =============================== */
+:root {
+    --bg-dark: #0f111a;
+    --surface: #1e2130;
+    --surface-light: #2a2e42;
+    --primary: #5271ff;
+    --success: #00d285;
+    --warning: #ffb020;
+    --danger: #ff4757;
+    --text-main: #f8f9fa;
+    --text-muted: #9aa0ad;
+    --border: #3b3f54;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* ===============================
+   Layout
+   =============================== */
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    /* Mobile first */
+    min-height: 100vh;
+    background-color: var(--surface);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* ===============================
+   Navigation Top Bar
+   =============================== */
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background: var(--surface-light);
+}
+
+.nav-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.nav-spacer {
+    width: 40px;
+}
+
+/* ===============================
+   View Management
+   =============================== */
+.view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 64px);
+    overflow-y: auto;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.view.hidden {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.view.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ===============================
+   Finance Summary View
+   =============================== */
+.summary-panel {
+    background: linear-gradient(135deg, var(--surface-light) 0%, rgba(42, 46, 66, 0.7) 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.balance-card {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.balance-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+}
+
+.balance-amount {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.kpi-row {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.kpi-card {
+    flex: 1;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.kpi-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.kpi-card.income .kpi-value {
+    color: var(--success);
+}
+
+.kpi-card.expense .kpi-value {
+    color: var(--danger);
+}
+
+.kpi-card.saving .kpi-value {
+    color: #00d4ff;
+}
+
+/* ===============================
+   Lists
+   =============================== */
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+
+.section-title h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.text-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.transactions-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 5rem;
+    /* space for FAB */
+}
+
+.transaction-item {
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.transaction-item:active {
+    transform: scale(0.98);
+}
+
+.transaction-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.transaction-desc {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.transaction-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.transaction-amount {
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.amount-income {
+    color: var(--success);
+}
+
+.amount-expense {
+    color: var(--text-main);
+}
+
+.amount-saving {
+    color: #00d4ff;
+}
+
+/* ===============================
+   FAB & Form
+   =============================== */
+.fab-btn {
+    position: fixed;
+    bottom: 24px;
+    right: max(24px, calc(50% - 240px + 24px));
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(82, 113, 255, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    z-index: 50;
+}
+
+.fab-btn:hover {
+    transform: scale(1.05);
+    background: #6b86ff;
+}
+
+.fab-btn:active {
+    transform: scale(0.95);
+}
+
+.form-container {
+    background: var(--surface-light);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-title {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.form-group input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    border-color: var(--primary);
+}
+
+.type-selector {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.type-btn {
+    flex: 1;
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.type-btn.active[data-type="expense"] {
+    background: rgba(255, 71, 87, 0.2);
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.type-btn.active[data-type="income"] {
+    background: rgba(0, 210, 133, 0.2);
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.type-btn.active[data-type="saving"] {
+    background: rgba(0, 212, 255, 0.2);
+    color: #00d4ff;
+    border-color: #00d4ff;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    flex: 1;
+    text-align: center;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
