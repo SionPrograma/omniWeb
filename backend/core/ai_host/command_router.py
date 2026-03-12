@@ -72,7 +72,18 @@ class CommandRouter:
                 payload=proc_res.payload
             )
 
-        # 2. Existing intent classification
+        # 2. Education Engine Detection (Phase Z)
+        education_keywords = ["enseñame", "aprender", "explicar", "clase", "curso", "leccion", "teach", "learn", "explain"]
+        is_education = any(k in msg for k in education_keywords)
+        
+        if is_education:
+            from backend.core.ai_host.processors.education_processor import education_processor
+            topic = msg
+            for k in education_keywords: topic = topic.replace(k, "")
+            topic = topic.strip().strip(" sobre ").strip(" sobre el ").strip(" sobre la ")
+            return await education_processor.process(topic, "default_user")
+
+        # 3. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

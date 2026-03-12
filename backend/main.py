@@ -298,6 +298,43 @@ async def get_idea_clusters():
     from backend.core.idea_cloud.idea_store import idea_store
     return {"status": "ok", "clusters": [c.model_dump() for c in idea_store.get_all_clusters()]}
 
+# --- Education Engine Endpoints (Phase Z) ---
+
+@app.get(f"{settings.API_V1_STR}/education/path")
+async def get_learning_path(topic: str):
+    """Generates or retrieves a learning path for a topic."""
+    from backend.core.education_engine.learning_path_generator import learning_path_generator
+    path = learning_path_generator.generate_path(topic)
+    return {"status": "ok", "path": path.model_dump()}
+
+@app.get(f"{settings.API_V1_STR}/education/map")
+async def get_concept_map(topic: str):
+    """Generates a hierarchical concept map."""
+    from backend.core.education_engine.concept_map_builder import concept_map_builder
+    cmap = concept_map_builder.build_map(topic)
+    return {"status": "ok", "concept_map": cmap.model_dump() if cmap else None}
+
+@app.get(f"{settings.API_V1_STR}/education/profile")
+async def get_learning_profile():
+    """Returns the user skill and mastery profile."""
+    from backend.core.education_engine.skill_tracker import skill_tracker
+    profile = skill_tracker.get_user_profile()
+    return {"status": "ok", "profile": [s.model_dump() for s in profile]}
+
+@app.post(f"{settings.API_V1_STR}/education/evaluate")
+async def evaluate_knowledge(topic: str, answer: str):
+    """Evaluates user understanding and updates skills."""
+    from backend.core.education_engine.knowledge_evaluator import knowledge_evaluator
+    result = await knowledge_evaluator.evaluate_mastery(topic, answer)
+    return {"status": "ok", "result": result}
+
+@app.get(f"{settings.API_V1_STR}/education/certs")
+async def get_certifications(current_user: OmniUser = Depends(get_current_user)):
+    """Returns earned certifications for the current user."""
+    from backend.core.education_engine.certification_engine import certification_engine
+    certs = certification_engine.get_user_certifications(str(current_user.id))
+    return {"status": "ok", "certifications": [c.model_dump() for c in certs]}
+
 # --- Distributed Network Endpoints (Phase V) ---
 
 @app.get(f"{settings.API_V1_STR}/network/nodes")

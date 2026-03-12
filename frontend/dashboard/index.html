@@ -476,6 +476,62 @@
             margin-top: 5px;
         }
 
+        /* Education Engine Panel */
+        .education-panel {
+            position: fixed;
+            top: 2rem;
+            right: 55rem;
+            width: 320px;
+            background: rgba(20, 60, 40, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+        }
+
+        .learning-step {
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 3px solid #00ff88;
+        }
+
+        .skill-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            margin-bottom: 5px;
+        }
+
+        .skill-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            width: 60px;
+            overflow: hidden;
+        }
+
+        .skill-fill {
+            height: 100%;
+            background: #00ff88;
+            transition: width 0.5s ease;
+        }
+
+        .cert-badge {
+            font-size: 0.6rem;
+            color: #ffd700;
+            border: 1px solid #ffd700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
         /* Runtime Foundation Panel */
         .runtime-panel {
             position: fixed;
@@ -750,7 +806,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.9.0-companion
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v1.0.0-universal
         </div>
     </header>
 
@@ -844,6 +900,22 @@
             <div class="task-progress-bar">
                 <div class="task-progress-fill" id="super-task-progress-fill"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Universal Education Panel (Phase Z) -->
+    <div class="education-panel">
+        <div class="insights-title" style="color: #00ff88;">Education Engine</div>
+        <div id="learning-path-content">
+            <div style="font-size: 0.8rem; opacity: 0.6;">Sin ruta de aprendizaje activa.</div>
+        </div>
+        <div id="skill-profile-content"
+            style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            <div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 8px;">PERFIL DE HABILIDADES</div>
+            <div id="skills-list"></div>
+        </div>
+        <div id="certs-content" style="margin-top: 10px;">
+            <!-- Certs here -->
         </div>
     </div>
 
@@ -1412,6 +1484,45 @@
             }
         }
 
+        async function loadEducationProfile() {
+            try {
+                const response = await fetch('/api/v1/education/profile');
+                if (!response.ok) return;
+                const data = await response.json();
+                const container = document.getElementById('skills-list');
+                if (!data.profile || data.profile.length === 0) {
+                    container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.5;">Inicia una sesión de aprendizaje...</div>';
+                    return;
+                }
+                container.innerHTML = data.profile.slice(0, 5).map(skill => `
+                    <div class="skill-item">
+                        <span>${skill.concept}</span>
+                        <div class="skill-bar">
+                            <div class="skill-fill" style="width: ${skill.level * 100}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.warn("Education profile failed:", e);
+            }
+        }
+
+        async function loadCertifications() {
+            try {
+                const response = await fetch('/api/v1/education/certs');
+                if (!response.ok) return;
+                const data = await response.json();
+                const container = document.getElementById('certs-content');
+                if (!data.certifications || data.certifications.length === 0) return;
+
+                container.innerHTML = data.certifications.map(cert => `
+                    <div class="cert-badge">🏆 ${cert.title}</div>
+                `).join('');
+            } catch (e) {
+                console.warn("Certs failed:", e);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadChips();
@@ -1425,6 +1536,8 @@
             loadSemanticSummary();
             loadIdeas();
             loadClusters();
+            loadEducationProfile();
+            loadCertifications();
 
             // Periodicals
             setInterval(loadNodes, 10000);
@@ -1434,6 +1547,8 @@
             setInterval(loadSemanticSummary, 20000);
             setInterval(loadIdeas, 12000);
             setInterval(loadClusters, 25000);
+            setInterval(loadEducationProfile, 20000);
+            setInterval(loadCertifications, 40000);
         });
 
         async function loadSemanticSummary() {
