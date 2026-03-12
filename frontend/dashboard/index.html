@@ -1237,13 +1237,52 @@
             loadAntimodal();
             loadNodes();
             loadRuntime();
+            loadSemanticSummary();
 
             // Periodicals
             setInterval(loadNodes, 10000);
             setInterval(loadRuntime, 15000);
             setInterval(loadInsights, 30000);
             setInterval(loadProposals, 45000);
+            setInterval(loadSemanticSummary, 20000);
         });
+
+        async function loadSemanticSummary() {
+            try {
+                const response = await fetch('/api/v1/system/semantic/summary');
+                if (!response.ok) return;
+                const data = await response.json();
+
+                const container = document.getElementById('knowledge-interface-content');
+                if (!container || !data) return;
+
+                if (data.total_indexed === 0) {
+                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Capa semántica inicializada. Sin conceptos aún.</div>';
+                    return;
+                }
+
+                let html = `
+                    <div style="font-size: 0.8rem; margin-bottom: 10px;">
+                        <span style="opacity: 0.7;">Conceptos indexados:</span>
+                        <span style="font-weight: bold; color: var(--accent-color);">${data.total_indexed}</span>
+                    </div>
+                `;
+
+                if (data.recent_concepts && data.recent_concepts.length > 0) {
+                    html += '<div style="font-size: 0.7rem; opacity: 0.5; margin-bottom: 5px; text-transform: uppercase;">Recientes:</div>';
+                    data.recent_concepts.forEach(c => {
+                        html += `
+                            <div style="font-size: 0.75rem; padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 4px; border-left: 2px solid #00d4ff;">
+                                ${c.text.substring(0, 35)}${c.text.length > 35 ? '...' : ''}
+                            </div>
+                        `;
+                    });
+                }
+                container.innerHTML = html;
+            } catch (e) {
+                console.warn("Semantic summary failed:", e);
+            }
+        }
 
         // Antimodal logic
         async function loadAntimodal() {

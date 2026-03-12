@@ -67,4 +67,25 @@ class VectorStore:
                     timestamp=row["timestamp"]
                 ) for row in rows]
 
+    def get_summary(self) -> dict:
+        """Returns a summary of the vector store for diagnostics."""
+        with set_chip_context("core"):
+            with db_manager.get_connection() as conn:
+                # 1. Total count
+                total = conn.execute("SELECT COUNT(*) as cnt FROM semantic_embeddings").fetchone()["cnt"]
+                
+                # 2. Count by type
+                by_type_rows = conn.execute("SELECT source_type, COUNT(*) as cnt FROM semantic_embeddings GROUP BY source_type").fetchall()
+                by_type = {row["source_type"]: row["cnt"] for row in by_type_rows}
+                
+                # 3. Recent 5 concepts
+                recent_rows = conn.execute("SELECT text_content, source_type FROM semantic_embeddings ORDER BY timestamp DESC LIMIT 5").fetchall()
+                recent = [{"text": row["text_content"], "type": row["source_type"]} for row in recent_rows]
+                
+                return {
+                    "total_indexed": total,
+                    "by_type": by_type,
+                    "recent_concepts": recent
+                }
+
 vector_store = VectorStore()

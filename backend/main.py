@@ -254,6 +254,12 @@ async def sync_semantic_layer(admin_user: dict = Security(get_admin_user)):
         await embedding_synchronizer.sync_all()
         return {"status": "success", "message": "Semantic layer synchronized."}
 
+@app.get(f"{settings.API_V1_STR}/system/semantic/summary")
+async def get_semantic_summary():
+    """Returns a summary of the semantic layer for dashboard visualization."""
+    from backend.core.semantic_layer.vector_store import vector_store
+    return vector_store.get_summary()
+
 @app.get(f"{settings.API_V1_STR}/system/loop/status")
 async def get_loop_status(task_id: str):
     """Returns the current state of a stability loop task."""
