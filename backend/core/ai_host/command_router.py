@@ -34,7 +34,8 @@ class CommandRouter:
             "modify": self._handle_modify,
             "memory": self._handle_memory,
             "graph": self._handle_graph,
-            "antimodal": self._handle_antimodal
+            "antimodal": self._handle_antimodal,
+            "knowledge": self._handle_knowledge
         }
 
     async def route(self, message: str, modality: str = "text") -> AICommandResponse:
@@ -72,6 +73,8 @@ class CommandRouter:
              res = await self.intents["graph"](msg)
         elif "antimodal" in msg or "silencio" in msg or "silent" in msg or "compact" in msg or "fondo" in msg or "background" in msg or "distraccion" in msg or "distraction" in msg or "resumen" in msg or "summary" in msg:
              res = await self.intents["antimodal"](msg)
+        elif "explica" in msg or "explain" in msg or "entiende" in msg or "understand" in msg or "conecta" in msg or "connect" in msg or "mapa" in msg or "map" in msg or "aprende" in msg or "learn" in msg or "que es" in msg or "what is" in msg:
+             res = await self.intents["knowledge"](msg)
         
         if not res:
             res = AICommandResponse(
@@ -435,5 +438,60 @@ class CommandRouter:
             message=status_msg,
             payload={"mode": mode.value, "status": antimodal_controller.get_status_summary()}
         )
+
+    async def _handle_knowledge(self, msg: str) -> AICommandResponse:
+        """
+        Handles Knowledge Dialogue Mode using Semantic Layer & KG.
+        """
+        from backend.core.semantic_layer.semantic_query_engine import semantic_query_engine
+        from backend.core.knowledge_graph.graph_query import GraphQueryEngine
+        
+        query_engine = GraphQueryEngine()
+        
+        # 1. Explain [Concept]
+        if "explica" in msg or "explain" in msg or "que es" in msg or "what is" in msg:
+            concept = msg.replace("explica", "").replace("explain", "").replace("que es", "").replace("what is", "").strip(",.?! ")
+            results = semantic_query_engine.search(concept, limit=1, threshold=0.3)
+            
+            if results:
+                res = results[0]
+                return AICommandResponse(
+                    intent="knowledge_explain",
+                    status="success",
+                    message=f"Explicación técnica: {res.text_content}. Este concepto está relacionado con {res.source_type}.",
+                    payload={"concept": concept, "source": res.source_type, "score": res.score}
+                )
+            return AICommandResponse(intent="knowledge_explain", status="error", message=f"No tengo información detallada sobre '{concept}' en mi base semántica.")
+
+        # 2. Path / Map
+        if "mapa" in msg or "map" in msg or "camino" in msg or "path" in msg:
+            target = msg.split()[-1].strip(",.?!")
+            path = query_engine.suggest_learning_path(target)
+            if path:
+                steps = [p["name"] for p in path]
+                visual = VisualResponseEngine.create_knowledge_map(f"Mapa de {target}", steps)
+                return AICommandResponse(
+                    intent="knowledge_map",
+                    status="success",
+                    message=f"He generado un mapa de conocimiento para {target}. Sigue este camino: {' -> '.join(steps)}",
+                    payload={"steps": steps, "visual": visual}
+                )
+
+        # 3. Connect [A] with [B] (Semantic bridge)
+        if "conecta" in msg or "connect" in msg:
+            parts = msg.replace("conecta", "").replace("connect", "").split("con") # or "with"
+            if len(parts) >= 2:
+                a, b = parts[0].strip(), parts[1].strip()
+                res_a = semantic_query_engine.search(a, limit=3)
+                res_b = semantic_query_engine.search(b, limit=3)
+                
+                return AICommandResponse(
+                    intent="knowledge_connect",
+                    status="success",
+                    message=f"Analizando conexiones semánticas entre '{a}' y '{b}'...",
+                    payload={"a_results": [r.text_content for r in res_a], "b_results": [r.text_content for r in res_b]}
+                )
+
+        return AICommandResponse(intent="knowledge_dialogue", status="error", message="Entro en modo diálogo de conocimiento, ¿sobre qué tema quieres profundizar?")
 
 ai_command_router = CommandRouter()

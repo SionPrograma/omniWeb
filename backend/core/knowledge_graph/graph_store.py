@@ -1,8 +1,11 @@
 import json
+import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from backend.core.database import db_manager
 from backend.core.knowledge_graph.graph_models import KnowledgeNode, KnowledgeEdge
+
+logger = logging.getLogger(__name__)
 
 class GraphStore:
     """
@@ -30,13 +33,24 @@ class GraphStore:
                     "UPDATE knowledge_nodes SET description = ?, importance_score = ?, metadata = ? WHERE id = ?",
                     (node.description, node.importance_score, json.dumps(node.metadata), node_id)
                 )
-                return node_id
             else:
                 cursor = conn.execute(
                     "INSERT INTO knowledge_nodes (node_type, name, description, importance_score, metadata) VALUES (?, ?, ?, ?, ?)",
                     (node.node_type, node.name, node.description, node.importance_score, json.dumps(node.metadata))
                 )
-                return cursor.lastrowid
+                node_id = cursor.lastrowid
+            conn.commit()
+
+        # Semantic Layer Sync (AFTER closing the main knowledge_nodes transaction)
+        try:
+            from backend.core.semantic_layer.embedding_synchronizer import embedding_synchronizer
+            updated_node = self.get_node(node_id)
+            if updated_node:
+                embedding_synchronizer.sync_node(updated_node)
+        except Exception as e:
+            logger.error(f"GraphStore: Failed to sync embedding: {e}")
+            
+        return node_id
 
     def save_edge(self, edge: KnowledgeEdge) -> int:
         """
@@ -131,3 +145,5 @@ class GraphStore:
                 importance_score=row["importance_score"],
                 metadata=json.loads(row["metadata"]) if row["metadata"] else {}
             ) for row in rows]
+
+graph_store = GraphStore()

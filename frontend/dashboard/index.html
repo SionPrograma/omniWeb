@@ -485,6 +485,35 @@
             color: #ff4444;
         }
 
+        /* Knowledge Interface Panel */
+        .knowledge-interface-panel {
+            position: fixed;
+            top: 25rem;
+            right: 22rem;
+            width: 320px;
+            background: rgba(40, 30, 60, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            z-index: 50;
+        }
+
+        .knowledge-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-color);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            margin: 2px;
+        }
+
+        .status-pill.stopped {
+            background: rgba(255, 68, 68, 0.1);
+            color: #ff4444;
+        }
+
         /* Mode-specific UI changes */
         body.mode-silent .chips-container,
         body.mode-silent header,
@@ -677,6 +706,15 @@
         <button id="sync-graph-btn"
             style="margin-top: 10px; width: 100%; padding: 5px; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 8px; cursor: pointer; font-size: 0.8rem;">Sincronizar
             Grafo</button>
+    </div>
+
+    <!-- Knowledge Interface Panel -->
+    <div class="knowledge-interface-panel">
+        <div class="insights-title">Knowledge Interface</div>
+        <div id="knowledge-interface-content">
+            <div style="font-size: 0.8rem; opacity: 0.6;">Exploración semántica inactiva.</div>
+        </div>
+        <div id="knowledge-tags" style="margin-top: 10px; display: flex; flex-wrap: wrap;"></div>
     </div>
 
     <!-- Runtime Foundation Panel -->
@@ -1060,6 +1098,18 @@
                     content += `<div title="${labels[i]}: ${v}" style="flex: 1; background: var(--accent-color); height: ${height}px; border-radius: 2px;"></div>`;
                 });
                 content += `</div>`;
+            } else if (payload.type === 'knowledge_map') {
+                const steps = payload.data?.steps || [];
+                content += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+                steps.forEach((s, i) => {
+                    content += `
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--accent-color); color: #000; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">${i + 1}</div>
+                            <span>${s}</span>
+                        </div>
+                    `;
+                });
+                content += `</div>`;
             } else if (payload.type === 'table') {
                 const headers = payload.data?.headers || [];
                 const rows = payload.data?.rows || [];
@@ -1077,50 +1127,34 @@
             visualArea.appendChild(card);
         }
 
-        async function sendToAI() {
-            const message = aiInput.value.trim();
-            if (!message) return;
+        function renderKnowledge(data) {
+            const container = document.getElementById('knowledge-interface-content');
+            const tags = document.getElementById('knowledge-tags');
 
-            // Add user message to UI
-            addMessage('user', message);
-            aiInput.value = '';
+            if (!data) return;
 
-            try {
-                const token = localStorage.getItem('omniweb_token') || 'omniweb-dev-secret-token';
-
-                const response = await fetch('/api/v1/ai-host/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ message })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    addMessage('ai', data.message || "Comando procesado correctamente.");
-
-                    // Handle Visual Payload if present
-                    if (data.payload && data.payload.visual) {
-                        renderVisualResponse(data.payload.visual);
-                    }
-
-                    // Reload both chips and insights
-                    setTimeout(() => {
-                        loadChips();
-                        loadInsights();
-                        loadProposals();
-                        loadContext();
-                    }, 1000);
-                } else {
-                    addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
-                }
-            } catch (error) {
-                addMessage('ai', "Error al conectar con el AI Host.");
+            if (data.intent === 'knowledge_explain') {
+                container.innerHTML = `
+                    <div style="border-left: 3px solid var(--accent-color); padding-left: 10px; margin-bottom: 10px;">
+                        <span style="font-size: 0.7rem; opacity: 0.6; display: block;">Semantic Node: ${data.payload.concept}</span>
+                        <p style="font-size: 0.8rem; margin-top: 5px;">${data.message}</p>
+                    </div>
+                `;
+                tags.innerHTML = `
+                    <span class="knowledge-tag">confidence: ${(data.payload.score * 100).toFixed(1)}%</span>
+                    <span class="knowledge-tag">type: ${data.payload.source}</span>
+                `;
+            } else if (data.intent === 'knowledge_map') {
+                container.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <span style="font-size: 0.7rem; opacity: 0.6; display: block;">Learning Path</span>
+                        <p style="font-size: 0.8rem; margin-top: 5px;">${data.message}</p>
+                    </div>
+                `;
+                tags.innerHTML = data.payload.steps.map(s => `<span class="knowledge-tag">${s}</span>`).join('');
             }
         }
+
 
         function addMessage(sender, text) {
             const msgDiv = document.createElement('div');
@@ -1312,22 +1346,12 @@
             `).join('');
         }
 
-        // Intercept AI Host response to detect loops
-        const originalSendToAI = sendToAI;
-        sendToAI = async function () {
-            // We wrap the original function to catch the loop_id in payload
-            const oldAddMessage = addMessage;
-            // Temporary override to inspect data
-            // This is a bit hacky, but works for the prototype dashboard
-            await originalSendToAI();
-        };
 
         // Modify renderVisualResponse or similar to hook into the message result
         // For now, let's just make trackLoop global so it can be called from console or other triggers
         window.trackLoop = trackLoop;
 
-        // Auto-hook into sendToAI response
-        async function sendToAIWithLoop() {
+        async function sendToAI() {
             const message = aiInput.value.trim();
             if (!message) return;
 
@@ -1358,25 +1382,31 @@
                         renderVisualResponse(data.payload.visual);
                     }
 
+                    if (data.intent && data.intent.startsWith('knowledge_')) {
+                        renderKnowledge(data);
+                    }
+
                     setTimeout(() => {
                         loadChips();
                         loadInsights();
                         loadProposals();
                         loadContext();
+                        loadGraph();
                     }, 1000);
                 } else {
-                    addMessage('ai', `Error: ${data.detail || 'Fallo'}`);
+                    addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
                 }
             } catch (error) {
+                console.error(error);
                 addMessage('ai', "Error al conectar con el AI Host.");
             }
         }
 
-        // Replace the event listener
-        sendBtn.removeEventListener('click', sendToAI);
-        sendBtn.addEventListener('click', sendToAIWithLoop);
-        // Note: Enter key listener also needs replacement or we just redefine the function
-        window.sendToAI = sendToAIWithLoop;
+        // Event Listeners
+        sendBtn.addEventListener('click', sendToAI);
+        aiInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendToAI();
+        });
     </script>
 </body>
 

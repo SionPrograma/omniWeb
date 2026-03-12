@@ -28,8 +28,19 @@ class MemoryStore:
                             memory.importance_score, memory.confidence_score
                         )
                     )
+                    memory_id = cursor.lastrowid
                     conn.commit()
-                    return cursor.lastrowid
+                
+                # Semantic Layer Sync (AFTER closing the long_term_memories transaction)
+                try:
+                    from backend.core.semantic_layer.embedding_synchronizer import embedding_synchronizer
+                    # Re-fetch or create a temporary entry for sync
+                    memory.id = memory_id
+                    embedding_synchronizer.sync_memory(memory)
+                except Exception as e:
+                    logger.error(f"MemoryStore: Failed to sync embedding: {e}")
+                    
+                return memory_id
             except Exception as e:
                 logger.error(f"MemoryStore: Failed to save memory: {e}")
                 return -1

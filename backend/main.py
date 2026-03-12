@@ -245,6 +245,15 @@ async def sync_knowledge_graph(admin_user: dict = Security(get_admin_user)):
         builder.process_all_memories()
         return {"status": "success", "message": "Graph synchronized with long-term memory."}
 
+@app.post(f"{settings.API_V1_STR}/system/semantic/sync")
+async def sync_semantic_layer(admin_user: dict = Security(get_admin_user)):
+    """Triggers a full rebuild of the semantic index."""
+    from backend.core.semantic_layer.embedding_synchronizer import embedding_synchronizer
+    from backend.core.permissions import set_chip_context
+    with set_chip_context("core"):
+        await embedding_synchronizer.sync_all()
+        return {"status": "success", "message": "Semantic layer synchronized."}
+
 @app.get(f"{settings.API_V1_STR}/system/loop/status")
 async def get_loop_status(task_id: str):
     """Returns the current state of a stability loop task."""

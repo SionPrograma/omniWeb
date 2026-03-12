@@ -48,6 +48,16 @@ class LoopController:
                 if is_stable:
                     state.current_step = LoopStep.COMPLETE
                     logger.info(f"Task {task_id} completed successfully and stabilized.")
+                    
+                    # Knowledge Sync on Success (Phase R/S Stability Loop Integration)
+                    if task_type in ["create_chip", "modify_system", "manual_sync"]:
+                         try:
+                             from backend.core.semantic_layer.embedding_synchronizer import embedding_synchronizer
+                             await embedding_synchronizer.sync_all()
+                             logger.info("Stability Loop: Semantic layer updated after success.")
+                         except Exception as e:
+                             logger.error(f"Post-task Semantic Sync failed: {e}")
+
                     return state, last_result
                 
                 # 7. IF FAIL -> REPAIR

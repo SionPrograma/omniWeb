@@ -49,3 +49,13 @@ class VisualResponseEngine:
                 "level": level
             }
         }
+
+    @staticmethod
+    def create_knowledge_map(title: str, steps: List[str]) -> Dict[str, Any]:
+        return {
+            "type": "knowledge_map",
+            "title": title,
+            "data": {
+                "steps": steps
+            }
+        }
