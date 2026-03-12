@@ -2,6 +2,8 @@ from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 import logging
 from .processors.knowledge_processor import KnowledgeProcessor
+from .processors.memory_processor import MemoryProcessor
+from .processors.graph_processor import GraphProcessor
 from backend.core.stability_loop.loop_controller import loop_controller
 from backend.core.stability_loop.loop_models import LoopStep
 from backend.core.multimodal.multimodal_router import multimodal_router, MultimodalInput
@@ -22,6 +24,13 @@ class CommandRouter:
     Parses and routes natural language commands to system actions.
     """
     def __init__(self):
+        # Processor Registry Integration (Phase T Readiness)
+        from .processors.registry import processor_registry
+        self.registry = processor_registry
+        self.registry.register("knowledge", KnowledgeProcessor())
+        self.registry.register("memory", MemoryProcessor())
+        self.registry.register("graph", GraphProcessor())
+
         self.intents = {
             "open": self._handle_open,
             "create": self._handle_create,
@@ -307,103 +316,18 @@ class CommandRouter:
         )
     
     async def _handle_memory(self, msg: str) -> AICommandResponse:
-        from backend.core.long_memory.memory_retriever import memory_retriever
-        
-        # 1. Handle "continue/resume project"
-        if "continuar" in msg or "resume" in msg or "proyecto" in msg:
-            projects = memory_retriever.get_recent_projects()
-            if projects:
-                p = projects[0]
-                return AICommandResponse(
-                    intent="memory_recall",
-                    status="success",
-                    message=f"Hablemos de tu último proyecto: '{p.title}'. ¿Quieres continuar donde lo dejaste?",
-                    payload={"memory": p}
-                )
-            return AICommandResponse(intent="memory_recall", status="error", message="No encontré proyectos recientes para continuar.")
-
-        # 2. General recall
-        memories = memory_retriever.find_relevant_memories(msg)
-        if memories:
-            m = memories[0]
-            desc = f"He recordado esto: {m.summary}"
-            return AICommandResponse(
-                intent="memory_recall",
-                status="success",
-                message=desc,
-                payload={"memories": memories}
-            )
-            
-        return AICommandResponse(intent="memory_recall", status="error", message="No tengo recuerdos claros sobre eso aún.")
+        """
+        Delegates Memory Dialogue Mode to specialized processor.
+        """
+        processor = self.registry.get_processor("memory")
+        return await processor.process(msg)
 
     async def _handle_graph(self, msg: str) -> AICommandResponse:
-        from backend.core.knowledge_graph.graph_query import GraphQueryEngine
-        from backend.core.knowledge_graph.graph_builder import GraphBuilder
-        
-        query_engine = GraphQueryEngine()
-        builder = GraphBuilder()
-        
-        # Proactively build/update graph from memory if requested or if we are exploring
-        if "sincronizar" in msg or "sync" in msg or "build" in msg:
-            builder.process_all_memories()
-            return AICommandResponse(
-                intent="graph_sync",
-                status="success",
-                message="Grafo de conocimiento sincronizado con la memoria a largo plazo.",
-                payload={}
-            )
-
-        # 1. Related Topics / Explore
-        if "explora" in msg or "explore" in msg or "relacion" in msg or "relates" in msg:
-            # Extract topic - simple word after explore/explora
-            parts = msg.replace("explora", "").replace("explore", "").replace("relacionado con", "").replace("relates to", "").split()
-            if parts:
-                topic = parts[0].strip(",.?!")
-                related = query_engine.get_related_topics(topic)
-                if related:
-                    topics_str = ", ".join([f"{r['name']} ({r['relationship']})" for r in related])
-                    
-                    # Add Visual Graph Payload
-                    visual = VisualResponseEngine.create_table(
-                        f"Relaciones de {topic}",
-                        ["Destino", "Tipo", "Relación"],
-                        [[r["name"], r["type"], r["relationship"]] for r in related]
-                    )
-                    
-                    return AICommandResponse(
-                        intent="graph_explore",
-                        status="success",
-                        message=f"Explorando '{topic}'. Temas relacionados: {topics_str}.",
-                        payload={"root": topic, "related": related, "visual": visual}
-                    )
-                return AICommandResponse(intent="graph_explore", status="error", message=f"No encontré conexiones for '{topic}'. Prueba sincronizar el grafo.")
-
-        # 2. Learning Path
-        if "camino" in msg or "path" in msg or "aprender" in msg or "learn" in msg:
-             parts = msg.split()
-             topic = parts[-1].strip(",.?!")
-             path = query_engine.suggest_learning_path(topic)
-             if path:
-                 path_str = " -> ".join([p["name"] for p in path])
-                 return AICommandResponse(
-                     intent="graph_learning_path",
-                     status="success",
-                     message=f"Camino de aprendizaje para {topic}: {path_str}",
-                     payload={"path": path}
-                 )
-        
-        # 3. Project Graph
-        if "grafo" in msg or "graph" in msg or "proyecto" in msg:
-             # Default to general graph info if no specific project
-             nodes = query_engine.store.get_all_nodes()
-             return AICommandResponse(
-                 intent="graph_view",
-                 status="success",
-                 message=f"El grafo de conocimiento actual contiene {len(nodes)} conceptos interconectados.",
-                 payload={"nodes_count": len(nodes)}
-             )
-
-        return AICommandResponse(intent="graph_query", status="error", message="No pude procesar tu consulta del grafo.")
+        """
+        Delegates Knowledge Graph Mode to specialized processor.
+        """
+        processor = self.registry.get_processor("graph")
+        return await processor.process(msg)
 
     async def _handle_antimodal(self, msg: str) -> AICommandResponse:
         """
@@ -444,7 +368,7 @@ class CommandRouter:
         """
         Delegates Knowledge Dialogue Mode to specialized processor.
         """
-        processor = KnowledgeProcessor()
+        processor = self.registry.get_processor("knowledge")
         return await processor.process(msg)
 
 ai_command_router = CommandRouter()
