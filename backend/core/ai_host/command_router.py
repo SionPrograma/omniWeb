@@ -130,7 +130,15 @@ class CommandRouter:
             from backend.core.ai_host.processors.os_processor import os_processor
             return await os_processor.process(msg, "default_user")
 
-        # 8. Existing intent classification
+        # 8. Language Bridge Detection (Phase AH)
+        bridge_keywords = ["traduccion", "bridge", "idioma", "traductor", "subtitulo", "habla"]
+        is_bridge = any(k in msg for k in bridge_keywords)
+        
+        if is_bridge:
+            from backend.core.ai_host.processors.bridge_processor import bridge_processor
+            return await bridge_processor.process(msg, "default_user")
+
+        # 9. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

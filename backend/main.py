@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Security, Depends, Request
+from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -426,6 +427,32 @@ async def get_kernel_state():
     """Returns the unified Knowledge OS workspace state."""
     from backend.core.knowledge_os.workspace_manager import workspace_manager
     return {"status": "ok", "state": workspace_manager.state.model_dump()}
+
+# --- Phase AH - Language Bridge ---
+
+@app.post(f"{settings.API_V1_STR}/bridge/config")
+async def set_bridge_config(config: dict):
+    """Updates the user configuration for the translation bridge."""
+    from backend.core.language_bridge.conversation_bridge import conversation_bridge, BridgeUserConfig
+    user_id = config.get("user_id", "default_user")
+    new_config = BridgeUserConfig(**config)
+    await conversation_bridge.set_user_config(user_id, new_config)
+    return {"status": "ok"}
+
+@app.post(f"{settings.API_V1_STR}/bridge/utterance")
+async def process_bridge_utterance(data: dict):
+    """Processes a spoken segment for translation and delivery."""
+    from backend.core.language_bridge.conversation_bridge import conversation_bridge, LanguageCode
+    speaker_data = data.get("speaker", {})
+    from backend.core.language_bridge.language_bridge_models import Speaker
+    speaker = Speaker(**speaker_data)
+    
+    res = await conversation_bridge.process_utterance(
+        speaker, 
+        data.get("text", ""), 
+        data.get("recipient_id", "default_user")
+    )
+    return {"status": "ok", "payload": res}
 
 # --- Distributed Network Endpoints (Phase V) ---
 
