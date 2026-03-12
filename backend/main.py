@@ -118,13 +118,23 @@ async def get_system_chips():
 
 @app.on_event("startup")
 async def startup_event():
-    # Initialize Node Monitoring
-    from backend.core.distributed_bus.node_health_monitor import node_health_monitor
-    await node_health_monitor.start()
+    from backend.core.permissions import set_chip_context
+    with set_chip_context("core"):
+        # Initialize Node Monitoring
+        from backend.core.distributed_bus.node_health_monitor import node_health_monitor
+        await node_health_monitor.start()
 
-    # Initialize New Runtime Foundation
-    from backend.core.omni_runtime.runtime_controller import runtime_controller
-    await runtime_controller.initialize()
+        # Initialize New Runtime Foundation
+        from backend.core.omni_runtime.runtime_controller import runtime_controller
+        await runtime_controller.initialize()
+
+        # Initialize Distributed Network discovery
+        from backend.core.distributed_network.node_discovery import node_discovery
+        await node_discovery.start()
+        
+        # Register heartbeat listener on the bus
+        from backend.core.event_bus import event_bus
+        event_bus.subscribe("network_node_heartbeat", node_discovery.handle_remote_heartbeat)
 
 @app.get(f"{settings.API_V1_STR}/system/nodes")
 async def get_nodes():
@@ -269,6 +279,35 @@ async def get_loop_status(task_id: str):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Task not found")
     return status
+
+# --- Distributed Network Endpoints (Phase V) ---
+
+@app.get(f"{settings.API_V1_STR}/network/nodes")
+async def get_network_nodes():
+    """Returns the specialized knowledge node registry."""
+    from backend.core.distributed_network.node_registry import network_node_registry
+    return network_node_registry.get_active_nodes()
+
+@app.get(f"{settings.API_V1_STR}/network/knowledge/bundle")
+async def get_knowledge_bundle():
+    """Serves local knowledge nodes to requesting peers."""
+    from backend.core.distributed_network.knowledge_sync import knowledge_sync_manager
+    from backend.core.distributed_network.security import network_security
+    # For now, we allow bundle sharing without explicit node auth for easier discovery
+    # but we'd normally guard this.
+    return knowledge_sync_manager.get_local_bundle()
+
+@app.get(f"{settings.API_V1_STR}/network/knowledge/search")
+async def search_remote_knowledge(query: str, threshold: float = 0.3):
+    """Answers semantic queries from remote nodes."""
+    from backend.core.semantic_layer.search_engine import semantic_query_engine
+    return await semantic_query_engine.search(query, threshold=threshold)
+
+@app.post(f"{settings.API_V1_STR}/network/sync")
+async def trigger_network_sync(node_id: str):
+    """Manually triggers a pull-sync from a specific remote node."""
+    from backend.core.distributed_network.knowledge_sync import knowledge_sync_manager
+    return await knowledge_sync_manager.request_sync(node_id)
 
 @app.post(f"{settings.API_V1_STR}/system/proposals/execute")
 async def execute_proposal(proposal_id: int):

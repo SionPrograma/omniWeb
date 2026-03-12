@@ -659,7 +659,8 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.6.8-stable</div>
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v0.8.0-network
+        </div>
     </header>
 
     <!-- Insights Panel -->
@@ -1166,28 +1167,50 @@
 
         async function loadNodes() {
             try {
-                const response = await fetch('/api/v1/system/nodes');
+                const response = await fetch('/api/v1/network/nodes');
                 if (!response.ok) return;
                 const nodes = await response.json();
                 const container = document.getElementById('nodes-content');
                 if (!container) return;
 
-                if (nodes.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Solo nodo local activo.</div>';
+                if (nodes.length <= 1) {
+                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Localizando nodos en la red...</div>';
                     return;
                 }
 
-                container.innerHTML = nodes.map(node => `
-                    <div class="node-item">
-                        <div>
-                            <div style="font-size: 0.85rem; font-weight: bold;">${node.node_id.substring(0, 8)} (${node.node_type})</div>
-                            <div style="font-size: 0.7rem; opacity: 0.7;">${node.node_address}</div>
+                container.innerHTML = nodes.map(node => {
+                    const isLocal = node.node_url.includes('localhost');
+                    return `
+                    <div class="insight-item" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span style="font-weight: bold; color: ${isLocal ? 'var(--accent-color)' : '#fff'};">${node.node_id.substring(0, 8)} ${isLocal ? '(Local)' : ''}</span>
+                            <span class="status-pill ${node.status}" style="font-size: 0.6rem;">${node.status}</span>
                         </div>
-                        <div class="node-status ${node.status}"></div>
+                        <div style="font-size: 0.7rem; opacity: 0.6;">${node.node_url}</div>
+                        <div style="font-size: 0.7rem; display: flex; gap: 10px; margin-top: 4px;">
+                            <span>Nodes: ${node.knowledge_summary.node_count}</span>
+                            <span>Embeds: ${node.knowledge_summary.embedding_count}</span>
+                        </div>
+                        ${!isLocal ? `
+                        <button onclick="syncFromNode('${node.node_id}')" style="margin-top: 5px; font-size: 0.65rem; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 2px 8px; border-radius: 4px; cursor: pointer;">Sincronizar</button>
+                        ` : ''}
                     </div>
-                `).join('');
+                `}).join('');
             } catch (e) {
-                console.error("Error loading nodes:", e);
+                console.warn("Network nodes failed:", e);
+            }
+        }
+
+        async function syncFromNode(nodeId) {
+            try {
+                const response = await fetch(`/api/v1/network/sync?node_id=${nodeId}`, { method: 'POST' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.loop_id) trackLoop(data.loop_id);
+                    alert("Sincronización iniciada vía Stability Loop");
+                }
+            } catch (e) {
+                alert("Error al iniciar sincronización");
             }
         }
 
