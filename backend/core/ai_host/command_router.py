@@ -83,11 +83,14 @@ class CommandRouter:
                 res = await self.intents["knowledge"](msg)
         
         if not res:
+            # Fallback to Idea Cloud (Phase Y)
+            from backend.core.idea_cloud.idea_capture import idea_capture
+            idea = idea_capture.capture(msg)
             res = AICommandResponse(
-                intent="unknown",
-                status="error",
-                message="Lo siento, no entiendo ese comando.",
-                payload={}
+                intent="idea_captured",
+                status="success",
+                message=f"He guardado tu pensamiento en la Nube de Ideas ('{msg[:30]}...'). Lo conectaré con tu conocimiento más tarde.",
+                payload={"idea_id": idea.id, "topics": idea.topics}
             )
 
         # Antimodal adaptation (Phase 6)

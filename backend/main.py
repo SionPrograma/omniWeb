@@ -136,6 +136,10 @@ async def startup_event():
         from backend.core.event_bus import event_bus
         event_bus.subscribe("network_node_heartbeat", node_discovery.handle_remote_heartbeat)
 
+        # Initialize Idea Cloud background processing (Phase Y)
+        from backend.core.idea_cloud.idea_background_processor import idea_background_processor
+        await idea_background_processor.start()
+
 @app.get(f"{settings.API_V1_STR}/system/nodes")
 async def get_nodes():
     """Returns list of active nodes in the distributed environment."""
@@ -279,6 +283,20 @@ async def get_loop_status(task_id: str):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Task not found")
     return status
+
+# --- Idea Cloud Endpoints (Phase Y) ---
+
+@app.get(f"{settings.API_V1_STR}/system/ideas")
+async def get_ideas():
+    """Returns recent ideas from the cloud."""
+    from backend.core.idea_cloud.idea_store import idea_store
+    return {"status": "ok", "ideas": [i.model_dump() for i in idea_store.get_recent_ideas()]}
+
+@app.get(f"{settings.API_V1_STR}/system/ideas/clusters")
+async def get_idea_clusters():
+    """Returns emerging concept clusters."""
+    from backend.core.idea_cloud.idea_store import idea_store
+    return {"status": "ok", "clusters": [c.model_dump() for c in idea_store.get_all_clusters()]}
 
 # --- Distributed Network Endpoints (Phase V) ---
 
