@@ -12,6 +12,7 @@ from backend.core.multimodal.visual_response import VisualResponseEngine
 from backend.core.antimodal.antimodal_controller import antimodal_controller
 from backend.core.antimodal.antimodal_models import AntimodalMode
 from .processors.supercommand_processor import SuperCommandProcessor
+from .processors.logbook_processor import LogbookProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class CommandRouter:
         self.registry.register("memory", MemoryProcessor())
         self.registry.register("graph", GraphProcessor())
         self.registry.register("supercommand", SuperCommandProcessor())
+        self.registry.register("logbook", LogbookProcessor())
 
         self.intents = {
             "open": self._handle_open,
@@ -66,103 +68,97 @@ class CommandRouter:
         
         res = None
         
-        # 1. Check for SuperCommand (Phase X)
-        super_proc = self.registry.get_processor("supercommand")
-        logger.info(f"CommandRouter: SuperProcessor found: {super_proc is not None}")
-        if super_proc and await super_proc.can_handle(msg):
-            logger.info(f"CommandRouter: Routing to SuperCommand Engine: {msg}")
-            proc_res = await super_proc.process(msg)
-            return AICommandResponse(
-                intent=proc_res.intent,
-                status="success",
-                message=proc_res.message,
-                payload=proc_res.payload
-            )
-
-        # 2. Education Engine Detection (Phase Z)
-        education_keywords = ["enseñame", "aprender", "explicar", "clase", "curso", "leccion", "teach", "learn", "explain"]
-        is_education = any(k in msg for k in education_keywords)
+        # 1. Master Logbook Detection (Should be one of the first things to check)
+        logbook_keywords = ["log", "guarda", "anota", "registra", "idea", "bug", "fix", "tarea", "task", "decision"]
+        is_logbook_intent = any(k in msg for k in logbook_keywords) and (
+            "como" in msg or "esto" in msg or "sobre" in msg or "anota" in msg or "guarda" in msg or len(msg) > 15
+        )
         
-        if is_education:
+        log_res = None
+        if is_logbook_intent:
+            logger.info(f"CommandRouter: Logbook intent detected: {msg}")
+            processor = self.registry.get_processor("logbook")
+            log_res = await processor.process(msg, "default_user")
+            # If the user explicitly asks to log/save/note, return immediately.
+            early_return_keywords = ["log ", "guarda ", "anota ", "registra ", "save this", "note this"]
+            if any(w in msg for w in early_return_keywords):
+                return log_res
+
+        # 2. Check for SuperCommand (Phase X)
+        super_proc = self.registry.get_processor("supercommand")
+        if super_proc and await super_proc.can_handle(msg):
+            proc_res = await super_proc.process(msg)
+            # Combine message if we logged something
+            if log_res:
+                proc_res.message = f"{log_res.message}\n\n{proc_res.message}"
+            return proc_res
+
+        # --- Other Domain Processors ---
+
+        # 3. Education Engine Detection (Phase Z)
+        education_keywords = ["enseñame", "aprender", "explicar", "clase", "curso", "leccion", "teach", "learn", "explain"]
+        if any(k in msg for k in education_keywords):
             from backend.core.ai_host.processors.education_processor import education_processor
             topic = msg
             for k in education_keywords: topic = topic.replace(k, "")
             topic = topic.strip().strip(" sobre ").strip(" sobre el ").strip(" sobre la ")
             return await education_processor.process(topic, "default_user")
 
-        # 3. Opportunity Engine Detection (Phase AA)
+        # 4. Opportunity Engine Detection (Phase AA)
         opportunity_keywords = ["oportunidad", "empleo", "trabajo", "carrera", "opportunity", "job", "career"]
-        is_opportunity = any(k in msg for k in opportunity_keywords)
-        
-        if is_opportunity:
+        if any(k in msg for k in opportunity_keywords):
             from backend.core.ai_host.processors.opportunity_processor import opportunity_processor
             return await opportunity_processor.process(msg, "default_user")
 
-        # 4. Multi-AI Interface Detection (Phase AB)
+        # 5. Multi-AI Interface Detection (Phase AB)
         interface_keywords = ["abrir", "open", "invitar", "invite", "ventana", "window"]
-        is_interface = any(k in msg for k in interface_keywords)
-        
-        if is_interface:
+        if any(k in msg for k in interface_keywords):
             from backend.core.ai_host.processors.interface_processor import interface_processor
             return await interface_processor.process(msg, "default_user")
 
-        # 5. Spatial Interface Detection (Phase AC)
+        # 6. Spatial Interface Detection (Phase AC)
         spatial_keywords = ["proyectar", "project", "360", "espacio", "holograma", "hologram"]
-        is_spatial = any(k in msg for k in spatial_keywords)
-        
-        if is_spatial:
+        if any(k in msg for k in spatial_keywords):
             from backend.core.ai_host.processors.spatial_processor import spatial_processor
             return await spatial_processor.process(msg, "default_user")
 
-        # 6. Swarm Engine Detection (Phase AD)
+        # 7. Swarm Engine Detection (Phase AD)
         swarm_keywords = ["enjambre", "swarm", "investiga", "research", "analiza", "multi"]
-        is_swarm = any(k in msg for k in swarm_keywords) and len(msg) > 15
-        
-        if is_swarm:
+        if any(k in msg for k in swarm_keywords) and len(msg) > 15:
             from backend.core.ai_host.processors.swarm_processor import swarm_processor
             return await swarm_processor.process(msg, "default_user")
 
-        # 7. Knowledge OS Detection (Phase AG - v2.0.0)
+        # 8. Knowledge OS Detection (Phase AG - v2.0.0)
         os_keywords = ["sistema", "kernel", "modo", "os", "econom", "mercado", "evolucion"]
-        is_os = any(k in msg for k in os_keywords)
-        
-        if is_os:
+        if any(k in msg for k in os_keywords):
             from backend.core.ai_host.processors.os_processor import os_processor
             return await os_processor.process(msg, "default_user")
 
-        # 8. Language Bridge Detection (Phase AH)
+        # 9. Language Bridge Detection (Phase AH)
         bridge_keywords = ["traduccion", "bridge", "idioma", "traductor", "subtitulo", "habla"]
-        is_bridge = any(k in msg for k in bridge_keywords)
-        
-        if is_bridge:
+        if any(k in msg for k in bridge_keywords):
             from backend.core.ai_host.processors.bridge_processor import bridge_processor
             return await bridge_processor.process(msg, "default_user")
 
-        # 9. Global Communication Detection (Phase AI)
+        # 10. Global Communication Detection (Phase AI)
         comm_keywords = ["llamada", "call", "sesion", "unirse", "comunicacion", "participantes"]
-        is_comm = any(k in msg for k in comm_keywords)
-        
-        if is_comm:
+        if any(k in msg for k in comm_keywords):
             from backend.core.ai_host.processors.comm_processor import comm_processor
             return await comm_processor.process(msg, "default_user")
 
-        # 10. Knowledge Domains Detection (Phase AJ)
+        # 11. Knowledge Domains Detection (Phase AJ)
         domain_keywords = ["dominio", "ciencia", "historia", "filosofia", "desarrollo humano"]
-        is_domain = any(k in msg for k in domain_keywords)
-        
-        if is_domain:
+        if any(k in msg for k in domain_keywords):
             from backend.core.ai_host.processors.domain_processor import domain_processor
             return await domain_processor.process(msg, "default_user")
 
-        # 11. Collaboration Spaces Detection (Phase AJ)
+        # 12. Collaboration Spaces Detection (Phase AJ)
         collab_keywords = ["proyecto", "colaboracion", "investigacion", "nota", "espacio"]
-        is_collab = any(k in msg for k in collab_keywords)
-        
-        if is_collab:
+        if any(k in msg for k in collab_keywords):
             from backend.core.ai_host.processors.collab_processor import collab_processor
             return await collab_processor.process(msg, "default_user")
 
-        # 12. Existing intent classification
+        # 13. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

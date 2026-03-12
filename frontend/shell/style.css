@@ -1,0 +1,403 @@
+:root {
+    --bg-deep: #050508;
+    --bg-nebula: #0a0a1f;
+    --accent: #00d4ff;
+    --accent-glow: rgba(0, 212, 255, 0.4);
+    --text-main: #f0f0f5;
+    --text-dim: #a0a0b0;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-heavy: rgba(10, 10, 20, 0.8);
+    --spring-easing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background: var(--bg-deep);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Background Effects */
+.nebula-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(circle at 20% 30%, rgba(60, 20, 120, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(20, 80, 120, 0.15) 0%, transparent 40%);
+    filter: blur(60px);
+    z-index: -1;
+}
+
+#shell-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-bottom: 70px;
+    /* Space for nav */
+}
+
+/* AI CORE / GREETING */
+#ai-host-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    transition: transform 0.5s var(--spring-easing), opacity 0.3s ease;
+}
+
+#ai-host-view:not(.active) {
+    display: none;
+}
+
+.ai-core-container {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.ai-orb {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+    position: relative;
+    border-radius: 50%;
+}
+
+.ai-orb-inner {
+    position: absolute;
+    inset: 10px;
+    background: linear-gradient(135deg, var(--accent), #7000ff);
+    border-radius: 50%;
+    animation: orbPulse 4s infinite ease-in-out;
+    filter: blur(2px);
+}
+
+.ai-orb-glow {
+    position: absolute;
+    inset: -10px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0.2;
+    filter: blur(20px);
+    animation: orbFloat 6s infinite ease-in-out;
+}
+
+@keyframes orbPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+@keyframes orbFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.greeting-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 200;
+    letter-spacing: -1px;
+    background: linear-gradient(to bottom, #fff, #aaa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.status-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 0.5rem;
+}
+
+/* CHAT AREA */
+.chat-interaction-area {
+    width: 100%;
+    max-width: 500px;
+    padding: 1rem;
+}
+
+.conversation-log {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message.ai .msg-bubble {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    padding: 1rem;
+    border-radius: 18px 18px 18px 4px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    backdrop-filter: blur(10px);
+}
+
+.ai-visual {
+    margin: 10px 0;
+}
+
+.visual-card {
+    background: var(--glass-heavy);
+    border: 1px solid var(--accent);
+    padding: 1rem;
+    border-radius: 12px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 5px 15px rgba(0, 212, 255, 0.1);
+}
+
+.visual-card h4 {
+    font-family: 'Outfit', sans-serif;
+    color: var(--accent);
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 5px;
+    margin-bottom: 8px;
+}
+
+/* ACTIVE CHIP VIEW */
+#active-chip-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-deep);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#active-chip-view.active {
+    transform: translateY(0);
+}
+
+.chip-header {
+    height: 60px;
+    background: var(--glass-heavy);
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--glass-border);
+    justify-content: space-between;
+}
+
+.entry-chip-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+#chip-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+}
+
+/* BOTTOM NAV */
+#bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    background: var(--glass-heavy);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 200;
+    padding: 0 1rem;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    gap: 4px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.nav-item.active {
+    color: var(--accent);
+}
+
+.shell-launcher {
+    position: relative;
+    top: -20px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--accent), #7000ff);
+    border-radius: 50%;
+    box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+}
+
+.launcher-icon {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    width: 18px;
+    height: 18px;
+}
+
+.launcher-icon span {
+    background: white;
+    border-radius: 1px;
+}
+
+/* INPUT BAR */
+.input-bar {
+    position: fixed;
+    bottom: 85px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 500px;
+    background: var(--glass-heavy);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    display: flex;
+    padding: 8px 15px;
+    align-items: center;
+    z-index: 150;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.input-bar input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 8px;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+#send-command {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+/* LAUNCHER OVERLAY */
+#launcher-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 180;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 90px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+#launcher-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.launcher-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    transform: translateY(50px);
+    transition: transform 0.4s var(--spring-easing);
+}
+
+#launcher-overlay.active .launcher-grid {
+    transform: translateY(0);
+}
+
+.chip-launcher-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.chip-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.chip-icon.lingua {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: #00d4ff;
+}
+
+.chip-icon.finanzas {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: #00ff88;
+}
+
+.chip-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.exit-chip-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+}

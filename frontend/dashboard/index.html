@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OmniWeb | Personal Knowledge Environment</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00d4ff">
     <style>
         :root {
             --bg-color: #050508;
@@ -30,9 +32,10 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             background: radial-gradient(circle at center, #1a1a2e 0%, #050508 100%);
+            padding-top: 2rem;
         }
 
         /* Ambient Stars */
@@ -143,6 +146,26 @@
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 1px;
+        }
+
+        /* Responsive Panel Management */
+        .glass-panel {
+            position: fixed;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            padding: 1.2rem;
+            z-index: 50;
+            transition: all 0.3s ease, z-index 0s;
+            overflow-y: auto;
+            max-height: 40vh;
+        }
+
+        .glass-panel:hover,
+        .glass-panel.active {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
         }
 
         .chip.coming-soon {
@@ -274,32 +297,16 @@
 
         /* System Insights Panel */
         .insights-panel {
-            position: fixed;
             top: 2rem;
             left: 2rem;
-            width: 300px;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            backdrop-filter: blur(15px);
-            padding: 1.5rem;
-            z-index: 50;
-        }
-
-        .insights-title {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--accent-color);
-            margin-bottom: 1rem;
-            font-weight: bold;
+            width: 280px;
         }
 
         .insight-item {
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .insight-label {
@@ -993,35 +1000,48 @@
         }
 
         /* Mobile Adjustments */
-        @media (max-width: 1200px) {
-            .user-context-panel {
-                left: 2rem;
-                top: 40rem;
+        @media (max-width: 1024px) {
+            h1 {
+                font-size: 2.5rem;
+                letter-spacing: 0.2rem;
+            }
+
+            .chips-container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                transform: none !important;
+            }
+
+            .chip {
+                width: 100%;
+                height: 80px;
+            }
+
+            /* Hide non-essential panels on mobile */
+            .glass-panel:not(.ai-panel) {
+                display: none !important;
+            }
+
+            .ai-panel {
+                width: 90vw;
+                height: 50vh;
+                right: 5vw;
+                bottom: 1rem;
+                left: 5vw;
             }
         }
 
         @media (max-width: 600px) {
-            .chips-container {
-                grid-template-columns: 1fr;
-            }
-
             h1 {
-                font-size: 2.5rem;
+                font-size: 2rem;
             }
+        }
 
-            .ai-panel {
-                width: calc(100% - 2rem);
-                right: 1rem;
-                bottom: 1rem;
-                height: 350px;
-            }
-
-            .insights-panel,
-            .proposals-panel,
-            .user-context-panel {
-                display: none;
-                /* Hide on small screens for clarity */
-            }
+        .insights-panel,
+        .proposals-panel,
+        .user-context-panel {
+            display: none;
+            /* Hide on small screens for clarity */
         }
 
         /* SuperCommand Panel */
@@ -1090,12 +1110,12 @@
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
             style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">
-            v2.2.0-knowledge-log
+            v3.0.0-modular
         </div>
     </header>
 
     <!-- Insights Panel -->
-    <div class="insights-panel">
+    <div class="insights-panel glass-panel">
         <div class="insights-title">System Insights</div>
         <div id="insights-content">
             <div class="insight-item">
@@ -1105,7 +1125,7 @@
     </div>
 
     <!-- Proposals Panel -->
-    <div class="proposals-panel">
+    <div class="proposals-panel glass-panel">
         <div class="insights-title">AI Suggestions</div>
         <div id="proposals-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Sin sugerencias por ahora. El sistema está observando tu uso.
@@ -1114,7 +1134,7 @@
     </div>
 
     <!-- User Context Panel -->
-    <div class="user-context-panel">
+    <div class="user-context-panel glass-panel">
         <div class="insights-title">User Behavior</div>
         <div id="context-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Analizando patrones...</div>
@@ -1122,7 +1142,7 @@
     </div>
 
     <!-- Distributed Nodes Panel -->
-    <div class="nodes-panel">
+    <div class="nodes-panel glass-panel">
         <div class="insights-title">Distributed Nodes</div>
         <div id="nodes-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Localizando nodos...</div>
@@ -1130,7 +1150,7 @@
     </div>
 
     <!-- Knowledge Graph Panel -->
-    <div class="knowledge-graph-panel">
+    <div class="knowledge-graph-panel glass-panel">
         <div class="insights-title">Knowledge Graph</div>
         <div id="graph-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Cargando red de conceptos...</div>
@@ -1141,7 +1161,7 @@
     </div>
 
     <!-- Knowledge Interface Panel -->
-    <div class="knowledge-interface-panel">
+    <div class="knowledge-interface-panel glass-panel">
         <div class="insights-title">Knowledge Interface</div>
         <div id="knowledge-interface-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Exploración semántica inactiva.</div>
@@ -1154,7 +1174,7 @@
     <div id="agent-orbit" style="position: fixed; inset: 0; pointer-events: none; z-index: 90;"></div>
 
     <!-- Interface Control Panel -->
-    <div class="runtime-panel" style="bottom: 2rem; left: 2rem; height: auto;">
+    <div class="runtime-panel glass-panel" style="bottom: 2rem; left: 2rem; height: auto;">
         <div class="insights-title" style="color: #bb86fc;">Interface Control</div>
         <div style="font-size: 0.7rem; margin-top: 10px;">
             <div>Brightness</div>
@@ -1165,7 +1185,7 @@
                 style="width: 100%; accent-color: #bb86fc;">
         </div>
     </div>
-    <div class="runtime-panel">
+    <div class="runtime-panel glass-panel">
         <div class="insights-title">System Runtime</div>
         <div id="runtime-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Cargando runtime...</div>
@@ -1181,7 +1201,7 @@
     </aside>
 
     <!-- SuperCommand Execution Monitor -->
-    <div class="supercommand-panel" id="supercommand-panel">
+    <div class="supercommand-panel glass-panel" id="supercommand-panel">
         <div class="insights-title">SuperCommand Monitor</div>
         <div id="super-task-title"
             style="font-weight: bold; font-size: 0.9rem; color: var(--accent-color); margin-bottom: 5px;"></div>
@@ -1203,7 +1223,7 @@
     </div>
 
     <!-- Human Development Network (Phase AA) -->
-    <div class="human-dev-panel">
+    <div class="human-dev-panel glass-panel">
         <div class="insights-title" style="color: #00c8ff;">Human Development</div>
         <div id="cognitive-metrics-content">
             <div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 5px;">COGNITIVE PROFILE</div>
@@ -1219,7 +1239,7 @@
     </div>
 
     <!-- Universal Education Panel (Phase Z) -->
-    <div class="education-panel">
+    <div class="education-panel glass-panel">
         <div class="insights-title" style="color: #00ff88;">Education Engine</div>
         <div id="learning-path-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Sin ruta de aprendizaje activa.</div>
@@ -1235,7 +1255,7 @@
     </div>
 
     <!-- Idea Cloud Panel (Phase Y) -->
-    <div class="idea-cloud-panel">
+    <div class="idea-cloud-panel glass-panel">
         <div class="insights-title" style="color: #bb86fc;">Idea Cloud</div>
         <div id="ideas-content">
             <div style="font-size: 0.8rem; opacity: 0.6;">Sin pensamientos capturados...</div>
@@ -1247,7 +1267,7 @@
     </div>
 
     <!-- Antimodal Panel -->
-    <div class="antimodal-panel">
+    <div class="antimodal-panel glass-panel">
         <div class="insights-title">Interaction Mode</div>
         <div style="font-size: 0.8rem; margin-bottom: 10px; opacity: 0.8;" id="current-mode-description">Standard
             interface active.</div>
@@ -1262,7 +1282,7 @@
     </div>
 
     <!-- My Logbook Panel (Phase AK) -->
-    <div class="logbook-panel">
+    <div class="logbook-panel glass-panel">
         <div class="insights-title" style="color: #00ffc8;">My Logbook</div>
         <div id="log-timeline">
             <div style="font-size: 0.8rem; opacity: 0.6;">Sincronizando vitácora...</div>
@@ -1275,7 +1295,7 @@
     </div>
 
     <!-- Knowledge Domains Panel (Phase AJ) -->
-    <div class="domains-panel">
+    <div class="domains-panel glass-panel">
         <div class="insights-title" style="color: #ff6b6b;">Knowledge Domains</div>
         <div id="domains-list">
             <div style="font-size: 0.8rem; opacity: 0.6;">Cargando dominios...</div>
@@ -1283,7 +1303,7 @@
     </div>
 
     <!-- Active Global Projects Panel (Phase AJ) -->
-    <div class="projects-panel">
+    <div class="projects-panel glass-panel">
         <div class="insights-title" style="color: #6b6bff;">Active Global Projects</div>
         <div id="projects-list">
             <div style="font-size: 0.8rem; opacity: 0.6;">Explorando proyectos...</div>
@@ -1294,7 +1314,7 @@
     </div>
 
     <!-- AI Host Panel -->
-    <div class="ai-panel">
+    <div class="ai-panel glass-panel">
         <div class="ai-header">
             <div class="ai-status-dot"></div>
             <span style="font-weight: 600; font-size: 0.9rem;">AI HOST</span>
@@ -1303,7 +1323,7 @@
             </div>
         </div>
         <div class="ai-chat-history" id="chat-history">
-            <div class="message ai">¡Hola! Soy tu asistente de OmniWeb. ¿En qué puedo ayudarte hoy?</div>
+            <!-- Greeting will be injected dynamically -->
         </div>
         <div id="ai-visual-response" style="padding: 0 1rem; margin-bottom: 10px;"></div>
         <div class="ai-input-area">
@@ -1694,9 +1714,63 @@
         function addMessage(sender, text) {
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${sender}`;
-            msgDiv.innerText = text;
+
+            if (sender === 'ai') {
+                typeMessage(msgDiv, text);
+            } else {
+                msgDiv.innerText = text;
+            }
+
             chatHistory.appendChild(msgDiv);
             chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function typeMessage(element, text) {
+            let i = 0;
+            element.innerText = '';
+            const interval = setInterval(() => {
+                if (i < text.length) {
+                    element.innerText += text.charAt(i);
+                    i++;
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 30);
+        }
+
+        async function initializeGreeting() {
+            try {
+                const userId = localStorage.getItem('omniweb_user_id') || 'new_user';
+                const browserLang = navigator.language || 'en';
+
+                const response = await fetch('/api/v1/onboarding/greeting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        browser_lang: browserLang
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const payload = data.payload;
+
+                    // Display greeting with animation
+                    addMessage('ai', payload.greeting);
+
+                    // If returning user, highlight we remember them
+                    if (payload.is_returning) {
+                        console.log("System recognizes returning user:", userId);
+                    }
+                } else {
+                    throw new Error("Greeting API unavailable");
+                }
+            } catch (error) {
+                console.warn("Using fallback greeting:", error);
+                addMessage('ai', "¡Hola! Bienvenido a OmniWeb. ¿En qué puedo ayudarte?");
+            }
         }
 
         async function loadNodes() {
@@ -2110,6 +2184,20 @@
                 loadLogbook();
             }
         }
+
+        // Panel Z-Index Management
+        let topZ = 100;
+        function bringToFront(el) {
+            topZ++;
+            el.style.zIndex = topZ;
+            document.querySelectorAll('.glass-panel').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        document.querySelectorAll('.glass-panel').forEach(panel => {
+            panel.addEventListener('mousedown', () => bringToFront(panel));
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             loadChips();
             loadInsights();
@@ -2131,7 +2219,7 @@
             loadProjectList();
             loadLogbook();
             loadAffinity();
-
+            initializeGreeting();
             // New Project Button
             document.getElementById('new-project-btn').addEventListener('click', () => {
                 const title = prompt("Project Title:");
@@ -2417,6 +2505,14 @@
         aiInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendToAI();
         });
+        // Service Worker Registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker failed', err));
+            });
+        }
     </script>
 </body>
 

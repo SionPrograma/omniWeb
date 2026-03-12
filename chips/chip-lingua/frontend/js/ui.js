@@ -11,7 +11,9 @@ const ui = {
         stagesList: document.getElementById('stages-list'),
         resultContainer: document.getElementById('result-container'),
         resultAudio: document.getElementById('result-audio'),
-        downloadLink: document.getElementById('download-link')
+        downloadLink: document.getElementById('download-link'),
+        logContent: document.getElementById('log-content'),
+        clearLogsBtn: document.getElementById('clear-logs')
     },
 
     updateStages(progress) {
@@ -38,9 +40,41 @@ const ui = {
         });
     },
 
-    showResult(url) {
+    addLog(message, type = 'info') {
+        const entry = document.createElement('div');
+        const timestamp = new Date().toLocaleTimeString();
+        entry.className = `log-entry ${type}`;
+        entry.innerHTML = `<span style="opacity: 0.5;">[${timestamp}]</span> ${message}`;
+        this.elements.logContent.appendChild(entry);
+        this.elements.logContent.scrollTop = this.elements.logContent.scrollHeight;
+    },
+
+    showResult(url, status = 'completed', errorMsg = '') {
         this.elements.resultContainer.style.display = 'block';
-        const fullUrl = `http://localhost:8000${url}`;
+
+        if (status === 'partial_success') {
+            this.elements.resultContainer.style.background = 'rgba(245, 158, 11, 0.1)';
+            this.elements.resultContainer.style.borderColor = '#f59e0b';
+            const statusText = this.elements.resultContainer.querySelector('p');
+            if (statusText) {
+                statusText.textContent = 'Process completed with warnings';
+                statusText.style.color = '#f59e0b';
+            }
+            this.addLog(`Process completed with warnings: ${errorMsg}`, 'warning');
+        } else {
+            this.elements.resultContainer.style.background = 'rgba(16, 185, 129, 0.1)';
+            this.elements.resultContainer.style.borderColor = 'var(--success)';
+            const statusText = this.elements.resultContainer.querySelector('p');
+            if (statusText) {
+                statusText.textContent = 'Processing Complete!';
+                statusText.style.color = 'var(--success)';
+            }
+            this.addLog('Process completed successfully. Audio ready.', 'success');
+        }
+
+        const baseUrl = window.location.origin.includes('file://') ? 'http://localhost:8000' : window.location.origin;
+        const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+
         this.elements.resultAudio.src = fullUrl;
         this.elements.downloadLink.href = fullUrl;
         this.elements.submitBtn.disabled = false;
@@ -55,6 +89,12 @@ const ui = {
         }
     }
 };
+
+// Log Clearing Logic
+ui.elements.clearLogsBtn.addEventListener('click', () => {
+    ui.elements.logContent.innerHTML = '';
+    ui.addLog('Log cleared.', 'system');
+});
 
 // Drag and Drop Logic
 ui.elements.dropZone.addEventListener('click', () => ui.elements.fileInput.click());
@@ -74,10 +114,16 @@ ui.elements.dropZone.addEventListener('drop', (e) => {
     if (e.dataTransfer.files.length) {
         ui.elements.fileInput.files = e.dataTransfer.files;
         updateFileLabel();
+        ui.addLog(`File dropped: ${e.dataTransfer.files[0].name}`, 'info');
     }
 });
 
-ui.elements.fileInput.addEventListener('change', updateFileLabel);
+ui.elements.fileInput.addEventListener('change', () => {
+    updateFileLabel();
+    if (ui.elements.fileInput.files.length) {
+        ui.addLog(`File selected: ${ui.elements.fileInput.files[0].name}`, 'info');
+    }
+});
 
 function updateFileLabel() {
     if (ui.elements.fileInput.files.length) {

@@ -41,6 +41,7 @@ header h1 {
     font-weight: 800;
     background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.025em;
 }
@@ -249,4 +250,118 @@ audio {
     color: var(--accent-primary);
     text-decoration: none;
     font-weight: 600;
+}
+
+/* Log Bitácora */
+.log-bitacora {
+    margin-top: 2rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    font-family: 'Fira Code', monospace;
+}
+
+.log-header {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.log-content {
+    padding: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+
+.log-entry {
+    margin-bottom: 0.25rem;
+    border-left: 2px solid transparent;
+    padding-left: 0.5rem;
+}
+
+.log-entry.system {
+    color: var(--accent-primary);
+    border-left-color: var(--accent-primary);
+}
+
+.log-entry.info {
+    color: var(--text-main);
+}
+
+.log-entry.success {
+    color: var(--success);
+    border-left-color: var(--success);
+}
+
+.log-entry.error {
+    color: var(--error);
+    border-left-color: var(--error);
+}
+
+.log-entry.warning {
+    color: #f59e0b;
+    border-left-color: #f59e0b;
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.btn-text:hover {
+    background: rgba(56, 189, 248, 0.1);
+}
+
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    header h1 {
+        font-size: 2rem;
+    }
+
+    .main-card {
+        padding: 1.5rem;
+        border-radius: 1rem;
+    }
+
+    .file-drop-zone {
+        padding: 2rem 1rem;
+    }
+
+    header {
+        margin-bottom: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.75rem;
+    }
+
+    .input-group label {
+        font-size: 0.75rem;
+    }
+
+    button.primary {
+        font-size: 0.9rem;
+    }
 }

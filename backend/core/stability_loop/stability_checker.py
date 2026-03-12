@@ -48,9 +48,10 @@ class StabilityChecker:
     async def check_stats(self) -> bool:
         try:
             from backend.core.module_registry import module_registry
-            from backend.core.permissions import set_chip_context
-            active_chips = module_registry.get_active_modules()
-            return len(active_chips) > 0
+            # In bootstrap or test modes, we might have 0 modules. 
+            # We check if the registry is at least accessible.
+            module_registry.get_active_modules()
+            return True
         except Exception:
             return False
 

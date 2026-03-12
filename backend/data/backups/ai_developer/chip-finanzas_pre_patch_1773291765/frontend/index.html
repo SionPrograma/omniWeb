@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chip Finanzas | OmniWeb</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for a modern, clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="top-nav">
+            <button id="btn-back" class="icon-btn back-btn" aria-label="Volver">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
+            <h1 class="nav-title">Finanzas</h1>
+            <div class="nav-spacer"></div>
+        </header>
+
+        <!-- Main Dashboard View -->
+        <main id="view-dashboard" class="view active">
+            <!-- Summary Panel -->
+            <div class="summary-panel">
+                <div class="balance-card">
+                    <p class="balance-label">Balance Actual</p>
+                    <h2 id="summary-balance" class="balance-amount">$0.00</h2>
+                </div>
+                <div class="kpi-row">
+                    <div class="kpi-card income">
+                        <p class="kpi-label">Ingresos</p>
+                        <p id="summary-income" class="kpi-value">+$0.00</p>
+                    </div>
+                    <div class="kpi-card expense">
+                        <p class="kpi-label">Gastos</p>
+                        <p id="summary-expense" class="kpi-value">-$0.00</p>
+                    </div>
+                    <div class="kpi-card saving">
+                        <p class="kpi-label">Ahorro</p>
+                        <p id="summary-saving" class="kpi-value">$0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <h3>Últimos Movimientos</h3>
+                <button id="btn-show-all" class="text-btn">Ver todos</button>
+            </div>
+
+            <!-- Movimientos list -->
+            <ul id="transactions-list" class="transactions-list">
+                <!-- Transactions will be injected here via JS -->
+            </ul>
+
+            <!-- Floating Action Button for Adding New Transaction -->
+            <button id="btn-add-transaction" class="fab-btn" aria-label="Agregar Movimiento">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
+        </main>
+
+        <!-- Add Transaction Form View -->
+        <main id="view-add-form" class="view hidden">
+            <div class="form-container">
+                <h2 class="form-title">Nuevo Movimiento</h2>
+
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <div class="type-selector">
+                        <button type="button" class="type-btn active" data-type="expense">Gasto</button>
+                        <button type="button" class="type-btn" data-type="income">Ingreso</button>
+                        <button type="button" class="type-btn" data-type="saving">Ahorro</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-amount">Monto</label>
+                    <input type="number" id="input-amount" placeholder="0.00" step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="input-desc">Descripción</label>
+                    <input type="text" id="input-desc" placeholder="Ej. Compra supermercado">
+                </div>
+
+                <div class="form-actions">
+                    <button id="btn-save-transaction" class="btn btn-primary">Guardar</button>
+                    <button id="btn-cancel-transaction" class="btn btn-outline">Cancelar</button>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Modulo de App con importaciones de Core -->
+    <script type="module" src="app.js"></script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+
+<button id="export-pdf-btn" class="omni-btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<script>document.getElementById("export-pdf-btn")?.addEventListener("click", () => alert("Exporting to PDF..."));</script>
+</body>
+
+</html>

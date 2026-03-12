@@ -53,9 +53,11 @@ class IdeaBackgroundProcessor:
                 )
                 idea_store.save_cluster(cluster)
         
-        # Mark as processed
+        # Mark as processed and trigger expansion
+        from .idea_expansion import idea_expansion
         for idea in unprocessed:
             idea.is_processed = True
             idea_store.save_idea(idea)
+            await idea_expansion.process_new_idea(idea)
 
 idea_background_processor = IdeaBackgroundProcessor()

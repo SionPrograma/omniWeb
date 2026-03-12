@@ -1,0 +1,24 @@
+{
+    "name": "OmniWeb VideoTranslator",
+    "short_name": "VideoTranslator",
+    "description": "AI-Powered Video Transcription, Translation & Narration",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#38bdf8",
+    "icons": [
+        {
+            "src": "omniweb_lingua_icon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "omniweb_lingua_icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

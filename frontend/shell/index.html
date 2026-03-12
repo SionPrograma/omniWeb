@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OmniWeb | AI Host Shell</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@200;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="logbook.css">
+    <meta name="theme-color" content="#0a0a0f">
+</head>
+
+<body>
+    <!-- Background Nebula/Particles -->
+    <div class="nebula-bg"></div>
+    <div class="particles" id="particles"></div>
+
+    <div id="shell-container">
+        <!-- AI HOST VIEW (LANDING) -->
+        <main id="ai-host-view" class="active">
+            <div class="ai-core-container">
+                <div class="ai-orb">
+                    <div class="ai-orb-inner"></div>
+                    <div class="ai-orb-glow"></div>
+                </div>
+                <h1 class="greeting-text" id="greeting">Omni Shell</h1>
+                <p class="status-subtitle">System: Online | Context: Global</p>
+            </div>
+
+            <div class="chat-interaction-area">
+                <div class="conversation-log" id="chat-log">
+                    <!-- Dynamic messages -->
+                    <div class="message ai">
+                        <div class="msg-bubble">How can I assist you today? I'm observing your active chips and
+                            long-term memory.</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- CHIP VIEW (IFRAME CONTAINER) -->
+        <section id="active-chip-view">
+            <div class="chip-header">
+                <button class="exit-chip-btn" id="close-chip">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <span id="active-chip-title">Chip: Lingua</span>
+                <div class="chip-options">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="1" />
+                        <circle cx="12" cy="5" r="1" />
+                        <circle cx="12" cy="19" r="1" />
+                    </svg>
+                </div>
+            </div>
+            <iframe id="chip-frame" src="" frameborder="0"></iframe>
+        </section>
+
+        <!-- CONTEXT PANEL (OVERLAY) -->
+        <aside id="context-panel">
+            <div class="panel-handle"></div>
+            <header class="panel-header">
+                <h2>Knowledge Graph</h2>
+            </header>
+            <div class="panel-content">
+                <div class="context-item">
+                    <span class="label">Last Activity</span>
+                    <span class="value">Video Translation (Lingua)</span>
+                </div>
+                <div class="context-item">
+                    <span class="label">Priority Nodes</span>
+                    <div class="nodes-mini-grid">
+                        <div class="mini-node">Finanzas</div>
+                        <div class="mini-node">Logbook</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- SHELL NAVIGATION (BOTTOM NAV) -->
+        <nav id="bottom-nav">
+            <button class="nav-item active" data-view="chat">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>AI Host</span>
+            </button>
+
+            <button class="nav-item shell-launcher" id="open-launcher">
+                <div class="launcher-icon">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+            </button>
+
+            <button class="nav-item" data-view="context">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+                    <path d="M12 12L2.7 16.5" />
+                    <path d="M12 12l7.5 7.5" />
+                </svg>
+                <span>Context</span>
+            </button>
+
+            <button class="nav-item" onclick="masterLogbook.toggle()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                <span>Logbook</span>
+            </button>
+        </nav>
+
+        <!-- LAUNCHER OVERLAY -->
+        <div id="launcher-overlay">
+            <div class="launcher-grid">
+                <div class="chip-launcher-item active" data-chip="lingua" data-url="/lingua/">
+                    <div class="chip-icon lingua">L</div>
+                    <span class="chip-label">Lingua</span>
+                </div>
+                <div class="chip-launcher-item" data-chip="finanzas" data-url="/finanzas/">
+                    <div class="chip-icon finanzas">F</div>
+                    <span class="chip-label">Finanzas</span>
+                </div>
+                <div class="chip-launcher-item disabled">
+                    <div class="chip-icon empty">+</div>
+                    <span class="chip-label">More</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-bar">
+            <input type="text" placeholder="Command Omni..." id="shell-input">
+            <button id="send-command">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+    <script src="logbook.js"></script>
+</body>
+
+</html>
