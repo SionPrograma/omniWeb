@@ -106,7 +106,15 @@ class CommandRouter:
             from backend.core.ai_host.processors.interface_processor import interface_processor
             return await interface_processor.process(msg, "default_user")
 
-        # 5. Existing intent classification
+        # 5. Spatial Interface Detection (Phase AC)
+        spatial_keywords = ["proyectar", "project", "360", "espacio", "holograma", "hologram"]
+        is_spatial = any(k in msg for k in spatial_keywords)
+        
+        if is_spatial:
+            from backend.core.ai_host.processors.spatial_processor import spatial_processor
+            return await spatial_processor.process(msg, "default_user")
+
+        # 6. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

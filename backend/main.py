@@ -380,6 +380,30 @@ async def get_interface_config():
     from backend.core.web_window_engine.web_window_controller import web_window_controller
     return {"status": "ok", "config": web_window_controller.config.model_dump()}
 
+# --- Spatial Interface (Phase AC) ---
+
+@app.get(f"{settings.API_V1_STR}/spatial/scene")
+async def get_spatial_scene():
+    """Returns the current 3D holographic scene state."""
+    from backend.core.spatial_interface.spatial_scene_manager import spatial_scene_manager
+    return {"status": "ok", "scene": spatial_scene_manager.active_scene.model_dump()}
+
+@app.post(f"{settings.API_V1_STR}/spatial/transform")
+async def update_spatial_transform(obj_id: str, x: float = None, y: float = None, z: float = None):
+    """Updates position of a holographic object."""
+    from backend.core.spatial_interface.spatial_scene_manager import spatial_scene_manager
+    from backend.core.spatial_interface.spatial_models import Vector3
+    pos = Vector3(x=x, y=y, z=z) if x is not None else None
+    spatial_scene_manager.update_object(obj_id, position=pos)
+    return {"status": "ok"}
+
+@app.post(f"{settings.API_V1_STR}/spatial/gesture")
+async def process_spatial_gesture(gesture: str, obj_id: str = None):
+    """Processes a simulated hand gesture."""
+    from backend.core.spatial_interface.gesture_processor import gesture_processor
+    res = gesture_processor.process_gesture(gesture, obj_id)
+    return res
+
 # --- Distributed Network Endpoints (Phase V) ---
 
 @app.get(f"{settings.API_V1_STR}/network/nodes")
