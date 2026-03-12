@@ -580,6 +580,111 @@
             letter-spacing: 1px;
         }
 
+        /* Floating Window System (Phase AB) */
+        .floating-window {
+            position: absolute;
+            z-index: 1000;
+            background: rgba(10, 20, 35, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            backdrop-filter: blur(25px);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: opacity 0.3s;
+        }
+
+        .window-header {
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            user-select: none;
+        }
+
+        .window-title {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .win-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .win-close {
+            background: #ff5f56;
+        }
+
+        .win-min {
+            background: #ffbd2e;
+        }
+
+        .win-max {
+            background: #27c93f;
+        }
+
+        .window-content {
+            flex-grow: 1;
+            background: #000;
+        }
+
+        .window-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Agent Icons & Orbit */
+        .agent-icon {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #a855f7, #3b82f6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            z-index: 900;
+            cursor: move;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .agent-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .agent-icon.speaking {
+            animation: agent-pulse 1s infinite;
+        }
+
+        @keyframes agent-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 255, 0.7);
+            }
+
+            100% {
+                box-shadow: 0 0 0 15px rgba(0, 200, 255, 0);
+            }
+        }
+
         /* Runtime Foundation Panel */
         .runtime-panel {
             position: fixed;
@@ -854,7 +959,7 @@
         <h1>OmniWeb</h1>
         <div class="subtitle">Personal Knowledge Environment</div>
         <div class="version-badge"
-            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v1.2.0-human-dev
+            style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7;">v1.3.0-interactive
         </div>
     </header>
 
@@ -913,7 +1018,22 @@
         <div id="knowledge-tags" style="margin-top: 10px; display: flex; flex-wrap: wrap;"></div>
     </div>
 
-    <!-- Runtime Foundation Panel -->
+    <!-- OmniWeb Interactive Space (Phase AB) -->
+    <div id="interactive-space" style="position: fixed; inset: 0; pointer-events: none; z-index: 100;"></div>
+    <div id="agent-orbit" style="position: fixed; inset: 0; pointer-events: none; z-index: 90;"></div>
+
+    <!-- Interface Control Panel -->
+    <div class="runtime-panel" style="bottom: 2rem; left: 2rem; height: auto;">
+        <div class="insights-title" style="color: #bb86fc;">Interface Control</div>
+        <div style="font-size: 0.7rem; margin-top: 10px;">
+            <div>Brightness</div>
+            <input type="range" id="brightness-slider" min="0.2" max="1.5" step="0.1" value="1.0"
+                style="width: 100%; accent-color: #bb86fc;">
+            <div style="margin-top: 8px;">Transparency</div>
+            <input type="range" id="transparency-slider" min="0.1" max="1.0" step="0.1" value="0.8"
+                style="width: 100%; accent-color: #bb86fc;">
+        </div>
+    </div>
     <div class="runtime-panel">
         <div class="insights-title">System Runtime</div>
         <div id="runtime-content">
@@ -1630,6 +1750,88 @@
             }
         }
 
+        // --- Multi-AI Interface Logic (Phase AB) ---
+
+        function createWindow(config) {
+            const space = document.getElementById('interactive-space');
+            const win = document.createElement('div');
+            win.id = `window-${config.id}`;
+            win.className = 'floating-window';
+            win.style.left = `${config.x}px`;
+            win.style.top = `${config.y}px`;
+            win.style.width = `${config.width}px`;
+            win.style.height = `${config.height}px`;
+            win.style.pointerEvents = 'auto';
+            win.style.opacity = config.opacity;
+
+            win.innerHTML = `
+                <div class="window-header" onmousedown="startDrag(event, '${win.id}')">
+                    <div class="window-title">${config.title}</div>
+                    <div class="window-controls">
+                        <div class="win-btn win-min"></div>
+                        <div class="win-btn win-close" onclick="this.closest('.floating-window').remove()"></div>
+                    </div>
+                </div>
+                <div class="window-content">
+                    <iframe src="${config.url}" title="${config.title}"></iframe>
+                </div>
+            `;
+            space.appendChild(win);
+        }
+
+        function createAgentIcon(agent) {
+            const orbit = document.getElementById('agent-orbit');
+            const icon = document.createElement('div');
+            icon.className = `agent-icon ${agent.status === 'speaking' ? 'speaking' : ''}`;
+            icon.style.left = `${agent.position.x}%`;
+            icon.style.top = `${agent.position.y}%`;
+            icon.style.pointerEvents = 'auto';
+            icon.innerText = agent.name[0];
+            icon.title = `${agent.name} (${agent.role})`;
+            orbit.appendChild(icon);
+        }
+
+        function startDrag(e, id) {
+            const el = document.getElementById(id);
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+
+            document.onmouseup = () => {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            };
+
+            document.onmousemove = (e) => {
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                el.style.top = (el.offsetTop - pos2) + "px";
+                el.style.left = (el.offsetLeft - pos1) + "px";
+            };
+        }
+
+        async function loadInterfaceState() {
+            try {
+                // Windows
+                const wRes = await fetch('/api/v1/interface/windows');
+                const wData = await wRes.json();
+                wData.windows.forEach(w => {
+                    if (!document.getElementById(`window-${w.id}`)) createWindow(w);
+                });
+
+                // Agents
+                const aRes = await fetch('/api/v1/interface/agents');
+                const aData = await aRes.json();
+                const orbit = document.getElementById('agent-orbit');
+                orbit.innerHTML = '';
+                if (aData.agents) aData.agents.forEach(createAgentIcon);
+            } catch (e) {
+                console.warn("Interface state load failed:", e);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadChips();
@@ -1647,6 +1849,18 @@
             loadCertifications();
             loadSkillProfile();
             loadOpportunities();
+            loadInterfaceState();
+
+            // Sliders (Phase AB)
+            document.getElementById('brightness-slider').addEventListener('input', (e) => {
+                document.body.style.filter = `brightness(${e.target.value})`;
+            });
+
+            document.getElementById('transparency-slider').addEventListener('input', (e) => {
+                document.querySelectorAll('.floating-window, .insights-panel, .human-dev-panel, .education-panel, .graph-panel, .runtime-panel').forEach(el => {
+                    el.style.opacity = e.target.value;
+                });
+            });
 
             // Periodicals
             setInterval(loadNodes, 10000);
@@ -1660,6 +1874,7 @@
             setInterval(loadCertifications, 40000);
             setInterval(loadSkillProfile, 15000);
             setInterval(loadOpportunities, 30000);
+            setInterval(loadInterfaceState, 5000);
         });
 
         async function loadSemanticSummary() {

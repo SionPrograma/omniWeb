@@ -98,7 +98,15 @@ class CommandRouter:
             from backend.core.ai_host.processors.opportunity_processor import opportunity_processor
             return await opportunity_processor.process(msg, "default_user")
 
-        # 4. Existing intent classification
+        # 4. Multi-AI Interface Detection (Phase AB)
+        interface_keywords = ["abrir", "open", "invitar", "invite", "ventana", "window"]
+        is_interface = any(k in msg for k in interface_keywords)
+        
+        if is_interface:
+            from backend.core.ai_host.processors.interface_processor import interface_processor
+            return await interface_processor.process(msg, "default_user")
+
+        # 5. Existing intent classification
         intent = intent_classifier.classify(msg)
         
         if intent and intent in self.intents:

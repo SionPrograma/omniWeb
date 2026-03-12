@@ -360,6 +360,26 @@ async def award_certificate(title: str, skills: list[str], level: str = "Foundat
     cert = certification_generator.award_certification("default_user", title, skills, level)
     return {"status": "ok", "certification": cert.model_dump()}
 
+# --- Multi-AI Interface (Phase AB) ---
+
+@app.get(f"{settings.API_V1_STR}/interface/windows")
+async def get_active_windows():
+    """Returns all active floating windows."""
+    from backend.core.web_window_engine.web_window_controller import web_window_controller
+    return {"status": "ok", "windows": [w.model_dump() for w in web_window_controller.windows.values()]}
+
+@app.get(f"{settings.API_V1_STR}/interface/agents")
+async def get_active_agents():
+    """Returns all invited AI participants."""
+    from backend.core.multi_ai_interface.agent_manager import agent_manager
+    return {"status": "ok", "agents": [a.model_dump() for a in agent_manager.get_all_agents()]}
+
+@app.get(f"{settings.API_V1_STR}/interface/config")
+async def get_interface_config():
+    """Returns global theme and transparency settings."""
+    from backend.core.web_window_engine.web_window_controller import web_window_controller
+    return {"status": "ok", "config": web_window_controller.config.model_dump()}
+
 # --- Distributed Network Endpoints (Phase V) ---
 
 @app.get(f"{settings.API_V1_STR}/network/nodes")
