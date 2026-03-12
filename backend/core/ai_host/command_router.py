@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 import logging
+from .intent_classifier import intent_classifier
 from .processors.knowledge_processor import KnowledgeProcessor
 from .processors.memory_processor import MemoryProcessor
 from .processors.graph_processor import GraphProcessor
@@ -56,35 +57,15 @@ class CommandRouter:
         
         res = None
         
-        # Simple rule-based intent classification
-        if "abrir" in msg or "open" in msg:
-             res = await self.intents["open"](msg)
-        elif "crea" in msg or "create" in msg:
-             res = await self.intents["create"](msg)
-        elif "activa" in msg or "activate" in msg:
-             res = await self.intents["activate"](msg)
-        elif "desactiva" in msg or "deactivate" in msg:
-             res = await self.intents["deactivate"](msg)
-        elif "estado" in msg or "status" in msg or "salud" in msg:
-             res = await self.intents["status"](msg)
-        elif "listar" in msg or "list" in msg or "chips" in msg:
-             res = await self.intents["list"](msg)
-        elif "preparar" in msg or "sugiere" in msg or "sesión" in msg:
-             res = await self.intents["suggest"](msg)
-        elif "insight" in msg or "mejorar" in msg or "optimizar" in msg or "sugerencia" in msg or "mejora" in msg:
-             res = await self.intents["insights"](msg)
-        elif "workflow" in msg or "flujo" in msg:
-             res = await self.intents["workflow"](msg)
-        elif "modificar" in msg or "modify" in msg or "parche" in msg:
-             res = await self.intents["modify"](msg)
-        elif "recordar" in msg or "memory" in msg or "historia" in msg or "continuar" in msg or "resume" in msg or "recall" in msg:
-             res = await self.intents["memory"](msg)
-        elif "explora" in msg or "explore" in msg or "relacion" in msg or "relates" in msg or "camino" in msg or "path" in msg or "grafo" in msg or "graph" in msg:
-             res = await self.intents["graph"](msg)
-        elif "antimodal" in msg or "silencio" in msg or "silent" in msg or "compact" in msg or "fondo" in msg or "background" in msg or "distraccion" in msg or "distraction" in msg or "resumen" in msg or "summary" in msg:
-             res = await self.intents["antimodal"](msg)
-        elif "explica" in msg or "explain" in msg or "entiende" in msg or "understand" in msg or "conecta" in msg or "connect" in msg or "mapa" in msg or "map" in msg or "aprende" in msg or "learn" in msg or "que es" in msg or "what is" in msg:
-             res = await self.intents["knowledge"](msg)
+        # Intent classification through decoupled component (Phase T readiness)
+        intent = intent_classifier.classify(msg)
+        
+        if intent and intent in self.intents:
+            res = await self.intents[intent](msg)
+        elif not intent:
+            # Fallback for knowledge as it has a broad semantic footprint
+            if any(k in msg for k in ["explica", "explain", "que es", "what is"]):
+                res = await self.intents["knowledge"](msg)
         
         if not res:
             res = AICommandResponse(
