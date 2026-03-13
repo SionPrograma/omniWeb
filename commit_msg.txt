@@ -1,8 +1,0 @@
-docs(portfolio): transform repository into professional engineering standard
-
-This commit includes:
-- Complete architectural documentation in /docs
-- Milestone mapping for project evolution
-- README overhaul for portfolio positioning
-- Repository cleanup and script reorganization
-- Official creator attribution: Nicolás Alejandro Ordoñez
