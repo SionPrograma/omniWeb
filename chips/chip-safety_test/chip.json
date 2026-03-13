@@ -1,0 +1,12 @@
+{
+    "id": "chip-safety_test",
+    "slug": "safety_test",
+    "name": "Original Chip",
+    "description": "M\u00f3dulo din\u00e1mico: Original Chip",
+    "version": "0.1.0",
+    "type": "hybrid",
+    "has_frontend": true,
+    "has_backend": true,
+    "entry_frontend": "frontend/index.html",
+    "active": true
+}

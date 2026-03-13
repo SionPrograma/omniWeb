@@ -1,0 +1,11 @@
+{
+  "text": "Hello world",
+  "segments": [
+    {
+      "text": "Hello world",
+      "start": 0,
+      "end": 2,
+      "translated_text": "Hola mundo"
+    }
+  ]
+}

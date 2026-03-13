@@ -27,6 +27,11 @@ from backend.core.user_context.router import router as context_router
 from backend.core.ai_host.router import router as aihost_router
 from backend.core.stability_loop.router import router as stability_router
 from backend.core.master_logbook.router import router as master_logbook_router
+from backend.core.identity.router import router as identity_router
+from backend.core.security.creator_router import router as creator_gateway_router
+from backend.core.user_logbook.router import router as user_logbook_router
+from backend.core.user_graph.router import router as user_graph_router
+from backend.core.insight_engine.router import router as insight_router
 
 # Ensure the root of the project is in the Python path
 sys.path.append(os.getcwd())
@@ -77,13 +82,18 @@ async def dashboard():
 
 # --- Include Modular Routers ---
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
+app.include_router(identity_router, prefix=f"{settings.API_V1_STR}/auth", tags=["identity"])
+app.include_router(creator_gateway_router, prefix=f"{settings.API_V1_STR}/creator", tags=["security-fortress"])
 app.include_router(system_router, prefix=f"{settings.API_V1_STR}/system", tags=["system"])
 app.include_router(edu_router, prefix=f"{settings.API_V1_STR}/education", tags=["education"])
 app.include_router(ecosystem_router, prefix=f"{settings.API_V1_STR}", tags=["ecosystem"])
 app.include_router(domain_router, prefix=f"{settings.API_V1_STR}/domains", tags=["domains"])
 app.include_router(collaboration_router, prefix=f"{settings.API_V1_STR}/collab", tags=["collaboration"])
 app.include_router(onboarding_router, prefix=f"{settings.API_V1_STR}/onboarding", tags=["onboarding"])
-app.include_router(logbook_router, prefix=f"{settings.API_V1_STR}/logbook", tags=["logbook"])
+app.include_router(user_logbook_router, prefix=f"{settings.API_V1_STR}/logbook", tags=["user-logbook"])
+app.include_router(user_graph_router, prefix=f"{settings.API_V1_STR}/user/graph", tags=["user-graph"])
+app.include_router(insight_router, prefix=f"{settings.API_V1_STR}/user/insights", tags=["insights"])
+app.include_router(logbook_router, prefix=f"{settings.API_V1_STR}/logbook-network", tags=["logbook"])
 app.include_router(context_router, prefix=f"{settings.API_V1_STR}/user", tags=["user"])
 app.include_router(aihost_router, prefix=f"{settings.API_V1_STR}/ai-host", tags=["ai-host"])
 app.include_router(stability_router, prefix=f"{settings.API_V1_STR}/system/loop", tags=["stability"])

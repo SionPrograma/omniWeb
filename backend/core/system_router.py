@@ -67,6 +67,87 @@ async def get_system_stats():
         "events_tracked": total_events
     }
 
+@router.get("/inspect")
+async def inspect_system(query: str = "project", admin_user: dict = Security(get_admin_user)):
+    """
+    Returns relevant files and directories for a query.
+    Used by the Code Control panel in Mission Control.
+    """
+    from backend.core.ai_developer.code_analyzer import code_analyzer
+    return code_analyzer.inspect_project(query)
+
+@router.get("/state")
+async def get_system_state():
+    """
+    Unified entry point for full system state.
+    """
+    from backend.core.system_state.engine import state_engine
+    state = await state_engine.get_state()
+    
+    # Mode Filter (Phase 14)
+    if settings.OMNIWEB_MODE == "user":
+        state_data = state.model_dump()
+        state_data["auditor_summary"] = None # Hide sensitive audits in user mode
+        state_data["git_branch"] = "stable"
+        state_data["git_commit"] = "****"
+        return state_data
+        
+    return state
+
+@router.get("/state/summary")
+async def get_state_summary():
+    """
+    Core metrics summary.
+    """
+    from backend.core.system_state.engine import state_engine
+    state = await state_engine.get_state()
+    return {
+        "version": state.version,
+        "health": state.health,
+        "ai_host": state.ai_host["status"],
+        "db": state.database["status"],
+        "chips_active": len(state.chips),
+        "pending_fixes": state.pending_fixes,
+        "is_healing": state.is_healing
+    }
+
+@router.get("/state/chips")
+async def get_chips_state():
+    """
+    Detailed chip registry and health.
+    """
+    from backend.core.system_state.engine import state_engine
+    state = await state_engine.get_state()
+    return state.chips
+
+@router.get("/creator/status")
+async def get_creator_status():
+    """
+    Legacy wrapper for Creator Shell. Now powered by SystemStateEngine.
+    """
+    from backend.core.system_state.engine import state_engine
+    state = await state_engine.get_state()
+    
+    return {
+        "version": state.version,
+        "git": {
+            "branch": state.git_branch,
+            "commit": state.git_commit
+        },
+        "chips": {
+            "count": len(state.chips),
+            "list": [c.model_dump() for c in state.chips]
+        },
+        "db": state.database,
+        "ai_host": state.ai_host,
+        "auditor": {
+            "latest": state.auditor_summary,
+            "pending_fixes_count": state.pending_fixes,
+            "recent_fixes": [], # Handled by specific fix endpoints
+            "is_healing": state.is_healing
+        }
+    }
+
 @router.get("/usage")
 async def get_system_usage():
     from backend.core.usage.usage_tracker import usage_tracker
@@ -171,3 +252,57 @@ async def receive_distributed_event(request: Request):
     body = await request.body()
     await distributed_event_router.route_incoming(body.decode())
     return {"status": "success"}
+
+@router.post("/audit")
+async def run_system_audit(admin_user: dict = Security(get_admin_user)):
+    """
+    Triggers a full system audit.
+    """
+    from backend.core.system_auditor.auditor import auditor
+    report = await auditor.run_full_audit()
+    return report
+
+@router.get("/audit/latest")
+async def get_latest_audit_report():
+    """
+    Fetches the latest audit entry from the Master Logbook.
+    """
+    from backend.core.master_logbook.manager import master_logbook_manager
+    from backend.core.master_logbook.models import EntryType, MasterLogbookFilter
+    
+    filters = MasterLogbookFilter(type=EntryType.SYSTEM_AUDIT)
+    entries = master_logbook_manager.get_entries(filters=filters, limit=1)
+    
+    if not entries:
+        raise HTTPException(status_code=404, detail="No audit reports found.")
+    
+    latest = entries[0]
+    return latest.metadata.get("audit_report", latest.content)
+
+@router.get("/audit/fixes")
+async def get_pending_fixes(admin_user: dict = Security(get_admin_user)):
+    """
+    Returns all pending auto-fix proposals.
+    """
+    from backend.core.system_auditor.fix_engine import fix_engine
+    return list(fix_engine.active_proposals.values())
+
+@router.post("/audit/fix/apply")
+async def apply_fix(proposal_id: str, admin_user: dict = Security(get_admin_user)):
+    """
+    Applies a specific auto-fix proposal.
+    """
+    from backend.core.system_auditor.fix_engine import fix_engine
+    success = await fix_engine.apply_fix(proposal_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Fix application failed.")
+    
+    # Run audit again to verify
+    from backend.core.system_auditor.auditor import auditor
+    new_report = await auditor.run_full_audit()
+    
+    return {
+        "status": "success",
+        "message": f"Fix {proposal_id} applied successfully.",
+        "new_report_status": new_report.overall_status.value
+    }

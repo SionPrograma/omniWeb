@@ -11,7 +11,8 @@
     "dashboard_visible": true,
     "active": true,
     "permissions": [
-        "db_access",
-        "event_publish"
+        "storage_read",
+        "storage_write",
+        "user_logbook_access"
     ]
 }

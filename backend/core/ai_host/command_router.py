@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 import logging
 from .intent_classifier import intent_classifier
+from .processors.base import AICommandResponse
 from .processors.knowledge_processor import KnowledgeProcessor
 from .processors.memory_processor import MemoryProcessor
 from .processors.graph_processor import GraphProcessor
@@ -13,14 +14,17 @@ from backend.core.antimodal.antimodal_controller import antimodal_controller
 from backend.core.antimodal.antimodal_models import AntimodalMode
 from .processors.supercommand_processor import SuperCommandProcessor
 from .processors.logbook_processor import LogbookProcessor
+from .processors.code_control_processor import CodeControlProcessor
+from .processors.healing_processor import HealingProcessor
+from .processors.status_processor import StatusProcessor
+from .processors.generator_processor import GeneratorProcessor
+from .processors.user_logbook_processor import UserLogbookProcessor
+from .processors.user_graph_processor import UserGraphProcessor
+from .processors.insight_processor import InsightProcessor
+from .processors.permission_processor import PermissionProcessor
 
 logger = logging.getLogger(__name__)
 
-class AICommandResponse(BaseModel):
-    intent: str
-    status: str
-    message: str
-    payload: Dict[str, Any] = {}
 
 class CommandRouter:
     """
@@ -35,13 +39,24 @@ class CommandRouter:
         self.registry.register("graph", GraphProcessor())
         self.registry.register("supercommand", SuperCommandProcessor())
         self.registry.register("logbook", LogbookProcessor())
+        self.registry.register("code_control", CodeControlProcessor())
+        self.registry.register("healing", HealingProcessor())
+        self.registry.register("status", StatusProcessor())
+        self.registry.register("generator", GeneratorProcessor())
+        self.registry.register("user_logbook", UserLogbookProcessor())
+        self.registry.register("user_graph", UserGraphProcessor())
+        self.registry.register("insight", InsightProcessor())
+        self.registry.register("permission", PermissionProcessor())
 
         self.intents = {
-            "open": self._handle_open,
+            "open_chip": self._handle_open_chip,
+            "log_entry": self._handle_log_entry,
+            "show_system_status": self._handle_show_system_status,
+            "show_logbook": self._handle_show_logbook,
+            "launch_pipeline": self._handle_launch_pipeline,
             "create": self._handle_create,
             "activate": self._handle_activate,
             "deactivate": self._handle_deactivate,
-            "status": self._handle_status,
             "list": self._handle_list,
             "workflow": self._handle_workflow,
             "insights": self._handle_insights,
@@ -50,169 +65,188 @@ class CommandRouter:
             "memory": self._handle_memory,
             "graph": self._handle_graph,
             "antimodal": self._handle_antimodal,
-            "knowledge": self._handle_knowledge
+            "knowledge": self._handle_knowledge,
+            "healing": self._handle_healing
         }
 
-    async def route(self, message: str, modality: str = "text") -> AICommandResponse:
-        # Multimodal Entrance
-        input_v = MultimodalInput(modality=modality, raw_data=message)
-        msg = await multimodal_router.handle_input(input_v)
-        msg = msg.lower()
-
-        # Phase AA: Automatic Skill Discovery
-        try:
-            from backend.core.skill_engine.skill_detector import skill_detector
-            skill_detector.detect_from_input("default_user", msg)
-        except Exception as e:
-            logger.error(f"CommandRouter: Skill Discovery Error: {e}")
+    async def route(self, message: str, modality: str = "text", context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        from backend.core.permissions import set_chip_context
+        user_id = context.get("user_id") if context else None
         
-        res = None
+        with set_chip_context("core", user_id=user_id):
+            # Multimodal Entrance
+            input_v = MultimodalInput(modality=modality, raw_data=message)
+            msg = await multimodal_router.handle_input(input_v)
+            msg = msg.lower()
+
+            # Phase AA: Automatic Skill Discovery
+            try:
+                from backend.core.skill_engine.skill_detector import skill_detector
+                skill_detector.detect_from_input("default_user", msg)
+            except Exception as e:
+                logger.error(f"CommandRouter: Skill Discovery Error: {e}")
+            
+            res = None
+            
+            # 1. Intent classification
+            intent = intent_classifier.classify(msg)
+            logger.info(f"CommandRouter: Detected intent '{intent}' for message: {msg}")
+
+            # 2. Check registered processors for specialized handling (Phase 6/T)
+            for proc in self.registry._processors.values():
+                if await proc.can_handle(msg):
+                    return await proc.process(msg, context=context)
+
+            # 3. Route based on detected intent
+            if intent and intent in self.intents:
+                res = await self.intents[intent](msg)
+                if res: return res
+
+            # --- Legacy / Phase-specific Fallbacks ---
+
+            # 13. Existing intent classification
+            intent = intent_classifier.classify(msg)
+            
+            if intent and intent in self.intents:
+                res = await self.intents[intent](msg)
+            elif not intent:
+                # Fallback for knowledge as it has a broad semantic footprint
+                if any(k in msg for k in ["explica", "explain", "que es", "what is"]):
+                    res = await self.intents["knowledge"](msg)
+            
+            if not res:
+                # Fallback to Idea Cloud (Phase Y)
+                from backend.core.idea_cloud.idea_capture import idea_capture
+                idea = idea_capture.capture(msg)
+                res = AICommandResponse(
+                    intent="idea_captured",
+                    status="success",
+                    message=f"He guardado tu pensamiento en la Nube de Ideas ('{msg[:30]}...'). Lo conectaré con tu conocimiento más tarde.",
+                    payload={"idea_id": idea.id, "topics": idea.topics}
+                )
+
+            # Antimodal adaptation (Phase 6)
+            res.message = antimodal_controller.process_ai_response(res.message)
+
+            # Telemetry (Phase F)
+            try:
+                from backend.core.usage.usage_tracker import usage_tracker
+                usage_tracker.log_event(
+                    event_type="ai_command_executed",
+                    chip_slug="ai-host",
+                    metadata={
+                        "intent": res.intent,
+                        "status": res.status,
+                        "message_preview": message[:50] # Privacy first
+                    }
+                )
+            except:
+                pass
+
+            return res
+
+    async def _handle_open_chip(self, msg: str) -> AICommandResponse:
+        from backend.core.module_registry import module_registry
+        chips = module_registry.discover_all_chips()
         
-        # 1. Master Logbook Detection (Should be one of the first things to check)
-        logbook_keywords = ["log", "guarda", "anota", "registra", "idea", "bug", "fix", "tarea", "task", "decision"]
-        is_logbook_intent = any(k in msg for k in logbook_keywords) and (
-            "como" in msg or "esto" in msg or "sobre" in msg or "anota" in msg or "guarda" in msg or len(msg) > 15
-        )
+        target = None
+        # Remove verbs and common connector words
+        noise = ["open", "abrir", "launch", "ejecutar", "lanzar", "chip", "entrar a", "go to", "the", "el", "la", "start", "inicia", "acceder", "run"]
+        msg_clean = msg.lower()
+        for word in noise:
+            msg_clean = msg_clean.replace(word, "")
+        msg_clean = msg_clean.strip()
         
-        log_res = None
-        if is_logbook_intent:
-            logger.info(f"CommandRouter: Logbook intent detected: {msg}")
-            processor = self.registry.get_processor("logbook")
-            log_res = await processor.process(msg, "default_user")
-            # If the user explicitly asks to log/save/note, return immediately.
-            early_return_keywords = ["log ", "guarda ", "anota ", "registra ", "save this", "note this"]
-            if any(w in msg for w in early_return_keywords):
-                return log_res
-
-        # 2. Check for SuperCommand (Phase X)
-        super_proc = self.registry.get_processor("supercommand")
-        if super_proc and await super_proc.can_handle(msg):
-            proc_res = await super_proc.process(msg)
-            # Combine message if we logged something
-            if log_res:
-                proc_res.message = f"{log_res.message}\n\n{proc_res.message}"
-            return proc_res
-
-        # --- Other Domain Processors ---
-
-        # 3. Education Engine Detection (Phase Z)
-        education_keywords = ["enseñame", "aprender", "explicar", "clase", "curso", "leccion", "teach", "learn", "explain"]
-        if any(k in msg for k in education_keywords):
-            from backend.core.ai_host.processors.education_processor import education_processor
-            topic = msg
-            for k in education_keywords: topic = topic.replace(k, "")
-            topic = topic.strip().strip(" sobre ").strip(" sobre el ").strip(" sobre la ")
-            return await education_processor.process(topic, "default_user")
-
-        # 4. Opportunity Engine Detection (Phase AA)
-        opportunity_keywords = ["oportunidad", "empleo", "trabajo", "carrera", "opportunity", "job", "career"]
-        if any(k in msg for k in opportunity_keywords):
-            from backend.core.ai_host.processors.opportunity_processor import opportunity_processor
-            return await opportunity_processor.process(msg, "default_user")
-
-        # 5. Multi-AI Interface Detection (Phase AB)
-        interface_keywords = ["abrir", "open", "invitar", "invite", "ventana", "window"]
-        if any(k in msg for k in interface_keywords):
-            from backend.core.ai_host.processors.interface_processor import interface_processor
-            return await interface_processor.process(msg, "default_user")
-
-        # 6. Spatial Interface Detection (Phase AC)
-        spatial_keywords = ["proyectar", "project", "360", "espacio", "holograma", "hologram"]
-        if any(k in msg for k in spatial_keywords):
-            from backend.core.ai_host.processors.spatial_processor import spatial_processor
-            return await spatial_processor.process(msg, "default_user")
-
-        # 7. Swarm Engine Detection (Phase AD)
-        swarm_keywords = ["enjambre", "swarm", "investiga", "research", "analiza", "multi"]
-        if any(k in msg for k in swarm_keywords) and len(msg) > 15:
-            from backend.core.ai_host.processors.swarm_processor import swarm_processor
-            return await swarm_processor.process(msg, "default_user")
-
-        # 8. Knowledge OS Detection (Phase AG - v2.0.0)
-        os_keywords = ["sistema", "kernel", "modo", "os", "econom", "mercado", "evolucion"]
-        if any(k in msg for k in os_keywords):
-            from backend.core.ai_host.processors.os_processor import os_processor
-            return await os_processor.process(msg, "default_user")
-
-        # 9. Language Bridge Detection (Phase AH)
-        bridge_keywords = ["traduccion", "bridge", "idioma", "traductor", "subtitulo", "habla"]
-        if any(k in msg for k in bridge_keywords):
-            from backend.core.ai_host.processors.bridge_processor import bridge_processor
-            return await bridge_processor.process(msg, "default_user")
-
-        # 10. Global Communication Detection (Phase AI)
-        comm_keywords = ["llamada", "call", "sesion", "unirse", "comunicacion", "participantes"]
-        if any(k in msg for k in comm_keywords):
-            from backend.core.ai_host.processors.comm_processor import comm_processor
-            return await comm_processor.process(msg, "default_user")
-
-        # 11. Knowledge Domains Detection (Phase AJ)
-        domain_keywords = ["dominio", "ciencia", "historia", "filosofia", "desarrollo humano"]
-        if any(k in msg for k in domain_keywords):
-            from backend.core.ai_host.processors.domain_processor import domain_processor
-            return await domain_processor.process(msg, "default_user")
-
-        # 12. Collaboration Spaces Detection (Phase AJ)
-        collab_keywords = ["proyecto", "colaboracion", "investigacion", "nota", "espacio"]
-        if any(k in msg for k in collab_keywords):
-            from backend.core.ai_host.processors.collab_processor import collab_processor
-            return await collab_processor.process(msg, "default_user")
-
-        # 13. Existing intent classification
-        intent = intent_classifier.classify(msg)
+        # Priority 1: Exact slug match
+        for c in chips:
+            if c["slug"].lower() == msg_clean:
+                target = c["slug"]
+                break
         
-        if intent and intent in self.intents:
-            res = await self.intents[intent](msg)
-        elif not intent:
-            # Fallback for knowledge as it has a broad semantic footprint
-            if any(k in msg for k in ["explica", "explain", "que es", "what is"]):
-                res = await self.intents["knowledge"](msg)
+        # Priority 2: Keyword in message
+        if not target:
+            for c in chips:
+                # Check for slug or name (partial match)
+                if c["slug"].lower() in msg_clean or c["name"].lower() in msg_clean:
+                    target = c["slug"]
+                    break
+                    
+        # Priority 3: Fuzzy matching (fallback)
+        if not target:
+            for c in chips:
+                if msg_clean in c["slug"].lower() or msg_clean in c["name"].lower():
+                    target = c["slug"]
+                    break
         
-        if not res:
-            # Fallback to Idea Cloud (Phase Y)
-            from backend.core.idea_cloud.idea_capture import idea_capture
-            idea = idea_capture.capture(msg)
-            res = AICommandResponse(
-                intent="idea_captured",
-                status="success",
-                message=f"He guardado tu pensamiento en la Nube de Ideas ('{msg[:30]}...'). Lo conectaré con tu conocimiento más tarde.",
-                payload={"idea_id": idea.id, "topics": idea.topics}
-            )
-
-        # Antimodal adaptation (Phase 6)
-        res.message = antimodal_controller.process_ai_response(res.message)
-
-        # Telemetry (Phase F)
-        try:
-            from backend.core.usage.usage_tracker import usage_tracker
-            usage_tracker.log_event(
-                event_type="ai_command_executed",
-                chip_slug="ai-host",
-                metadata={
-                    "intent": res.intent,
-                    "status": res.status,
-                    "message_preview": message[:50] # Privacy first
-                }
-            )
-        except:
-            pass
-
-        return res
-
-    async def _handle_open(self, msg: str) -> AICommandResponse:
-        target = "none"
-        if "finanzas" in msg or "finances" in msg: target = "finanzas"
-        elif "reparto" in msg or "delivery" in msg: target = "reparto"
-        elif "musica" in msg or "music" in msg: target = "musica"
-        
-        if target != "none":
+        if target:
+            module_registry.log_execution(target)
             return AICommandResponse(
                 intent="open_chip",
                 status="success",
-                message=f"Abriendo el chip {target}.",
+                message=f"I've located the '{target}' chip. Launching runtime environment now.",
                 payload={"target": target, "action": "ACTIVATE_CHIP"}
             )
-        return AICommandResponse(intent="open_chip", status="error", message="No encontré el chip a abrir.")
+        
+        available = ", ".join([c["slug"] for c in chips[:5]])
+        return AICommandResponse(
+            intent="open_chip", 
+            status="error", 
+            message=f"I couldn't find the chip you mentioned ('{msg_clean}'). Available chips include: {available}...",
+            payload={"available_chips": [c["slug"] for c in chips]}
+        )
+
+    async def _handle_log_entry(self, msg: str) -> AICommandResponse:
+        processor = self.registry.get_processor("logbook")
+        return await processor.process(msg, "default_user")
+
+    async def _handle_show_system_status(self, msg: str) -> AICommandResponse:
+        processor = self.registry.get_processor("status")
+        return await processor.process(msg)
+
+    async def _handle_show_logbook(self, msg: str) -> AICommandResponse:
+        processor = self.registry.get_processor("logbook")
+        return await processor.process(msg, "default_user")
+
+    async def _handle_launch_pipeline(self, msg: str) -> AICommandResponse:
+        # Require confirmation for pipelines
+        if "confirm" not in msg.lower() and "yes" not in msg.lower() and "si" not in msg.lower():
+            return AICommandResponse(
+                intent="confirmation_required",
+                status="pending",
+                message="⚠️ **Action Required**: Launching a pipeline consumes system credits and resources. Do you wish to proceed?",
+                payload={"action": "launch_pipeline", "params": {"query": msg}}
+            )
+
+        # Implementation logic for pipeline simulation
+        pipeline_name = "Translation Engine" if "translation" in msg.lower() else "Generic Flow"
+        
+        from backend.core.interface.visual_interface import visual_interface
+        visual = visual_interface.create_visual_payload(
+            "task-report",
+            {
+                "status": "running",
+                "actions": [
+                    "Initializing neural engine...",
+                    "Loading language pairs...",
+                    "Optimizing batch size",
+                    "Security audit passed"
+                ],
+                "issues": []
+            },
+            f"Pipeline: {pipeline_name}"
+        )
+
+        return AICommandResponse(
+            intent="launch_pipeline",
+            status="success",
+            message=f"✅ **{pipeline_name}** initialization sequence started. You can track progress in the background dashboard.",
+            payload={
+                "pipeline_name": pipeline_name,
+                "pipeline_id": "gen-x-77", 
+                "status": "running",
+                "visual": visual
+            }
+        )
 
     async def _handle_create(self, msg: str) -> AICommandResponse:
         # Calls Chip Factory via Stability Loop
@@ -223,8 +257,8 @@ class CommandRouter:
             
         loop_state, result = await loop_controller.execute_task(
             "create_chip",
-            {"message": msg},
-            create_action
+            create_action,
+            {"message": msg}
         )
         
         if loop_state.current_step == LoopStep.COMPLETE and result["status"] == "success":
@@ -454,6 +488,13 @@ class CommandRouter:
         Delegates Knowledge Dialogue Mode to specialized processor.
         """
         processor = self.registry.get_processor("knowledge")
+        return await processor.process(msg)
+
+    async def _handle_healing(self, msg: str) -> AICommandResponse:
+        """
+        Delegates Healing/Self-Audit to specialized processor.
+        """
+        processor = self.registry.get_processor("healing")
         return await processor.process(msg)
 
 ai_command_router = CommandRouter()

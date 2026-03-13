@@ -28,7 +28,8 @@ class PatchGenerator:
                         "action": "insert_before",
                         "target": "</body>",
                         "content": btn_html + script_inject,
-                        "description": "Add PDF export functionality to UI"
+                        "description": "Add PDF export functionality to UI",
+                        "impact": "New Visual Feature"
                     })
                 else:
                     patches.append({
@@ -36,7 +37,8 @@ class PatchGenerator:
                         "action": "insert_before",
                         "target": "</body>",
                         "content": '\n<button class="omni-btn-primary">New Action</button>',
-                        "description": "Add generic button to UI"
+                        "description": "Add generic button to UI",
+                        "impact": "Visual Change"
                     })
 
         # 2. Add Backend Endpoints
@@ -53,7 +55,8 @@ class PatchGenerator:
                     "file": router_file,
                     "action": "append",
                     "content": content,
-                    "description": f"Added {route_name} endpoint to router"
+                    "description": f"Added {route_name} endpoint to router",
+                    "impact": "Backend Capability Expansion"
                 })
 
         # 3. Workflow Integration
@@ -65,9 +68,26 @@ class PatchGenerator:
                     "file": router_file,
                     "action": "append",
                     "content": content,
-                    "description": "Add workflow execution capability"
+                    "description": "Add workflow execution capability",
+                    "impact": "Process Automation Integration"
                 })
                 
         return patches
+
+    def summarize_patch(self, patches: List[Dict[str, Any]]) -> str:
+        """
+        Creates a human-readable summary of the proposed changes.
+        """
+        if not patches: return "No modifications proposed for these instructions."
+        
+        summary = "### 🛠️ Proposed Modifications\n"
+        for p in patches:
+            summary += f"- **File**: `{p['file']}`\n"
+            summary += f"  - action: {p['action']}\n"
+            summary += f"  - description: {p['description']}\n"
+            summary += f"  - impact: {p.get('impact', 'Code update')}\n"
+        
+        summary += "\n**Confirmation required** to apply these patches."
+        return summary
 
 patch_generator = PatchGenerator()

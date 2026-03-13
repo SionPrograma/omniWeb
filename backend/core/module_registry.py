@@ -167,6 +167,8 @@ class ModuleRegistry:
             "slug": module_name,
             "prefix": final_prefix,
             "status": "active" if final_prefix else "frontend-only",
+            "health": "healthy",
+            "last_execution": None,
             "metadata": metadata
         }
 
@@ -250,5 +252,14 @@ class ModuleRegistry:
         except Exception as e:
             logger.error(f"Failed to update chip {slug} status: {e}")
             return False
+
+    def log_execution(self, slug: str):
+        """Simple tracker for UI feedback."""
+        import datetime
+        if slug in self.modules:
+            self.modules[slug]["last_execution"] = datetime.datetime.now().isoformat()
+
+    def get_module_data(self, slug: str) -> Optional[Dict[str, Any]]:
+        return self.modules.get(slug)
 
 module_registry = ModuleRegistry()

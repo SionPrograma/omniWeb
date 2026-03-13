@@ -14,7 +14,9 @@ class EntryType(str, Enum):
     NOTE = "note"
     ARCHITECTURE = "architecture"
     RELEASE = "release"
-    AUDIT = "audit"
+    SYSTEM_AUDIT = "system_audit"
+    AUTO_FIX = "auto_fix"
+    ROADMAP = "roadmap"
 
 class Priority(str, Enum):
     LOW = "low"

@@ -11,11 +11,24 @@ class Settings(BaseSettings):
 
     # Active modules list
     ACTIVE_MODULES: list[str] = ["idiomas-ia", "lingua", "reparto", "finanzas", "programacion", "musica"]
+    
+    # System Mode: creator (full access) or user (simplified)
+    OMNIWEB_MODE: str = os.getenv("OMNIWEB_MODE", "creator")
 
     # Database & Storage
     DATA_DIR: str = "backend/data"
     DATABASE_NAME: str = "omniweb.db"
     ADMIN_TOKEN: str = os.getenv("OMNIWEB_ADMIN_TOKEN", "omniweb-dev-secret-token")
+
+    # OAuth Settings (Phase 15)
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "mock_id")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "mock_secret")
+    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "mock_id")
+    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "mock_secret")
+    # Creator Security Fortress (Phase 16)
+    CREATOR_ID: str = os.getenv("OMNIWEB_CREATOR_ID", "1") # Default to admin user '1'
+    REQUIRE_TRUSTED_DEVICE: bool = True
+    REQUIRE_HARDWARE_AUTH: bool = False # Set to true for high-security environments
 
     @property
     def DATABASE_URL(self) -> str:

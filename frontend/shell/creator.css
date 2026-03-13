@@ -1,0 +1,1021 @@
+/* OmniWeb Creator Environment Styles */
+
+/* 1. AI CORE VISUAL (Improved Orb) */
+.ai-orb {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 212, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 40px auto 2.5rem;
+    cursor: pointer;
+    transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    box-shadow: 0 0 40px rgba(0, 212, 255, 0.1);
+    z-index: 10;
+}
+
+.ai-orb:hover {
+    transform: scale(1.08) translateY(-8px);
+    background: radial-gradient(circle, rgba(0, 212, 255, 0.35) 0%, rgba(0, 0, 0, 0) 75%);
+    box-shadow: 0 0 120px rgba(0, 212, 255, 0.25);
+}
+
+.ai-orb::after {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    animation: orbRipple 3s infinite;
+    pointer-events: none;
+}
+
+@keyframes orbRipple {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(1.2);
+        opacity: 0;
+    }
+}
+
+.ai-orb-inner {
+    width: 100px;
+    height: 100px;
+    background: url('/shell/assets/logo.png') no-repeat center;
+    background-size: contain;
+    z-index: 10;
+    filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.6));
+    animation: orbPulse 4s infinite ease-in-out;
+}
+
+/* Secondary outer ring */
+.ai-orb::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    border: 2px dashed rgba(0, 212, 255, 0.3);
+    animation: rotateRing 20s infinite linear;
+    pointer-events: none;
+}
+
+@keyframes rotateRing {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.ai-orb-glow {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent, #00d4ff, transparent, #32ff96, transparent, #0055ff, transparent);
+    opacity: 0.3;
+    filter: blur(30px);
+    animation: glowRotate 8s infinite linear;
+}
+
+@keyframes orbPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.6));
+    }
+
+    50% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 35px rgba(0, 212, 255, 0.9));
+    }
+}
+
+@keyframes glowRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+:root {
+    --spring-easing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --online-color: #00ff88;
+    --warning-color: #ffcc00;
+    --offline-color: #ff4444;
+}
+
+.ai-orb.burst {
+    animation: orbBurst 1.2s var(--spring-easing);
+}
+
+/* SCANNING BEAM */
+.ai-orb::before {
+    content: '';
+    position: absolute;
+    inset: -15px;
+    border-radius: 50%;
+    border: 2px dashed rgba(0, 212, 255, 0.4);
+    animation: rotateRing 15s infinite linear;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.ai-orb.processing::before {
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 15px var(--accent);
+    animation: rotateRing 2s infinite linear;
+}
+
+.ai-orb.system_warning .ai-orb-glow {
+    background: conic-gradient(from 0deg, transparent, #ffcc00, transparent);
+    animation: glowRotate 3s infinite linear;
+}
+
+.ai-orb.system_error .ai-orb-glow {
+    background: conic-gradient(from 0deg, transparent, #ff4444, transparent);
+    animation: glowRotate 2s infinite linear;
+}
+
+.ai-orb.auto_fix_running .ai-orb-inner {
+    animation: orbPulseRapid 0.3s infinite ease-in-out;
+    filter: hue-rotate(240deg) brightness(1.2);
+}
+
+.ai-orb.auto_fix_running::after {
+    border-color: #00ff88;
+    animation: orbRipple 1s infinite;
+}
+
+@keyframes rotateRing {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.ai-orb.processing .ai-orb-inner {
+    animation: orbPulseRapid 0.6s infinite ease-in-out;
+}
+
+@keyframes orbPulseRapid {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 20px var(--accent));
+    }
+
+    50% {
+        transform: scale(1.15);
+        filter: drop-shadow(0 0 40px var(--accent));
+    }
+}
+
+.ai-orb.processing .ai-orb-glow {
+    animation: glowPulse 0.5s infinite ease-in-out;
+    opacity: 0.9;
+    background: conic-gradient(from 0deg, transparent, #32ff96, transparent, #00d4ff, transparent);
+}
+
+@keyframes glowPulse {
+
+    0%,
+    100% {
+        filter: blur(40px);
+        transform: scale(1.1);
+    }
+
+    50% {
+        filter: blur(70px);
+        transform: scale(1.4);
+    }
+}
+
+@keyframes orbBurst {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 212, 255, 1);
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    40% {
+        box-shadow: 0 0 150px 50px rgba(0, 212, 255, 0.5);
+        transform: scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        box-shadow: 0 0 300px 150px rgba(0, 212, 255, 0);
+        transform: scale(1);
+    }
+}
+
+/* 2. SYSTEM STATUS BAR (Top) */
+.system-status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 12px 24px;
+    padding-top: calc(12px + env(safe-area-inset-top));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to bottom, rgba(10, 10, 15, 0.9), rgba(10, 10, 15, 0));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.6);
+    z-index: 100;
+}
+
+.system-status-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+    animation: scanLine 8s infinite linear;
+}
+
+@keyframes scanLine {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 200%;
+    }
+}
+
+.status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s;
+}
+
+.status-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #444;
+}
+
+.status-dot.online {
+    background: #00ff88;
+    box-shadow: 0 0 5px #00ff88;
+}
+
+.status-dot.offline {
+    background: #ff4444;
+}
+
+.version-tag {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #00d4ff;
+    font-weight: 600;
+}
+
+/* 3. ENHANCED LOGBOOK (Filters & Items) */
+.logbook-filters {
+    display: flex;
+    gap: 8px;
+    padding: 10px 15px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.filter-chip {
+    padding: 4px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: 0.2s;
+    border: 1px solid transparent;
+}
+
+.filter-chip.active {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: #00d4ff;
+    color: #00d4ff;
+}
+
+.log-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.log-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.log-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.log-type {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.type-idea {
+    color: #ff00ff;
+}
+
+.type-bug {
+    color: #ff4444;
+}
+
+.type-task {
+    color: #00d4ff;
+}
+
+.type-roadmap {
+    color: #ffd700;
+}
+
+.log-priority {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+}
+
+.priority-high,
+.priority-critical {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.15);
+    border-color: rgba(255, 68, 68, 0.3);
+}
+
+.priority-medium {
+    color: #ffcc00;
+    background: rgba(255, 204, 0, 0.1);
+    border-color: rgba(255, 204, 0, 0.3);
+}
+
+.priority-low {
+    color: #00d4ff;
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.3);
+}
+
+.log-content {
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.5;
+    margin: 8px 0;
+}
+
+.log-chip-ref {
+    margin-top: 5px;
+    font-size: 11px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 4. CHIP STATUS PANEL */
+.chip-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+}
+
+.chip-status-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chip-status-info h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #fff;
+}
+
+.chip-status-info p {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.chip-health-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.health-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* 5. PERMISSION MODAL */
+#permission-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+#permission-modal.active {
+    display: flex;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 400px;
+    background: #111;
+    border: 1px solid #00d4ff;
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+}
+
+.modal-content h3 {
+    margin: 0 0 15px;
+    color: #00d4ff;
+}
+
+.modal-content p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 25px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-confirm {
+    background: #00d4ff;
+    color: #000;
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* 6. CONTEXT PANEL (Information Drawer) */
+#context-panel {
+    position: fixed;
+    right: -100%;
+    top: 0;
+    width: 90%;
+    max-width: 400px;
+    height: 100vh;
+    background: rgba(8, 8, 12, 0.9);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    z-index: 1000;
+    transition: right 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#context-panel.active {
+    right: 0;
+}
+
+.panel-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.close-panel {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: none;
+    /* Only show on mobile */
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+
+@media screen and (max-width: 768px) {
+    .close-panel {
+        display: flex;
+    }
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.2rem;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.context-section {
+    padding: 20px;
+}
+
+.context-section h3 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+}
+
+.context-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+}
+
+.context-item .label {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.context-item .value {
+    color: #00d4ff;
+    font-weight: 500;
+}
+
+/* MOBILE CREATOR ADJUSTMENTS */
+@media screen and (max-width: 768px) {
+    .ai-orb {
+        width: 110px;
+        height: 110px;
+        margin: 20px auto 1.5rem;
+    }
+
+    .ai-orb-inner {
+        width: 70px;
+        height: 70px;
+    }
+
+    .system-status-bar {
+        padding: 10px 15px;
+        padding-top: calc(10px + env(safe-area-inset-top));
+        font-size: 10px;
+    }
+
+    .status-pill {
+        padding: 3px 8px;
+        gap: 5px;
+    }
+
+    .status-pill span:not(.status-dot):not(.version-tag) {
+        display: none;
+        /* Hide text on very small screens, keep icons/dots */
+    }
+
+    .status-pill:first-child span {
+        display: inline;
+        /* Keep 'OmniWeb' text */
+    }
+
+    #context-panel {
+        width: 100%;
+        /* Full width on mobile */
+        max-width: none;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .ai-orb {
+        width: 100px;
+        height: 100px;
+    }
+
+    .ai-orb-inner {
+        width: 60px;
+        height: 60px;
+    }
+
+    .log-content {
+        font-size: 12px;
+    }
+
+    .modal-content {
+        padding: 20px;
+    }
+}
+
+/* 7. MISSION CONTROL (COCKPIT) */
+#mission-control-view {
+    position: fixed;
+    top: 50px;
+    top: calc(50px + env(safe-area-inset-top));
+    left: 0;
+    width: 100%;
+    height: calc(100% - 120px);
+    background: var(--bg-deep);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+#mission-control-view.active {
+    display: flex;
+}
+
+.cockpit-header {
+    margin-bottom: 20px;
+}
+
+.cockpit-header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    background: linear-gradient(to right, #fff, #888);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.cockpit-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+
+.cockpit-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.cockpit-tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+.cockpit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.cockpit-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.cockpit-card h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.health-metric {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: #aaa;
+}
+
+.metric-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.metric-value.pass {
+    color: #00ff88;
+}
+
+.metric-value.warn {
+    color: #ffcc00;
+}
+
+.metric-value.fail {
+    color: #ff4444;
+}
+
+.metric-value.info {
+    color: #00d4ff;
+}
+
+.fix-item {
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    margin-bottom: 10px;
+}
+
+.fix-item h4 {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.fix-item p {
+    font-size: 0.75rem;
+    color: #888;
+    margin: 0;
+}
+
+.btn-apply {
+    margin-top: 8px;
+    width: 100%;
+    padding: 6px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* 8. GALAXY MAP (PHASE 11) */
+.galaxy-container {
+    position: relative;
+    width: 100%;
+    height: 450px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    border: 1px solid var(--glass-border);
+    margin-top: 10px;
+}
+
+#galaxy-svg {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#galaxy-svg:active {
+    cursor: grabbing;
+}
+
+.galaxy-node {
+    cursor: pointer;
+    transition: filter 0.3s;
+}
+
+.galaxy-node:hover {
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+.node-label {
+    fill: #fff;
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+    text-anchor: middle;
+}
+
+.node-status-ring {
+    fill: none;
+    stroke-width: 2;
+    opacity: 0.3;
+}
+
+.node-orbit {
+    fill: none;
+    stroke: rgba(0, 212, 255, 0.05);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+/* Detail Card for Galaxy Map */
+.galaxy-detail-overlay {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 220px;
+    background: rgba(10, 10, 15, 0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 15px;
+    z-index: 1000;
+    animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: none;
+}
+
+.galaxy-detail-overlay.active {
+    display: block;
+}
+
+.galaxy-detail-overlay h3 {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+    color: var(--accent);
+}
+
+.galaxy-detail-overlay p {
+    font-size: 0.75rem;
+    margin: 4px 0;
+    color: #ccc;
+}
+
+.galaxy-detail-overlay .status-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: 8px;
+}
+
+/* Node States */
+.galaxy-node.healthy {
+    color: #00ff88;
+}
+
+.galaxy-node.warning {
+    color: #ffcc00;
+}
+
+.galaxy-node.error {
+    color: #ff4444;
+}
+
+.galaxy-node.healing {
+    color: #00d4ff;
+    animation: nodePulse 1s infinite alternate;
+}
+
+@keyframes nodePulse {
+    from {
+        opacity: 0.6;
+    }
+
+    to {
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 9. DEPENDENCY FLOWS (PHASE 12) */
+.galaxy-flow-path {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    opacity: 0.6;
+    transition: opacity 0.3s, stroke-width 0.3s;
+}
+
+.galaxy-flow-path.active {
+    opacity: 1;
+    stroke-width: 2.5;
+}
+
+.galaxy-flow-path.healthy {
+    stroke: #00d4ff;
+}
+
+.galaxy-flow-path.warning {
+    stroke: #ffcc00;
+}
+
+.galaxy-flow-path.error {
+    stroke: #ff4444;
+}
+
+.galaxy-flow-path.healing {
+    stroke: #00ff88;
+}
+
+.flow-particle {
+    stroke-dasharray: 4 20;
+    animation: flowDash 3s linear infinite;
+}
+
+@keyframes flowDash {
+    to {
+        stroke-dashoffset: -100;
+    }
+}
+
+.flow-latency-label {
+    fill: #888;
+    font-size: 8px;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+    text-anchor: middle;
+}
+
+/* 10. USER MODE (PHASE 14) */
+.user-mode #mission-control-view,
+.user-mode #creator-cockpit-trigger {
+    display: none !important;
+}
+
+.user-mode .creator-only {
+    display: none !important;
+}

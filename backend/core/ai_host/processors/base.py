@@ -9,6 +9,10 @@ class AICommandResponse(BaseModel):
     payload: Dict[str, Any] = {}
 
 class CommandProcessor(ABC):
+    async def can_handle(self, command: str) -> bool:
+        """Determines if this processor is qualified to handle the given command."""
+        return False
+
     @abstractmethod
     async def process(self, msg: str) -> AICommandResponse:
         pass

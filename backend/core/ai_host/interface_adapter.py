@@ -19,7 +19,7 @@ class InterfaceAdapter:
         """
         response = {
             "mode": self.mode.value,
-            "text": text,
+            "message": text,
             "payload": data or {}
         }
         

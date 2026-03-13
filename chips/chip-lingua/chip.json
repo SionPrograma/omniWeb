@@ -11,8 +11,11 @@
     "dashboard_visible": true,
     "active": true,
     "permissions": [
-        "db_access",
-        "event_publish",
-        "event_subscribe"
+        "audio_input",
+        "audio_output",
+        "network_access",
+        "storage_read",
+        "storage_write",
+        "user_logbook_access"
     ]
 }

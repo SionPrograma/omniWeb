@@ -1,0 +1,12 @@
+{
+    "id": "chip-stress_test_1",
+    "slug": "stress_test_1",
+    "name": "Stress test 1",
+    "description": "M\u00f3dulo din\u00e1mico: Stress test 1",
+    "version": "0.1.0",
+    "type": "hybrid",
+    "has_frontend": true,
+    "has_backend": true,
+    "entry_frontend": "frontend/index.html",
+    "active": true
+}

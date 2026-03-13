@@ -71,4 +71,50 @@ class CodeAnalyzer:
                             
         return analysis
 
+    def inspect_project(self, query: str) -> Dict[str, Any]:
+        """
+        Global project inspection based on a query.
+        """
+        query = query.lower()
+        results = {
+            "query": query,
+            "relevant_files": [],
+            "directories": [],
+            "scope": "project"
+        }
+
+        # Determine target domains
+        targets = []
+        if "shell" in query or "frontend" in query:
+            targets.append("frontend/shell")
+        if "backend" in query or "core" in query:
+            targets.append("backend/core")
+        if "chip" in query:
+            targets.append("chips")
+        
+        # Default to main project areas if no specific target
+        if not targets:
+            targets = ["frontend/shell", "backend/core", "chips"]
+
+        for target in targets:
+            if not os.path.exists(target): continue
+            
+            for root, dirs, files in os.walk(target):
+                # Filter out junk
+                if any(x in root for x in ["__pycache__", ".git", ".pytest_cache"]): continue
+                
+                rel_root = os.path.relpath(root, ".")
+                results["directories"].append(rel_root)
+                
+                for file in files:
+                    if file.endswith((".py", ".js", ".html", ".css", ".json")):
+                        full_path = os.path.join(rel_root, file)
+                        # Basic filtering for query
+                        if any(term in full_path.lower() or term in root.lower() for term in query.split()):
+                            results["relevant_files"].append(full_path)
+        
+        # Limit results for mobile display safety
+        results["relevant_files"] = results["relevant_files"][:15]
+        return results
+
 code_analyzer = CodeAnalyzer()

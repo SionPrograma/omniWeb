@@ -15,15 +15,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const shellInput = document.getElementById('shell-input');
     const sendBtn = document.getElementById('send-command');
+    const voiceBtn = document.getElementById('voice-command');
     const chatLog = document.getElementById('chat-log');
+    const closeContextBtn = document.getElementById('close-context');
+
+    if (closeContextBtn) {
+        closeContextBtn.addEventListener('click', () => {
+            toggleContext(false);
+            navItems.forEach(n => n.classList.remove('active'));
+            document.querySelector('[data-view="chat"]').classList.add('active');
+        });
+    }
 
     // --- State ---
     let activeView = 'chat';
 
+    // --- Onboarding Greeting ---
+    async function initGreeting() {
+        try {
+            const browser_lang = navigator.language.split('-')[0] || 'en';
+            const res = await fetch('/api/v1/onboarding/greeting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: "Hola Omni",
+                    browser_lang: browser_lang
+                })
+            });
+            const data = await res.json();
+            if (data.payload?.title) {
+                document.getElementById('greeting').innerText = data.payload.title;
+                if (data.payload.message) {
+                    addMessage(data.payload.message, 'ai');
+                }
+            }
+        } catch (err) {
+            console.error("Greeting failed:", err);
+        }
+    }
+    initGreeting();
+
     // --- Launcher Logic ---
+    function setLauncherActive(active) {
+        const isActive = active !== undefined ? active : !launcherOverlay.classList.contains('active');
+        launcherOverlay.classList.toggle('active', isActive);
+        openLauncherBtn.classList.toggle('active', isActive);
+        document.body.classList.toggle('launcher-active', isActive);
+        return isActive;
+    }
+
+    window.omniShell = {
+        closeLauncher: () => setLauncherActive(false)
+    };
+
     openLauncherBtn.addEventListener('click', () => {
-        launcherOverlay.classList.toggle('active');
-        openLauncherBtn.classList.toggle('active');
+        setLauncherActive();
     });
 
     launcherItems.forEach(item => {
@@ -33,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = item.getAttribute('data-url');
             const title = item.getAttribute('data-chip');
             launchChip(url, title);
-            launcherOverlay.classList.remove('active');
+            setLauncherActive(false);
         });
     });
 
@@ -74,8 +120,87 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function toggleContext(show) {
-        // Implementation for context panel sliding logic
-        console.log("Context toggle:", show);
+        if (show) {
+            setLauncherActive(false);
+            contextPanel.classList.add('active');
+            activeView = 'context';
+        } else {
+            contextPanel.classList.remove('active');
+            activeView = 'chat';
+        }
+    }
+
+    // --- Interactive Drag for Context Panel ---
+    let ctxTouchStartX = 0;
+    let ctxCurrentX = 0;
+    let isCtxDragging = false;
+
+    contextPanel.addEventListener('touchstart', (e) => {
+        ctxTouchStartX = e.touches[0].clientX;
+        isCtxDragging = true;
+        contextPanel.style.transition = 'none';
+    }, { passive: true });
+
+    contextPanel.addEventListener('touchmove', (e) => {
+        if (!isCtxDragging) return;
+        const touchX = e.touches[0].clientX;
+        ctxCurrentX = touchX - ctxTouchStartX;
+
+        // Only allow dragging to the right (close)
+        if (ctxCurrentX > 0) {
+            contextPanel.style.transform = `translateX(${ctxCurrentX}px)`;
+        }
+    }, { passive: true });
+
+    contextPanel.addEventListener('touchend', (e) => {
+        if (!isCtxDragging) return;
+        isCtxDragging = false;
+        contextPanel.style.transition = '';
+
+        if (ctxCurrentX > 100) {
+            toggleContext(false);
+            navItems.forEach(n => n.classList.remove('active'));
+            document.querySelector('[data-view="chat"]').classList.add('active');
+        } else {
+            contextPanel.style.transform = '';
+        }
+        ctxCurrentX = 0;
+    }, { passive: true });
+
+    launcherOverlay.addEventListener('touchstart', (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    launcherOverlay.addEventListener('touchend', (e) => {
+        const touchEndY = e.changedTouches[0].screenY;
+        if (touchEndY - touchStartY > 100) { // Swipe Down to close launcher
+            setLauncherActive(false);
+        }
+    }, { passive: true });
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/shell/sw.js')
+                .then(reg => console.log('SW Registered', reg))
+                .catch(err => console.error('SW Registration Failed', err));
+        });
+    }
+
+    // Handle virtual keyboard orientation/resize
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            const inputBar = document.querySelector('.input-bar');
+            if (inputBar) {
+                const layoutHeight = window.visualViewport.height;
+                // Offset the input bar if it's too high (keyboard open)
+                if (window.innerHeight - layoutHeight > 100) {
+                    inputBar.style.bottom = `${(window.innerHeight - layoutHeight) + 10}px`;
+                } else {
+                    inputBar.style.bottom = ''; // Revert to CSS default
+                }
+            }
+        });
     }
 
     // --- Chat / Command Logic ---
@@ -86,20 +211,65 @@ document.addEventListener('DOMContentLoaded', () => {
         chatLog.appendChild(msgDiv);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
+    window.addMessage = addMessage; // Expose to creator.js
 
     sendBtn.addEventListener('click', processCommand);
     shellInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') processCommand();
     });
 
+    // --- Voice Logic Integration ---
+    const voice = new VoiceInterface({
+        onResult: (text) => {
+            shellInput.value = text;
+            processCommand();
+        },
+        onStateChange: (isListening) => {
+            if (isListening) {
+                voiceBtn.classList.add('listening');
+                shellInput.placeholder = "Listening...";
+            } else {
+                voiceBtn.classList.remove('listening');
+                shellInput.placeholder = "Command Omni...";
+            }
+        },
+        onSpeechStart: () => {
+            const orb = document.querySelector('.ai-orb');
+            if (orb) orb.classList.add('speaking');
+        },
+        onSpeechEnd: () => {
+            const orb = document.querySelector('.ai-orb');
+            if (orb) orb.classList.remove('speaking');
+        }
+    });
+
+    if (voiceBtn) {
+        voiceBtn.addEventListener('click', () => {
+            voice.toggle();
+        });
+    }
+
     async function processCommand() {
         const cmd = shellInput.value.trim();
         if (!cmd) return;
 
+        // --- DEV PERMISSION CHECK ---
+        const complexKeywords = ['deploy', 'patch', 'rebuild', 'delete', 'migration', 'modify system'];
+        if (complexKeywords.some(k => cmd.toLowerCase().includes(k))) {
+            const confirmed = await window.creatorEnv.askPermission(
+                "System Modification Request",
+                `Are you sure you want to execute this development command: "${cmd}"?`
+            );
+            if (!confirmed) return;
+        }
+
         addMessage(cmd, 'user');
         shellInput.value = '';
 
-        // Typing indicator
+        // Typing indicator + Orb pulse
+        const orb = document.querySelector('.ai-orb');
+        if (orb) orb.classList.add('processing');
+
         const typingDiv = document.createElement('div');
         typingDiv.className = 'message ai typing';
         typingDiv.innerHTML = '<div class="msg-bubble">...</div>';
@@ -117,10 +287,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
+            if (orb) orb.classList.remove('processing');
             typingDiv.remove();
 
             if (data.message) {
                 addMessage(data.message, 'ai');
+                // Voice Feedback
+                voice.speak(data.message);
             }
 
             // Visual Payload Handling (Step 6)
@@ -140,6 +313,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Intent Handling
+            if (data.intent === 'confirmation_required') {
+                const confirmed = await window.creatorEnv.askPermission(
+                    "System Confirmation",
+                    data.message || "Do you want to proceed with this operation?"
+                );
+                if (confirmed) {
+                    shellInput.value = `confirm ${cmd}`;
+                    processCommand();
+                }
+                return;
+            }
+
+            // Close launcher if user manually types a command
+            setLauncherActive(false);
+
             if (data.intent === 'open_chip' && data.payload?.target) {
                 const url = `/${data.payload.target}/`;
                 setTimeout(() => launchChip(url, data.payload.target), 1000);
@@ -179,6 +367,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (visual.type === 'chip-modification-success') {
             content += `<p style="font-size: 0.8rem; color: #32ff96;">${visual.data}</p>`;
+        } else if (visual.type === 'logbook-list') {
+            const list = visual.data.entries || [];
+            content += `<div style="font-size: 0.8rem; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                ${list.map(e => `
+                    <div style="margin-bottom: 8px; border-left: 2px solid var(--accent-color); padding-left: 8px;">
+                        <span style="opacity: 0.5; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">${e.type}</span>
+                        <div style="color: #fff; margin-top: 2px;">${e.content}</div>
+                    </div>
+                `).join('')}
+            </div>`;
+        } else if (visual.type === 'file-list') {
+            const files = visual.data.files || [];
+            content += `<div style="font-size: 0.8rem; margin-top: 8px;">
+                ${files.map(f => `<div style="color: var(--text-dim); margin-bottom: 2px; font-family: monospace; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0;">📄 ${f}</div>`).join('')}
+            </div>`;
         } else {
             content += `<pre style="font-size: 0.7rem; color: var(--text-dim); overflow: auto;">${JSON.stringify(visual.data, null, 2)}</pre>`;
         }
@@ -189,26 +392,48 @@ document.addEventListener('DOMContentLoaded', () => {
         chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // --- Particles Background ---
+    // --- Particles Background (Animated) ---
     function createParticles() {
         const container = document.getElementById('particles');
         if (!container) return;
-        for (let i = 0; i < 20; i++) {
+        container.innerHTML = '';
+
+        // Optimize for mobile: fewer particles
+        const isMobile = window.innerWidth < 768;
+        const count = isMobile ? 15 : 40;
+
+        for (let i = 0; i < count; i++) {
             const p = document.createElement('div');
             p.className = 'particle';
+            const size = Math.random() * (isMobile ? 2 : 3);
+            const duration = 10 + Math.random() * 20;
             p.style.cssText = `
                 position: absolute;
-                width: 2px;
-                height: 2px;
+                width: ${size}px;
+                height: ${size}px;
                 background: white;
-                opacity: ${Math.random()};
+                opacity: ${Math.random() * 0.5 + 0.2};
                 top: ${Math.random() * 100}%;
                 left: ${Math.random() * 100}%;
                 border-radius: 50%;
                 pointer-events: none;
+                filter: blur(1px);
+                animation: floatParticle ${duration}s linear infinite;
             `;
             container.appendChild(p);
         }
     }
     createParticles();
+
+    // Add particle animation to stylesheet
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @keyframes floatParticle {
+            0% { transform: translate(0, 0); }
+            33% { transform: translate(${Math.random() * 50}px, ${Math.random() * 50}px); }
+            66% { transform: translate(${Math.random() * -50}px, ${Math.random() * 20}px); }
+            100% { transform: translate(0, 0); }
+        }
+    `;
+    document.head.appendChild(style);
 });

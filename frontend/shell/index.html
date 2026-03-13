@@ -9,9 +9,15 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@200;400;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="logbook.css">
-    <meta name="theme-color" content="#0a0a0f">
+    <link rel="stylesheet" href="/shell/style.css">
+    <link rel="stylesheet" href="/shell/logbook.css">
+    <link rel="stylesheet" href="/shell/creator.css">
+    <link rel="manifest" href="/shell/manifest.json">
+    <meta name="theme-color" content="#050508">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OmniWeb">
+    <link rel="apple-touch-icon" href="/shell/assets/logo.png">
 </head>
 
 <body>
@@ -20,12 +26,42 @@
     <div class="particles" id="particles"></div>
 
     <div id="shell-container">
+        <!-- SYSTEM STATUS BAR -->
+        <div class="system-status-bar" id="system-status">
+            <div class="status-group">
+                <div class="status-pill">
+                    <span class="status-dot online"></span>
+                    <span>OmniWeb</span>
+                    <span class="version-tag" id="sys-status-version">v0.0.0</span>
+                </div>
+                <div class="status-pill">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 3h12l4 6-10 13L2 9z" />
+                    </svg>
+                    <span id="sys-status-branch">master</span>
+                </div>
+            </div>
+            <div class="status-group">
+                <div class="status-pill">
+                    <span id="sys-chips-count">0</span> Chips
+                </div>
+                <div class="status-pill">
+                    <span class="status-dot online" id="ai-indicator"></span>
+                    <span>AI: Active</span>
+                </div>
+                <div class="status-pill">
+                    <span class="status-dot online" id="db-indicator"></span>
+                    <span>DB: OK</span>
+                </div>
+            </div>
+        </div>
         <!-- AI HOST VIEW (LANDING) -->
         <main id="ai-host-view" class="active">
             <div class="ai-core-container">
-                <div class="ai-orb">
+                <div class="ai-orb" id="main-ai-orb">
                     <div class="ai-orb-inner"></div>
                     <div class="ai-orb-glow"></div>
+                    <div class="orb-status-ring"></div>
                 </div>
                 <h1 class="greeting-text" id="greeting">Omni Shell</h1>
                 <p class="status-subtitle">System: Online | Context: Global</p>
@@ -62,22 +98,55 @@
             <iframe id="chip-frame" src="" frameborder="0"></iframe>
         </section>
 
+        <!-- MISSION CONTROL (COCKPIT) -->
+        <main id="mission-control-view">
+            <header class="cockpit-header">
+                <h1>Mission Control</h1>
+                <div class="cockpit-tabs">
+                    <button class="cockpit-tab active" data-tab="health">General Health</button>
+                    <button class="cockpit-tab" data-tab="map">Galaxy Map</button>
+                    <button class="cockpit-tab" data-tab="fixes">Auto-Healing</button>
+                    <button class="cockpit-tab" data-tab="insights">Insights</button>
+                    <button class="cockpit-tab" data-tab="security">Security</button>
+                    <button class="cockpit-tab" data-tab="code">System Modules</button>
+                </div>
+            </header>
+
+            <div class="cockpit-content">
+                <div id="cockpit-main-panel">
+                    <div class="loading-indicator">Synchronizing with system core...</div>
+                </div>
+            </div>
+        </main>
+
         <!-- CONTEXT PANEL (OVERLAY) -->
         <aside id="context-panel">
             <div class="panel-handle"></div>
             <header class="panel-header">
-                <h2>Knowledge Graph</h2>
+                <button class="close-panel" id="close-context">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2>System Inspection</h2>
             </header>
             <div class="panel-content">
-                <div class="context-item">
-                    <span class="label">Last Activity</span>
-                    <span class="value">Video Translation (Lingua)</span>
+                <div class="context-section">
+                    <h3>Loaded Chips</h3>
+                    <div class="chip-status-list" id="chip-status-container">
+                        <!-- Dynamic chip status cards -->
+                        <div class="loading-indicator">Scanning modules...</div>
+                    </div>
                 </div>
-                <div class="context-item">
-                    <span class="label">Priority Nodes</span>
-                    <div class="nodes-mini-grid">
-                        <div class="mini-node">Finanzas</div>
-                        <div class="mini-node">Logbook</div>
+                <div class="context-section">
+                    <h3>Host Metrics</h3>
+                    <div class="context-item">
+                        <span class="label">AI Logic</span>
+                        <span class="value">Hybrid / Neural</span>
+                    </div>
+                    <div class="context-item">
+                        <span class="label">Context Loop</span>
+                        <span class="value">Active</span>
                     </div>
                 </div>
             </div>
@@ -89,7 +158,17 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
-                <span>AI Host</span>
+                <span>Chat</span>
+            </button>
+
+            <button class="nav-item" onclick="window.location.href='/dashboard'">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                </svg>
+                <span>Dashboard</span>
             </button>
 
             <button class="nav-item shell-launcher" id="open-launcher">
@@ -104,7 +183,17 @@
                     <path d="M12 12L2.7 16.5" />
                     <path d="M12 12l7.5 7.5" />
                 </svg>
-                <span>Context</span>
+                <span>Chips</span>
+            </button>
+
+            <button class="nav-item" data-view="mission">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" />
+                    <rect x="2" y="14" width="20" height="8" rx="2" />
+                    <line x1="6" y1="6" x2="6" y2="6" />
+                    <line x1="6" y1="18" x2="6" y2="18" />
+                </svg>
+                <span>Mission</span>
             </button>
 
             <button class="nav-item" onclick="masterLogbook.toggle()">
@@ -136,6 +225,14 @@
 
         <div class="input-bar">
             <input type="text" placeholder="Command Omni..." id="shell-input">
+            <button id="voice-command">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+            </button>
             <button id="send-command">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
@@ -144,8 +241,35 @@
         </div>
     </div>
 
-    <script src="main.js"></script>
-    <script src="logbook.js"></script>
+    <!-- PERMISSION MODAL -->
+    <div id="permission-modal">
+        <div class="modal-content">
+            <h3 id="perm-title">Permission Required</h3>
+            <p id="perm-message">Execute development prompt?</p>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" id="perm-cancel">Cancel</button>
+                <button class="modal-btn btn-confirm" id="perm-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/shell/voice.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/shell/sw.js').then(reg => {
+                    console.log('OmniWeb Service Worker Registered.');
+                }).catch(err => {
+                    console.error('Service Worker Registration Failed:', err);
+                });
+            });
+        }
+    </script>
+    <script src="/shell/galaxy.js"></script>
+    <script src="/shell/creator.js"></script>
+    <script src="/shell/logbook.js"></script>
+    <script src="/shell/main.js"></script>
+
 </body>
 
 </html>

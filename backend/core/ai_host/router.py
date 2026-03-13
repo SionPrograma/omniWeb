@@ -17,7 +17,9 @@ async def process_message(request: ProcessRequest, current_user: OmniUser = Depe
     Main entry point for AI Host interactions.
     Processes natural language commands and returns adapted responses.
     """
-    cmd_res = await ai_router.route(request.message, modality=request.modality)
+    # Create context with user info
+    context = {"user_id": current_user.id, "username": current_user.username}
+    cmd_res = await ai_router.route(request.message, modality=request.modality, context=context)
     
     # Adapt response using InterfaceAdapter if needed
     from backend.core.ai_host.interface_adapter import adapter

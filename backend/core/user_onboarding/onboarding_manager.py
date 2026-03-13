@@ -51,9 +51,16 @@ class OnboardingManager:
         lang_greetings = greetings.get(user_lang, greetings[LanguageCode.ENGLISH])
         final_greeting = lang_greetings.get(time_context, lang_greetings["morning"])
         
+        # Language-specific titles
+        titles = {
+            LanguageCode.SPANISH: "Omni Shell",
+            LanguageCode.ENGLISH: "Omni Shell"
+        }
+        
         return {
             "detected_language": user_lang,
-            "greeting": final_greeting,
+            "title": titles.get(user_lang, "Omni Shell"),
+            "message": final_greeting,
             "time_context": time_context,
             "is_returning": is_returning,
             "setup_complete": True

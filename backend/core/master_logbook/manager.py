@@ -102,11 +102,13 @@ class MasterLogbookManager:
         from backend.core.config import settings
         from backend.core.module_registry import module_registry
 
+        active_modules = [m["slug"] for m in module_registry.get_active_modules()]
+        
         snapshot = {
             "version": settings.VERSION,
             "git_branch": "unknown",
             "last_commit": "unknown",
-            "active_modules": settings.ACTIVE_MODULES,
+            "active_modules": active_modules,
             "module_inventory": [c["slug"] for c in module_registry.discover_all_chips()]
         }
 
