@@ -1,0 +1,245 @@
+class CreatorEditor {
+    constructor() {
+        this.currentPath = null;
+        this.originalContent = null;
+        this.roots = ["chips", "backend", "frontend", "docs"];
+        this.currentRoot = "chips";
+    }
+
+    async init() {
+        console.log("Initializing Creator Editor...");
+        this.renderLayout();
+        await this.loadTree();
+    }
+
+    renderLayout() {
+        const panel = document.getElementById('cockpit-main-panel');
+        if (!panel) return;
+
+        panel.innerHTML = `
+            <div class="editor-container">
+                <div class="editor-sidebar">
+                    <div class="sidebar-header">
+                        <h3>File Tree</h3>
+                        <select id="editor-root-selector" onchange="window.creatorEditor.switchRoot(this.value)" style="background: transparent; border: none; color: #888; font-size: 0.7rem; outline: none;">
+                            ${this.roots.map(r => `<option value="${r}">${r.toUpperCase()}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="file-tree" id="file-tree-root">
+                        <div class="loading-indicator">Scanning files...</div>
+                    </div>
+                </div>
+                
+                <div class="editor-main">
+                    <div class="editor-header">
+                        <div class="current-file-path" id="editor-file-path">No file selected</div>
+                        <div class="editor-actions">
+                            <button class="btn-propose" id="editor-btn-propose" onclick="window.creatorEditor.proposeEdit()" disabled>Propose Changes</button>
+                        </div>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="code-textarea" spellcheck="false" placeholder="Select a file to start editing..." oninput="window.creatorEditor.handleInput()"></textarea>
+                    </div>
+                </div>
+
+                <div class="editor-assist">
+                    <div class="assist-header">
+                        <div class="ai-orb-tiny" style="width: 15px; height: 15px;"></div>
+                        <h3>Copilot Assist</h3>
+                    </div>
+                    <div class="assist-content" id="editor-assist-content">
+                        <p style="opacity: 0.5;">Select code or a file to get assistance.</p>
+                    </div>
+                    <div class="assist-controls">
+                        <button class="assist-btn" onclick="window.creatorEditor.requestAssist('explain')">💡 Explain this file</button>
+                        <button class="assist-btn" onclick="window.creatorEditor.requestAssist('optimize')">⚡ Optimize functions</button>
+                        <button class="assist-btn" onclick="window.creatorEditor.requestAssist('refactor')">🔨 Refactor code</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async switchRoot(newRoot) {
+        this.currentRoot = newRoot;
+        await this.loadTree();
+    }
+
+    async loadTree() {
+        const treeRoot = document.getElementById('file-tree-root');
+        if (!treeRoot) return;
+
+        try {
+            const res = await fetch(`/api/v1/editor/files?root=${this.currentRoot}`, {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
+            const data = await res.json();
+            this.renderTree(data, treeRoot);
+        } catch (err) {
+            treeRoot.innerHTML = `<div class="error-msg">Failed to load tree</div>`;
+        }
+    }
+
+    renderTree(nodes, container) {
+        container.innerHTML = nodes.map(node => this.createNodeHtml(node)).join('');
+    }
+
+    createNodeHtml(node) {
+        const icon = node.is_dir ? '📁' : '📄';
+        const childrenHtml = node.children && node.children.length > 0
+            ? `<div class="tree-children" id="children-${node.path.replace(/[^a-zA-Z0-9]/g, '-')}" style="display: none;">
+                ${node.children.map(c => this.createNodeHtml(c)).join('')}
+               </div>`
+            : '';
+
+        return `
+            <div class="tree-node-wrapper">
+                <div class="tree-node" onclick="window.creatorEditor.handleNodeClick('${node.path}', ${node.is_dir})">
+                    <i>${icon}</i>
+                    <span>${node.name}</span>
+                </div>
+                ${childrenHtml}
+            </div>
+        `;
+    }
+
+    handleNodeClick(path, isDir) {
+        if (isDir) {
+            const childrenId = `children-${path.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const el = document.getElementById(childrenId);
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        } else {
+            this.loadFile(path);
+        }
+    }
+
+    async loadFile(path) {
+        const textarea = document.getElementById('code-textarea');
+        const pathDisplay = document.getElementById('editor-file-path');
+        const proposeBtn = document.getElementById('editor-btn-propose');
+
+        try {
+            pathDisplay.innerText = "Loading...";
+            const res = await fetch(`/api/v1/editor/file/read?path=${encodeURIComponent(path)}`, {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
+            const data = await res.json();
+
+            this.currentPath = path;
+            this.originalContent = data.content;
+            textarea.value = data.content;
+            pathDisplay.innerText = data.path;
+            proposeBtn.disabled = true;
+
+            // Highlight active node
+            document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('active'));
+            const nodes = document.querySelectorAll('.tree-node');
+            nodes.forEach(n => {
+                if (n.innerText.includes(path.split(path.includes('/') ? '/' : '\\').pop())) {
+                    n.classList.add('active');
+                }
+            });
+
+        } catch (err) {
+            pathDisplay.innerText = "Error loading file";
+        }
+    }
+
+    handleInput() {
+        const textarea = document.getElementById('code-textarea');
+        const proposeBtn = document.getElementById('editor-btn-propose');
+
+        if (textarea.value !== this.originalContent) {
+            proposeBtn.disabled = false;
+        } else {
+            proposeBtn.disabled = true;
+        }
+    }
+
+    async proposeEdit() {
+        const textarea = document.getElementById('code-textarea');
+        const proposeBtn = document.getElementById('editor-btn-propose');
+
+        if (!this.currentPath) return;
+
+        proposeBtn.innerText = "Generating Preview...";
+        proposeBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/v1/editor/file/propose-edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
+                body: JSON.stringify({
+                    path: this.currentPath,
+                    content: textarea.value
+                })
+            });
+            const data = await res.json();
+
+            if (data.preview_id) {
+                // Open the preview system
+                if (window.builderUI) {
+                    window.builderUI.showPreview(data.preview_id);
+                } else {
+                    alert("Patch generated. ID: " + data.preview_id);
+                }
+            }
+        } catch (err) {
+            alert("Failed to propose edit");
+        } finally {
+            proposeBtn.innerText = "Propose Changes";
+            this.handleInput();
+        }
+    }
+
+    async requestAssist(action) {
+        const textarea = document.getElementById('code-textarea');
+        const assistContent = document.getElementById('editor-assist-content');
+        const selection = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+
+        if (!this.currentPath && !selection) {
+            assistContent.innerHTML = `<p style='color: #f1c40f;'>Please select a file or code snippet first.</p>`;
+            return;
+        }
+
+        assistContent.innerHTML = `<div class="loading-indicator">Consulting Copilot...</div>`;
+
+        try {
+            const res = await fetch('/api/v1/editor/copilot/assist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
+                body: JSON.stringify({
+                    action: action,
+                    path: this.currentPath || "unknown",
+                    code: selection || null
+                })
+            });
+            const data = await res.json();
+
+            assistContent.innerHTML = `
+                <div class="assist-response">
+                    ${this.formatMarkdown(data.response)}
+                </div>
+            `;
+        } catch (err) {
+            assistContent.innerHTML = `<p class='error'>Failed to get assistance.</p>`;
+        }
+    }
+
+    formatMarkdown(text) {
+        // Simple markdown formatter
+        return text
+            .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br/>');
+    }
+}
+
+window.creatorEditor = new CreatorEditor();

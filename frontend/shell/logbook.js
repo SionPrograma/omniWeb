@@ -25,7 +25,7 @@ class MasterLogbook {
                 </div>
                 <button class="close-logbook">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                        <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
                 </button>
             </header>
@@ -179,8 +179,16 @@ class MasterLogbook {
                 <div class="log-entry-footer">
                     <span>${new Date(entry.timestamp).toLocaleDateString()}</span>
                     ${entry.chip_reference ? `<span class="chip-tag">${entry.chip_reference}</span>` : ''}
-                    <div class="status-badge status-${entry.status}" onclick="event.stopPropagation(); masterLogbook.toggleStatus('${entry.id}', '${entry.status}')">
-                        ${entry.status}
+                    
+                    <div style="display: flex; gap: 8px;">
+                        ${entry.type === 'roadmap' && entry.status !== 'done' ? `
+                            <button class="approve-build-btn" onclick="event.stopPropagation(); masterLogbook.handleApprove('${entry.id}')">
+                                APPROVE & BUILD
+                            </button>
+                        ` : ''}
+                        <div class="status-badge status-${entry.status}" onclick="event.stopPropagation(); masterLogbook.toggleStatus('${entry.id}', '${entry.status}')">
+                            ${entry.status}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -220,6 +228,30 @@ class MasterLogbook {
             }
         } catch (error) {
             console.error('Failed to update status:', error);
+        }
+    }
+
+    async handleApprove(entryId) {
+        if (!confirm('Start construction sequence for this roadmap?')) return;
+
+        try {
+            const response = await fetch(`/api/v1/ai-host/copilot/builder/approve/${entryId}`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
+            const data = await response.json();
+
+            if (data.status === 'success' && data.task_id) {
+                // The main.js listener will pick up the 'approve_roadmap' intent if triggered by chat,
+                // but here we are calling the API directly, so we manually trigger the UI.
+                if (window.builderUI) {
+                    window.builderUI.show(data.task_id);
+                }
+            } else {
+                alert('Plan initialization failed: ' + (data.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Approval failed:', error);
         }
     }
 

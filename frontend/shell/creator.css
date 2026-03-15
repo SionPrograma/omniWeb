@@ -115,6 +115,67 @@
     }
 }
 
+/* Global Announcement Bar (Phase 23) */
+.global-announcement-bar {
+    background: linear-gradient(90deg, #00d4ff11, #00d4ff33);
+    border-bottom: 1px solid #00d4ff44;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    color: #fff;
+    text-align: center;
+    position: relative;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    animation: slideDown 0.5s ease;
+}
+
+.global-announcement-bar.warning {
+    background: linear-gradient(90deg, #ffaa0022, #ffaa0044);
+    border-bottom: 1px solid #ffaa0066;
+    color: #ffcc00;
+}
+
+.global-announcement-bar.critical {
+    background: linear-gradient(90deg, #ff444422, #ff444466);
+    border-bottom: 1px solid #ff444488;
+    color: #ff8888;
+    animation: pulseGlow 2s infinite;
+}
+
+.announcement-icon {
+    margin-right: 10px;
+    font-weight: bold;
+    display: inline-block;
+    padding: 0 6px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseGlow {
+    0% {
+        background-color: rgba(255, 68, 68, 0.2);
+    }
+
+    50% {
+        background-color: rgba(255, 68, 68, 0.4);
+    }
+
+    100% {
+        background-color: rgba(255, 68, 68, 0.2);
+    }
+}
+
+/* Original Cockpit Styles */
 :root {
     --spring-easing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     --online-color: #00ff88;
@@ -535,49 +596,74 @@
 #context-panel {
     position: fixed;
     right: -100%;
-    top: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 90%;
-    max-width: 400px;
-    height: 100vh;
-    background: rgba(8, 8, 12, 0.9);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
+    max-width: 420px;
+    height: 85vh;
+    background: rgba(12, 12, 20, 0.85);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
     z-index: 1000;
-    transition: right 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 212, 255, 0.1);
     display: flex;
     flex-direction: column;
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px 0 0 20px;
 }
 
 #context-panel.active {
     right: 0;
 }
 
-.panel-header {
-    padding: 20px 24px;
+/* Launcher Overlay Polish */
+.launcher-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.launcher-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 200;
+    letter-spacing: 2px;
+    color: #fff;
+    margin: 0;
+}
+
+.close-overlay-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 15px;
+    justify-content: center;
 }
 
 .close-panel {
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
     cursor: pointer;
-    display: none;
-    /* Only show on mobile */
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 5px;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
 }
 
-@media screen and (max-width: 768px) {
-    .close-panel {
-        display: flex;
-    }
+.close-panel:hover {
+    background: rgba(255, 68, 68, 0.2);
+    border-color: #ff4444;
 }
 
 .panel-header h2 {
@@ -1010,12 +1096,331 @@
     text-anchor: middle;
 }
 
-/* 10. USER MODE (PHASE 14) */
+/* 9. ADMIN OPS STYLES */
+#admin-suggestions-container::-webkit-scrollbar,
+#admin-ops-log-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+#admin-suggestions-container::-webkit-scrollbar-thumb,
+#admin-ops-log-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.insight-item {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s;
+}
+
+.insight-item:hover {
+    transform: translateX(4px);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+#checkpoints-list {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.btn-apply {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-apply:active {
+    transform: scale(0.95);
+}
+
+/* 10. USER MODE (PHASE 14/22) */
 .user-mode #mission-control-view,
-.user-mode #creator-cockpit-trigger {
+.user-mode #creator-cockpit-trigger,
+.user-mode .creator-only,
+.user-mode .nav-item[data-view="mission"] {
     display: none !important;
 }
 
-.user-mode .creator-only {
-    display: none !important;
+/* Creator Authenticated State UI Enhancements */
+body.creator-authenticated {
+    background: radial-gradient(circle at 50% 0%, rgba(50, 255, 150, 0.05), transparent 70%), #050508;
+}
+
+body.creator-authenticated #mission-control-view {
+    border-top: 1px solid rgba(50, 255, 150, 0.2);
+}
+
+body.creator-authenticated .nav-item[data-view="mission"] {
+    color: #32ff96 !important;
+}
+
+body.creator-authenticated #creator-badge {
+    animation: badgePulse 2s infinite ease-in-out;
+}
+
+@keyframes badgePulse {
+
+    0%,
+    100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* 10. CREATOR COPILOT CONSOLE (Phase 1) */
+.copilot-container {
+    height: 100%;
+}
+
+.copilot-split-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    height: 100%;
+    min-height: 500px;
+}
+
+.copilot-left-panel,
+.copilot-right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.prompt-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.plan-steps-list {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.step-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.step-card.approved {
+    border-color: rgba(0, 255, 136, 0.3);
+    background: rgba(0, 255, 136, 0.02);
+}
+
+.step-card.executing {
+    border-color: var(--info-color);
+    animation: pulseBorder 1s infinite;
+}
+
+.step-card.completed {
+    border-color: var(--pass-color);
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.step-info h4 {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #fff;
+}
+
+.step-info p {
+    margin: 4px 0 0;
+    font-size: 0.7rem;
+    opacity: 0.5;
+}
+
+.step-status-tag {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.terminal-card {
+    background: #050508 !important;
+    border-color: rgba(0, 212, 255, 0.2) !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.copilot-terminal {
+    flex: 1;
+    font-family: 'Inter', monospace;
+    font-size: 0.75rem;
+    color: #00d4ff;
+    padding: 10px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    min-height: 200px;
+}
+
+.term-line {
+    margin: 0 0 4px;
+    line-height: 1.4;
+}
+
+.term-line.system {
+    color: #888;
+}
+
+.term-line.exec {
+    color: #32ff96;
+}
+
+.term-line.error {
+    color: #ff4444;
+}
+
+.term-line.prompt {
+    color: #00d4ff;
+    font-weight: bold;
+}
+
+@keyframes pulseBorder {
+    0% {
+        border-color: rgba(0, 212, 255, 0.2);
+    }
+
+    50% {
+        border-color: rgba(0, 212, 255, 0.8);
+    }
+
+    100% {
+        border-color: rgba(0, 212, 255, 0.2);
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    .copilot-split-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* AUDIT & PROPOSAL STYLES (Phase 2) */
+.audit-issue {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-left: 3px solid #666;
+}
+
+.audit-issue.severity-critical {
+    border-left-color: #ff4444;
+    background: rgba(255, 68, 68, 0.05);
+}
+
+.audit-issue.severity-warning {
+    border-left-color: #ffaa00;
+    background: rgba(255, 170, 0, 0.05);
+}
+
+.audit-issue.severity-info {
+    border-left-color: #00d4ff;
+    background: rgba(0, 212, 255, 0.05);
+}
+
+.issue-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.layer-tag {
+    font-size: 0.6rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.issue-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #fff;
+}
+
+.issue-cause {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin: 5px 0;
+}
+
+.issue-meta,
+.suggested-fix {
+    font-size: 0.7rem;
+    margin-top: 4px;
+}
+
+.suggested-fix {
+    color: #00ff88;
+    opacity: 0.9;
+}
+
+.proposal-card {
+    background: rgba(0, 212, 255, 0.03);
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.proposal-card h4 {
+    margin: 0 0 10px;
+    color: #00d4ff;
+}
+
+.proposal-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin: 10px 0;
+}
+
+.proposal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.risk-low {
+    color: #00ff88;
+}
+
+.risk-medium {
+    color: #ffaa00;
+}
+
+.risk-high {
+    color: #ff4444;
+}
+
+.badge {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
 }

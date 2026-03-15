@@ -1,0 +1,15 @@
+{
+    "id": "chip-music-intelligence",
+    "slug": "music-intelligence",
+    "name": "Music Intelligence Domain",
+    "description": "Advanced real-time music analysis, instrument mapping, and spatial interaction loop.",
+    "version": "1.0.0",
+    "type": "hybrid",
+    "has_frontend": false,
+    "has_backend": true,
+    "active": true,
+    "permissions": [
+        "music_analysis",
+        "spatial_interaction"
+    ]
+}

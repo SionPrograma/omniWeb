@@ -1,0 +1,77 @@
+/* Offline Autonomous Mode (Phase 27) */
+.autonomous-container {
+    padding: 10px;
+}
+
+.offline-status-banner {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    color: #ff4444;
+    padding: 15px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.offline-status-banner.online {
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    color: #00ff88;
+}
+
+.backlog-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 5px;
+}
+
+.backlog-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
+}
+
+.backlog-item:last-child {
+    border-bottom: none;
+}
+
+.backlog-type {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.backlog-time {
+    font-size: 0.7rem;
+    opacity: 0.5;
+}
+
+.sync-pulse {
+    width: 10px;
+    height: 10px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: sync-glow 1.5s infinite;
+}
+
+@keyframes sync-glow {
+    0% {
+        transform: scale(0.8);
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 68, 68, 0);
+    }
+
+    100% {
+        transform: scale(0.8);
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+    }
+}

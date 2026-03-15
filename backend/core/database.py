@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import logging
+import asyncio
+import json
 from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -21,29 +23,45 @@ class DatabaseManager:
             os.makedirs(data_dir)
             logger.info(f"Created data directory: {data_dir}")
 
-    def get_connection(self):
+    def get_connection(self, internal: bool = False):
         """
         Returns a new connection to the SQLite database.
         Recommended to use as a context manager if possible, 
         or close manually.
         """
-        # Integra el modelo operativo de permisos de chip.
-        from backend.core.permissions import enforce_permission
-        
-        try:
-            enforce_permission("db_access")
-        except Exception as e:
-            logger.error(f"Module attempted unauthorized DB access: {e}")
-            raise
+        if not internal:
+            # Integra el modelo operativo de permisos de chip.
+            from backend.core.permissions import enforce_permission, _current_ctx_info
+            
+            # Log to debug context propagation
+            ctx = _current_ctx_info.get()
+            logger.debug(f"DB ACCESS: Context detected: {ctx}")
+            
+            try:
+                enforce_permission("db_access")
+            except Exception as e:
+                logger.error(f"Module attempted unauthorized DB access (Context: {ctx}): {e}")
+                raise
 
         try:
-            conn = sqlite3.connect(self.db_path)
+            # We use check_same_thread=False because we manage the session lifecycle 
+            # through AsyncDatabaseSession which handles the threading bridge.
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             # Row factory enables column access by name
             conn.row_factory = sqlite3.Row
+            # Enable Foreign Keys
+            conn.execute("PRAGMA foreign_keys = ON")
             return conn
         except sqlite3.Error as e:
             logger.error(f"Error connecting to SQLite ({self.db_path}): {e}")
             raise
+
+    def get_session(self):
+        """
+        OmniWeb Async Session Wrapper.
+        Provides a context manager for async database operations using a simple bridge.
+        """
+        return AsyncDatabaseSession(self)
 
     def init_db(self):
         """
@@ -141,3 +159,97 @@ class DatabaseManager:
 
 # Global instance for shared access
 db_manager = DatabaseManager()
+
+class AsyncDatabaseSession:
+    """
+    A simple bridge for modules expecting 'async with db_manager.get_session()'.
+    Uses threading to keep the async loop free.
+    """
+    def __init__(self, manager: DatabaseManager):
+        self.manager = manager
+        self.conn = None
+
+    async def __aenter__(self):
+        self.conn = await asyncio.to_thread(self.manager.get_connection)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.conn:
+            def _cleanup():
+                if exc_type is None:
+                    self.conn.commit()
+                else:
+                    self.conn.rollback()
+                self.conn.close()
+            await asyncio.to_thread(_cleanup)
+
+    async def execute(self, query, parameters: dict = None):
+        """Executes a query and returns a result wrapper."""
+        if parameters is None:
+            parameters = {}
+        
+        # Serialize list/dict parameters to JSON strings for SQLite
+        import json
+        for key, val in parameters.items():
+            if isinstance(val, (list, dict)):
+                parameters[key] = json.dumps(val)
+        
+        # Handle SQLAlchemy text objects if passed
+        if hasattr(query, "text"):
+            query = query.text
+        elif not isinstance(query, str):
+            query = str(query)
+            
+        def _execute():
+            # Using fetchall() to avoid cursor threading issues
+            cursor = self.conn.execute(query, parameters)
+            
+            # Use cursor.description safely (it is None for non-SELECT queries)
+            cols = [desc[0] for desc in cursor.description] if cursor.description else []
+            rows = cursor.fetchall() if cursor.description else []
+            
+            # Map to dicts and handle JSON automatically
+            results = []
+            for row in rows:
+                d = dict(row)
+                for key, val in d.items():
+                    if isinstance(val, str) and (val.startswith('[') or val.startswith('{')):
+                        try:
+                            d[key] = json.loads(val)
+                        except: pass
+                results.append(d)
+            return results
+            
+        rows = await asyncio.to_thread(_execute)
+        return AsyncResultWrapper(rows)
+
+    async def commit(self):
+        """Manually commit the transaction."""
+        await asyncio.to_thread(self.conn.commit)
+
+class AsyncResultWrapper:
+    """Wraps a list of dicts to simulate a cursor for fetchone/iteration."""
+    def __init__(self, rows):
+        self.rows = rows
+        self._index = 0
+
+    def __iter__(self):
+        return iter(self.rows)
+
+    def fetchone(self):
+        if self._index < len(self.rows):
+            row = self.rows[self._index]
+            self._index += 1
+            return row
+        return None
+
+    def fetchall(self):
+        return self.rows
+
+    def mappings(self):
+        """SQLAlchemy compatibility layer."""
+        return self
+
+    def all(self):
+        """SQLAlchemy compatibility layer."""
+        return self.rows

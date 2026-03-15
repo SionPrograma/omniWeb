@@ -1,0 +1,440 @@
+/* OMNIWEB CREATOR CONTROL THEME (QR STYLE) */
+
+:root {
+    --creator-bg: #0A0A0F;
+    --creator-gold: #D4AF37;
+    --creator-gold-glow: #E6C56B;
+    --creator-gold-dim: rgba(212, 175, 55, 0.4);
+    --creator-highlight: #FFD700;
+    --creator-border: rgba(212, 175, 55, 0.25);
+    --creator-terminal-bg: #050508;
+}
+
+/* THEME APPLICATION SCOPE */
+#mission-control-view,
+.copilot-container,
+.audit-panel,
+.proposal-panel,
+#project-timeline-panel,
+.creator-authenticated .ai-panel,
+.creator-authenticated .loop-panel,
+.creator-authenticated .proposals-panel,
+.creator-authenticated .runtime-panel {
+    background-color: var(--creator-bg) !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 100 h100 v300 M300 0 v200 h100 M200 200 h50 v50 h-50 z' fill='none' stroke='%23D4AF37' stroke-width='0.5' opacity='0.05'/%3E%3Ccircle cx='100' cy='100' r='1.5' fill='%23D4AF37' opacity='0.1'/%3E%3Ccircle cx='300' cy='200' r='1.5' fill='%23D4AF37' opacity='0.1'/%3E%3C/svg%3E") !important;
+    color: #ffffff !important;
+    border: 1px solid var(--creator-border) !important;
+}
+
+/* MISSION CONTROL SPECIFIC */
+#mission-control-view.active {
+    background: var(--creator-bg) !important;
+    border-left: 2px solid var(--creator-gold) !important;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.9);
+}
+
+.cockpit-card {
+    background: rgba(10, 10, 15, 0.7) !important;
+    border: 1px solid var(--creator-border) !important;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(15px);
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.cockpit-card:hover {
+    border-color: var(--creator-gold) !important;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+    background: rgba(15, 15, 20, 0.8) !important;
+}
+
+.cockpit-card h3,
+.cockpit-card h4 {
+    color: var(--creator-gold) !important;
+    font-family: 'Outfit', sans-serif !important;
+    letter-spacing: 1px;
+}
+
+/* TAB STYLING */
+.cockpit-tabs {
+    border-bottom: 1px solid var(--creator-border) !important;
+}
+
+.tab-btn {
+    color: rgba(255, 255, 255, 0.5) !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+.tab-btn.active {
+    color: var(--creator-gold) !important;
+    border-bottom: 2px solid var(--creator-gold) !important;
+    background: rgba(212, 175, 55, 0.05) !important;
+}
+
+/* BUTTONS */
+.btn-apply,
+.cockpit-btn {
+    background: transparent !important;
+    border: 1px solid var(--creator-gold) !important;
+    color: var(--creator-gold) !important;
+    text-transform: uppercase;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.btn-apply:hover,
+.cockpit-btn:hover {
+    background: var(--creator-gold) !important;
+    color: #000 !important;
+    box-shadow: 0 0 15px var(--creator-gold-glow);
+}
+
+/* TERMINAL */
+.copilot-terminal {
+    background: var(--creator-terminal-bg) !important;
+    border: 1px solid var(--creator-gold-dim) !important;
+    font-family: 'Inter', monospace !important;
+    padding: 15px !important;
+    border-radius: 8px !important;
+}
+
+.term-line {
+    border-left: 2px solid transparent;
+    padding-left: 8px;
+}
+
+.term-line.prompt {
+    color: var(--creator-highlight) !important;
+    font-weight: bold;
+    border-left: 2px solid var(--creator-gold);
+}
+
+.term-line.system {
+    color: rgba(212, 175, 55, 0.6) !important;
+}
+
+.term-line.exec {
+    color: #ffffff !important;
+    background: rgba(212, 175, 55, 0.1);
+}
+
+/* INPUTS */
+.cockpit-input,
+.cockpit-select {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid var(--creator-border) !important;
+    color: #fff !important;
+}
+
+.cockpit-input:focus,
+.cockpit-select:focus {
+    border-color: var(--creator-gold) !important;
+    outline: none;
+}
+
+/* AUDIT PANEL ENHANCEMENT */
+.audit-issue {
+    background: rgba(212, 175, 55, 0.02) !important;
+    border: 1px solid var(--creator-border) !important;
+}
+
+.audit-issue.severity-critical {
+    border-left: 4px solid #ff4444 !important;
+}
+
+.audit-issue.severity-warning {
+    border-left: 4px solid var(--creator-gold) !important;
+}
+
+/* ICONS */
+.ai-orb-inner {
+    filter: sepia(1) saturate(5) hue-rotate(-20deg) brightness(1.2) drop-shadow(0 0 10px var(--creator-gold)) !important;
+}
+
+/* DASHBOARD PANE SPECIFIC OVERRIDES */
+.creator-authenticated .ai-panel .ai-header {
+    border-bottom: 2px solid var(--creator-gold) !important;
+    background: rgba(212, 175, 55, 0.05) !important;
+}
+
+.creator-authenticated .ai-panel .ai-status-dot.online {
+    background: var(--creator-gold) !important;
+    box-shadow: 0 0 10px var(--creator-gold) !important;
+}
+
+.creator-authenticated .ai-panel button,
+.creator-authenticated .glass-panel button {
+    background: rgba(212, 175, 55, 0.1) !important;
+    border: 1px solid var(--creator-gold) !important;
+    color: #fff !important;
+}
+
+.creator-authenticated .ai-panel button:hover,
+.creator-authenticated .glass-panel button:hover {
+    background: var(--creator-gold) !important;
+    color: #000 !important;
+}
+
+
+/* Specific Dashboard Panels for Creator Mode */
+.creator-authenticated .proposals-panel,
+.creator-authenticated .loop-panel,
+.creator-authenticated .runtime-panel {
+    border-top: 2px solid var(--creator-gold) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(212, 175, 55, 0.05) !important;
+}
+
+/* NAVIGATION HIGHLIGHTS */
+.creator-authenticated .nav-item[data-view="mission"] svg {
+    stroke: var(--creator-gold) !important;
+    filter: drop-shadow(0 0 5px var(--creator-gold-dim));
+}
+
+.creator-authenticated .nav-item[data-view="mission"] span {
+    color: var(--creator-gold) !important;
+    font-weight: bold;
+}
+
+/* GOLD ICON ENHANCEMENT */
+.creator-authenticated .launcher-icon,
+.creator-authenticated .win-btn {
+    filter: sepia(1) saturate(5) hue-rotate(-20deg) brightness(1.1) contrast(1.1) !important;
+}
+
+/* SCROLLBAR */
+.creator-authenticated *::-webkit-scrollbar-thumb {
+    background: var(--creator-gold-dim) !important;
+    border-radius: 4px;
+}
+
+.creator-authenticated *::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* CIRCUIT DECORATIONS */
+.circuit-decoration {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0.1;
+    z-index: 0;
+}
+
+.circuit-decoration.top-right {
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M200 20 H120 V100 H0' fill='none' stroke='%23D4AF37' stroke-width='1'/%3E%3Ccircle cx='120' cy='20' r='3' fill='%23D4AF37'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: top right;
+}
+
+#mission-control-view::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 h50 v50 M100 0 v50 h50' fill='none' stroke='%23D4AF37' stroke-width='0.5' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* QR SCANNER UI (Phase 31) */
+.qr-scan-btn {
+    background: transparent !important;
+    border: 1px solid var(--creator-gold) !important;
+    color: var(--creator-gold) !important;
+    padding: 8px 15px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.qr-scan-btn:hover {
+    box-shadow: 0 0 15px var(--creator-gold-dim);
+    background: rgba(212, 175, 55, 0.1) !important;
+}
+
+.qr-scan-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+#qr-scanner-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 450px;
+    background: var(--creator-bg);
+    border: 1px solid var(--creator-gold);
+    border-radius: 20px;
+    z-index: 5000;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px var(--creator-gold-dim);
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+}
+
+#qr-scanner-overlay.active {
+    display: flex;
+}
+
+.scanner-video-wrap {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #000;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+    border: 1px solid var(--creator-border);
+}
+
+.scanner-video-wrap video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.scanner-frame {
+    position: absolute;
+    inset: 15%;
+    border: 2px solid var(--creator-gold);
+    box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+.scanner-frame::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--creator-highlight);
+    box-shadow: 0 0 10px var(--creator-gold);
+    animation: scanLineMove 2s infinite ease-in-out;
+}
+
+@keyframes scanLineMove {
+
+    0%,
+    100% {
+        top: 0;
+    }
+
+    50% {
+        top: 100%;
+    }
+}
+
+.scanner-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+/* MULTIMODAL EVIDENCE LAYER (Phase 32) */
+.media-evidence-panel {
+    background: rgba(10, 10, 15, 0.4);
+    border: 1px solid var(--creator-border);
+    border-radius: 8px;
+    margin-top: 15px;
+    padding: 10px;
+    display: none;
+}
+
+.media-evidence-panel.active {
+    display: block;
+}
+
+.evidence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.evidence-header h4 {
+    font-size: 0.75rem;
+    color: var(--creator-gold);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.evidence-count {
+    background: var(--creator-gold);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: bold;
+}
+
+.evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.evidence-item {
+    aspect-ratio: 1;
+    background: #000;
+    border-radius: 4px;
+    border: 1px solid var(--creator-border);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.evidence-item img,
+.evidence-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.evidence-item .type-tag {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--creator-gold);
+    font-size: 0.5rem;
+    padding: 2px;
+    text-align: center;
+}
+
+.upload-trigger-btn {
+    background: transparent;
+    border: 1px solid var(--creator-gold-dim);
+    color: var(--creator-gold);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.upload-trigger-btn:hover {
+    border-color: var(--creator-gold);
+    background: rgba(212, 175, 55, 0.1);
+}

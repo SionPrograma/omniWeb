@@ -349,3 +349,22 @@
     transform: scale(1.05);
     filter: brightness(1.2);
 }
+
+.approve-build-btn {
+    background: var(--creator-gold);
+    color: #000;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.approve-build-btn:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 170, 0, 0.3);
+}

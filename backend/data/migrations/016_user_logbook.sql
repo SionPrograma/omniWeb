@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS user_logbooks (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-CREATE INDEX idx_user_logbook_user ON user_logbooks(user_id);
-CREATE INDEX idx_user_logbook_type ON user_logbooks(entry_type);
-CREATE INDEX idx_user_logbook_time ON user_logbooks(timestamp);
+CREATE INDEX IF NOT EXISTS idx_user_logbook_user ON user_logbooks(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_logbook_type ON user_logbooks(entry_type);
+CREATE INDEX IF NOT EXISTS idx_user_logbook_time ON user_logbooks(timestamp);

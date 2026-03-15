@@ -1,3 +1,4 @@
+import os
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -36,7 +37,7 @@ class FixAction(BaseModel):
     patch_data: Optional[Dict[str, Any]] = None
 
 class AutoFixProposal(BaseModel):
-    id: str = Field(default_factory=lambda: f"fix-{int(datetime.now().timestamp())}")
+    id: str = Field(default_factory=lambda: f"fix-{datetime.now().strftime('%Y%m%d%H%M%S')}-{os.urandom(2).hex()}")
     issue_message: str
     analysis: str
     actions: List[FixAction]

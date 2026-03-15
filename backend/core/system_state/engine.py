@@ -10,7 +10,9 @@ from backend.core.system_auditor.fix_engine import fix_engine
 from backend.core.master_logbook.manager import master_logbook_manager
 from backend.core.master_logbook.models import EntryType, MasterLogbookFilter
 from backend.core.permissions import set_chip_context
-from .models import SystemState, SystemHealth, ChipState
+from backend.core.creator_control.manager import creator_control_manager
+from backend.core.cluster.manager import cluster_manager
+from .models import SystemState, SystemHealth, ChipState, SystemMode
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +35,12 @@ class SystemStateEngine:
         self._git_info["branch"] = snapshot.get("git_branch", "unknown")
         self._git_info["commit"] = snapshot.get("last_commit", "unknown")
 
-    async def get_state(self, force_refresh: bool = False) -> SystemState:
-        """Returns the current system state, updating if cache expired."""
-        from backend.core.permissions import enforce_permission, SYSTEM_STATE_ACCESS
-        enforce_permission(SYSTEM_STATE_ACCESS)
-        now = time.time()
-        if self._state is None or force_refresh or (now - self._last_update > self._cache_ttl):
-            await self.update_state()
+    async def get_state(self, force_refresh: bool = False, user_id: Optional[str] = None):
+        if force_refresh or not self._state or (time.time() - self._last_update > self._cache_ttl):
+            await self.update_state(user_id=user_id)
         return self._state
 
-    async def update_state(self):
+    async def update_state(self, user_id: Optional[str] = None):
         """Aggregates status from all subsystems into a unified state object."""
         try:
             # 1. Database Status
@@ -54,28 +52,54 @@ class SystemStateEngine:
                         db_ok = True
             except: pass
 
-            # 2. Chips & Health
+            # 2. Chips & Health (Runtime Alignment)
             all_chips = module_registry.discover_all_chips()
             chip_states = []
             overall_health = SystemHealth.HEALTHY
 
             for c in all_chips:
-                h = c.get("health", "healthy")
+                slug = c.get("slug", "unknown")
+                reg_info = module_registry.get_module_data(slug)
+                
+                # Default values from metadata
+                health_val = c.get("health", "healthy")
+                status_val = "active" if c.get("active") else "disabled"
+                
+                # Override with runtime truth if registered
+                if reg_info:
+                    # Registry exists
+                    health_val = reg_info.get("health", health_val)
+                    status_val = reg_info.get("status", status_val)
+                    
+                    # Detection of "Partial Health": claimed backend but not loaded
+                    if c.get("has_backend") and not reg_info.get("prefix"):
+                        # Mark as warning if it claims backend but is only "frontend-only" or "none"
+                        status_val = "unloaded_backend"
+                        if health_val != "error":
+                            health_val = "warning"
+                else:
+                    # Discovered on disk but NO trace in registry
+                    if c.get("active"):
+                        # If it should be active but isn't registered, it's a failure
+                        status_val = "registration_failed"
+                        health_val = "error"
+
+                # Convert health to enum
                 health_enum = SystemHealth.HEALTHY
-                if h == "warning": 
+                if health_val == "warning": 
                     health_enum = SystemHealth.WARNING
                     if overall_health != SystemHealth.ERROR: overall_health = SystemHealth.WARNING
-                elif h == "error": 
+                elif health_val == "error": 
                     health_enum = SystemHealth.ERROR
                     overall_health = SystemHealth.ERROR
-                
+
                 chip_states.append(ChipState(
-                    slug=c.get("slug", "unknown"),
+                    slug=slug,
                     name=c.get("name", "Unknown Chip"),
-                    status="active" if c.get("active") else "disabled",
+                    status=status_val,
                     health=health_enum,
-                    last_execution=c.get("last_execution", "never"),
-                    metadata=c # Pass full metadata from module discovery
+                    last_execution=reg_info.get("last_execution", "never") if reg_info else "never",
+                    metadata=c
                 ))
 
             # 3. Auditor Summary
@@ -111,6 +135,20 @@ class SystemStateEngine:
             except Exception as e:
                 logger.error(f"Failed to get memory info: {e}")
 
+            # 5b. Governance & Mode
+            mode = await creator_control_manager.get_system_mode()
+            maint = await creator_control_manager.get_active_maintenance()
+            announcement = await creator_control_manager.get_active_announcement()
+
+            # 5c. Cluster State (Phase 24)
+            cluster_state = await cluster_manager.get_cluster_state()
+            cluster_info = {
+                "active_nodes": cluster_state.active_nodes,
+                "total_nodes": cluster_state.total_nodes,
+                "cluster_load": cluster_state.cluster_load,
+                "nodes": [n.dict() for n in cluster_state.nodes]
+            }
+
             # 6. Dependency Flow Detection
             flow_data = {
                 "ai_to_chips": {
@@ -143,7 +181,9 @@ class SystemStateEngine:
             # 7. Build Unified State
             self._state = SystemState(
                 version=settings.VERSION,
-                system_mode=settings.OMNIWEB_MODE,
+                system_mode=mode,
+                maintenance_info=maint,
+                announcement=announcement,
                 git_branch=self._git_info["branch"],
                 git_commit=self._git_info["commit"],
                 health=overall_health,
@@ -162,6 +202,8 @@ class SystemStateEngine:
                 is_healing=is_healing,
                 memory_usage=memory_info,
                 flow_data=flow_data,
+                cluster=cluster_info,
+                sync_status=self._get_sync_info(user_id) if user_id else None,
                 timestamp=time.time(),
                 uptime_seconds=time.time() - self._start_time
             )
@@ -170,5 +212,23 @@ class SystemStateEngine:
         except Exception as e:
             logger.error(f"Failed to update System State: {e}")
             raise e
+
+    def _get_sync_info(self, user_id: str) -> Dict[str, Any]:
+        """Helper to get sync status without redundant manager imports."""
+        try:
+            with db_manager.get_connection() as conn:
+                devices = conn.execute("SELECT COUNT(*) as count FROM sync_devices WHERE user_id = ?", (user_id,)).fetchone()
+                last_log = conn.execute(
+                    "SELECT timestamp, status FROM sync_audit_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1",
+                    (user_id,)
+                ).fetchone()
+                
+                return {
+                    "devices_count": devices["count"] if devices else 0,
+                    "last_sync": last_log["timestamp"] if last_log else None,
+                    "status": last_log["status"] if last_log else "unconfigured"
+                }
+        except:
+            return {"devices_count": 0, "status": "error"}
 
 state_engine = SystemStateEngine()

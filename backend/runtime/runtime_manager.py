@@ -57,7 +57,7 @@ class RuntimeManager:
              checks["database"] = False
              
         # AI Host readiness check
-        from backend.core.ai_host.command_router import ai_command_router
+        from backend.core.ai_host import ai_command_router
         if not ai_command_router:
              checks["ai_host"] = False
 

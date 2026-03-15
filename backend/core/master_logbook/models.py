@@ -17,6 +17,8 @@ class EntryType(str, Enum):
     SYSTEM_AUDIT = "system_audit"
     AUTO_FIX = "auto_fix"
     ROADMAP = "roadmap"
+    SYSTEM_EVENT = "system_event"
+    USER_ACTION = "user_action"
 
 class Priority(str, Enum):
     LOW = "low"

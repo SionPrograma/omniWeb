@@ -12,6 +12,18 @@
     <link rel="stylesheet" href="/shell/style.css">
     <link rel="stylesheet" href="/shell/logbook.css">
     <link rel="stylesheet" href="/shell/creator.css">
+    <link rel="stylesheet" href="/shell/cluster.css">
+    <link rel="stylesheet" href="/shell/workload.css">
+    <link rel="stylesheet" href="/shell/mesh.css">
+    <link rel="stylesheet" href="/shell/offline.css">
+    <link rel="stylesheet" href="/shell/runtime.css">
+    <link rel="stylesheet" href="/shell/storage.css">
+    <link rel="stylesheet" href="/shell/human_dev.css">
+    <link rel="stylesheet" href="/shell/ecosystem_collab.css">
+    <link rel="stylesheet" href="/shell/scaling_beta.css">
+    <link rel="stylesheet" href="/shell/creator_theme.css">
+    <link rel="stylesheet" href="/shell/builder.css">
+    <link rel="stylesheet" href="/shell/editor.css">
     <link rel="manifest" href="/shell/manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,6 +38,14 @@
     <div class="particles" id="particles"></div>
 
     <div id="shell-container">
+        <!-- GLOBAL ANNOUNCEMENT BAR -->
+        <div class="global-announcement-bar" id="global-announcement" style="display: none;">
+            <div class="announcement-content">
+                <span class="announcement-icon">!</span>
+                <span id="announcement-text">System maintenance scheduled.</span>
+            </div>
+        </div>
+
         <!-- SYSTEM STATUS BAR -->
         <div class="system-status-bar" id="system-status">
             <div class="status-group">
@@ -33,7 +53,20 @@
                     <span class="status-dot online"></span>
                     <span>OmniWeb</span>
                     <span class="version-tag" id="sys-status-version">v0.0.0</span>
+                    <span id="creator-badge"
+                        style="display: none; margin-left: 6px; background: #32ff96; color: #000; padding: 0 5px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">CREATOR</span>
                 </div>
+                <!-- Phase 31: Creator QR Scan Shortcut -->
+                <button class="qr-scan-btn" id="global-qr-scan" style="display:none; margin-left: 10px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                        <rect x="7" y="7" width="3" height="3" />
+                        <rect x="14" y="7" width="3" height="3" />
+                        <rect x="7" y="14" width="3" height="1" />
+                    </svg>
+                    <span>SCAN ACCESS</span>
+                </button>
                 <div class="status-pill">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M6 3h12l4 6-10 13L2 9z" />
@@ -85,6 +118,7 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7" />
                     </svg>
+                    <span style="margin-left: 8px; font-size: 0.8rem; font-weight: 600;">BACK</span>
                 </button>
                 <span id="active-chip-title">Chip: Lingua</span>
                 <div class="chip-options">
@@ -108,6 +142,35 @@
                     <button class="cockpit-tab" data-tab="fixes">Auto-Healing</button>
                     <button class="cockpit-tab" data-tab="insights">Insights</button>
                     <button class="cockpit-tab" data-tab="security">Security</button>
+                    <button class="cockpit-tab" data-tab="admin">Admin Ops</button>
+                    <button class="cockpit-tab" data-tab="creator">Creator Plane</button>
+                    <button class="cockpit-tab" data-tab="cluster">Cluster</button>
+                    <button class="cockpit-tab" data-tab="mesh">Mesh</button>
+                    <button class="cockpit-tab" data-tab="autonomous">Autonomous</button>
+                    <button class="cockpit-tab" data-tab="runtime">Boot Runtime</button>
+                    <button class="cockpit-tab" data-tab="storage">Storage Grid</button>
+                    <button class="cockpit-tab" data-tab="knowledge">Knowledge Explorer</button>
+                    <button class="cockpit-tab" data-tab="learning">Learning Paths</button>
+                    <button class="cockpit-tab" data-tab="certs">Certifications</button>
+                    <button class="cockpit-tab" data-tab="opportunities">Opportunities</button>
+                    <button class="cockpit-tab" data-tab="collab">Collaborative Projects</button>
+                    <button class="cockpit-tab" data-tab="labs">Creator Labs</button>
+                    <button class="cockpit-tab" data-tab="market">Knowledge Market</button>
+                    <button class="cockpit-tab" data-tab="mentor">AI Mentor</button>
+                    <button class="cockpit-tab" data-tab="omniverse">Omniverse Gate</button>
+                    <button class="cockpit-tab" data-tab="observability">Global Telemetry</button>
+                    <button class="cockpit-tab" data-tab="beta">Beta Testing</button>
+                    <button class="cockpit-tab" data-tab="archival">Data Archive</button>
+                    <button class="cockpit-tab" data-tab="communication">Communication</button>
+                    <button class="cockpit-tab" data-tab="accessibility">Accessibility</button>
+                    <button class="cockpit-tab" data-tab="workload">Workload</button>
+                    <button class="cockpit-tab" data-tab="music">Music Lab</button>
+                    <button class="cockpit-tab" data-tab="integration">Integration</button>
+                    <button class="cockpit-tab" data-tab="copilot">AI Copilot</button>
+                    <button class="cockpit-tab" data-tab="qr_gateway">QR Gateway</button>
+                    <button class="cockpit-tab" data-tab="governance">Governance</button>
+                    <button class="cockpit-tab" data-tab="sync">Device Sync</button>
+                    <button class="cockpit-tab" data-tab="editor">Code Editor</button>
                     <button class="cockpit-tab" data-tab="code">System Modules</button>
                 </div>
             </header>
@@ -125,7 +188,7 @@
             <header class="panel-header">
                 <button class="close-panel" id="close-context">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                        <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
                 </button>
                 <h2>System Inspection</h2>
@@ -207,7 +270,22 @@
 
         <!-- LAUNCHER OVERLAY -->
         <div id="launcher-overlay">
+            <div class="launcher-header">
+                <h2>Galactic Launcher</h2>
+                <button id="close-launcher" class="close-overlay-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
             <div class="launcher-grid">
+                <div class="chip-launcher-item" data-chip="copilot"
+                    onclick="creatorEnv.switchView('mission'); creatorEnv.currentTab = 'copilot'; creatorEnv.renderCockpit(); omniShell.closeLauncher();">
+                    <div class="chip-icon" style="background: rgba(0, 212, 255, 0.2); border-color: var(--accent);">
+                        🤖
+                    </div>
+                    <span class="chip-label">AI Copilot</span>
+                </div>
                 <div class="chip-launcher-item active" data-chip="lingua" data-url="/lingua/">
                     <div class="chip-icon lingua">L</div>
                     <span class="chip-label">Lingua</span>
@@ -223,7 +301,31 @@
             </div>
         </div>
 
+        <!-- Phase 32: Multimodal Evidence Panel -->
+        <div id="shell-media-evidence" class="media-evidence-panel">
+            <div class="evidence-header">
+                <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="margin-right:5px;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="M21 15l-5-5L5 21" />
+                    </svg> EVIDENCE BATCH</h4>
+                <div style="display:flex; gap: 8px;">
+                    <span class="evidence-count" id="shell-media-count">0</span>
+                    <button class="upload-trigger-btn" onclick="creatorEnv.clearMedia()">CLEAR</button>
+                </div>
+            </div>
+            <div class="evidence-grid" id="shell-media-grid"></div>
+        </div>
+
         <div class="input-bar">
+            <input type="file" id="global-media-upload" multiple accept="image/*,video/*" style="display:none;"
+                onchange="creatorEnv.handleMediaUpload(this)">
+            <button id="media-upload-trigger" onclick="document.getElementById('global-media-upload').click()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12" />
+                </svg>
+            </button>
             <input type="text" placeholder="Command Omni..." id="shell-input">
             <button id="voice-command">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -253,7 +355,23 @@
         </div>
     </div>
 
+    <!-- QR SCANNER OVERLAY (Phase 31) -->
+    <div id="qr-scanner-overlay">
+        <h3 style="color: var(--creator-gold); margin-bottom: 15px; font-family: 'Outfit';">Creator Access Scan</h3>
+        <p style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 15px;">Alinea el código QR del creador dentro del
+            marco dorado.</p>
+        <div class="scanner-video-wrap">
+            <video id="scanner-video" autoplay playsinline></video>
+            <div class="scanner-frame"></div>
+        </div>
+        <div class="scanner-controls">
+            <button class="cockpit-btn" onclick="creatorEnv.closeScanner()">CANCEL</button>
+            <button class="btn-apply" id="sim-scan-btn">SIMULATE SCAN</button>
+        </div>
+    </div>
+
     <script src="/shell/voice.js"></script>
+    <script src="/shell/builder.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -267,6 +385,7 @@
     </script>
     <script src="/shell/galaxy.js"></script>
     <script src="/shell/creator.js"></script>
+    <script src="/shell/editor.js"></script>
     <script src="/shell/logbook.js"></script>
     <script src="/shell/main.js"></script>
 

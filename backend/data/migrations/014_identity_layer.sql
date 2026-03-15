@@ -8,8 +8,8 @@ ALTER TABLE users ADD COLUMN display_name TEXT;
 ALTER TABLE users ADD COLUMN avatar TEXT;
 
 -- Index for fast OAuth lookups
-CREATE INDEX idx_user_provider ON users(provider, provider_id);
-CREATE INDEX idx_user_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_user_provider ON users(provider, provider_id);
+CREATE INDEX IF NOT EXISTS idx_user_email ON users(email);
 
 -- Add last_login to users
 ALTER TABLE users ADD COLUMN last_login DATETIME;

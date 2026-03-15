@@ -1,0 +1,10 @@
+{
+    "id": "chip-omniexp",
+    "slug": "omniexp",
+    "name": "OmniExp",
+    "version": "0.1.0",
+    "description": "Scaffold the project structure",
+    "author": "OmniWeb AI Host",
+    "entry_point": "core/main.py",
+    "dependencies": []
+}

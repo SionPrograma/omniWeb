@@ -1,0 +1,10 @@
+{
+    "id": "chip-omni-log\u00edstica",
+    "slug": "omni-log\u00edstica",
+    "name": "Omni-Log\u00edstica",
+    "version": "0.1.0",
+    "description": "Este cluster titulado 'Log\u00edstica' agrupa 1 conceptos clave. Los temas principales incluyen: Log\u00edstica drones.. La visi\u00f3n general sugiere un enfoque hacia log\u00edstica con 1 puntos de apoyo documentados.",
+    "author": "OmniWeb AI Host",
+    "entry_point": "core/main.py",
+    "dependencies": []
+}

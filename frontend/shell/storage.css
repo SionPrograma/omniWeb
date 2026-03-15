@@ -1,0 +1,77 @@
+/* Distributed Storage Grid (Phase 29) */
+.storage-container {
+    padding: 10px;
+}
+
+.storage-hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.storage-stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.storage-stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent);
+    margin: 5px 0;
+}
+
+.storage-bar-container {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.storage-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.block-registry {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.block-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
+    align-items: center;
+}
+
+.block-id {
+    font-family: monospace;
+    opacity: 0.6;
+    font-size: 0.7rem;
+}
+
+.block-type {
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 0.65rem;
+}
+
+.replication-badge {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+}

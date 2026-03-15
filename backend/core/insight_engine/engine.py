@@ -37,6 +37,21 @@ class InsightEngine:
             insights.extend(await self._analyze_graph_density(user_id))
             
             self._cache[user_id] = insights
+            
+            # --- Admin Review System Integration (Phase 22) ---
+            from backend.core.admin_logbook.manager import admin_manager
+            from backend.core.admin_logbook.models import AISuggestion
+            
+            for insight in insights:
+                if insight.severity == InsightSeverity.CRITICAL:
+                    # Register as a pending suggestion for the Admin/Creator
+                    admin_manager.add_ai_suggestion(AISuggestion(
+                        id=insight.id,
+                        suggestion_type="CRITICAL_HEALTH",
+                        content={"title": insight.title, "description": insight.description, "metadata": insight.metadata},
+                        severity=insight.severity
+                    ))
+
             return insights
 
     async def _detect_logbook_patterns(self, user_id: str) -> List[ActionableInsight]:

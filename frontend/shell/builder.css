@@ -1,0 +1,233 @@
+/* Builder Execution Overlay */
+#builder-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(5, 5, 8, 0.95);
+    backdrop-filter: blur(20px);
+    z-index: 5000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#builder-overlay.active {
+    display: flex;
+}
+
+.builder-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.builder-header h2 {
+    font-size: 2.5rem;
+    font-weight: 200;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.4) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+}
+
+.builder-header p {
+    font-size: 0.9rem;
+    color: var(--creator-gold);
+    opacity: 0.8;
+}
+
+.builder-progress-container {
+    width: 80%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+}
+
+.main-progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    margin-bottom: 30px;
+    overflow: hidden;
+    position: relative;
+}
+
+.main-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #3296ff, #32ff96);
+    box-shadow: 0 0 20px rgba(50, 150, 255, 0.5);
+    transition: width 0.8s ease;
+}
+
+.builder-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.builder-step {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.builder-step.active {
+    background: rgba(50, 150, 255, 0.05);
+    border-color: rgba(50, 150, 255, 0.2);
+    transform: scale(1.02);
+}
+
+.builder-step.completed {
+    opacity: 0.6;
+}
+
+.step-indicator {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.builder-step.active .step-indicator {
+    border-color: #3296ff;
+    color: #3296ff;
+    animation: pulse 2s infinite;
+}
+
+.builder-step.completed .step-indicator {
+    background: #32ff96;
+    border-color: #32ff96;
+    color: #000;
+}
+
+.step-info {
+    flex: 1;
+}
+
+.step-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.step-status {
+    font-size: 0.7rem;
+    opacity: 0.5;
+    text-transform: uppercase;
+}
+
+.builder-controls {
+    margin-top: 40px;
+    display: flex;
+    gap: 20px;
+}
+
+.builder-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 12px 30px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.builder-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.builder-btn.primary {
+    background: var(--creator-gold);
+    color: #000;
+    border: none;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(50, 150, 255, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(50, 150, 255, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(50, 150, 255, 0);
+    }
+}
+
+.scanning-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: #32ff96;
+    box-shadow: 0 0 10px #32ff96;
+    animation: scan 4s linear infinite;
+    display: none;
+}
+
+@keyframes scan {
+    from {
+        left: 0%;
+    }
+
+    to {
+        left: 100%;
+    }
+}
+
+.text-pass {
+    color: #32ff96;
+}
+
+.text-fail {
+    color: #ff4d4d;
+}
+
+.mutation-item {
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.7);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+#builder-substep-text {
+    color: var(--creator-gold);
+    font-weight: 500;
+}

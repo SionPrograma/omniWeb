@@ -1,0 +1,110 @@
+/* Workload Distribution (Phase 25) */
+.workload-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.task-queue {
+    max-height: 400px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.85rem;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-slug {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.task-status {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.status-running {
+    background: rgba(0, 212, 255, 0.2);
+    color: var(--accent);
+    animation: pulse 2s infinite;
+}
+
+.status-completed {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+}
+
+.status-failed {
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
+}
+
+.task-meta {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.distribution-chart {
+    height: 150px;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.bar {
+    flex: 1;
+    background: var(--primary-low);
+    border: 1px solid var(--accent);
+    position: relative;
+    min-height: 5px;
+    border-radius: 4px 4px 0 0;
+}
+
+.bar::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    white-space: nowrap;
+}

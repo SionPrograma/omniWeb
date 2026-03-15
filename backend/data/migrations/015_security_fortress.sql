@@ -25,6 +25,6 @@ CREATE TABLE IF NOT EXISTS security_audit_logs (
     FOREIGN KEY (creator_id) REFERENCES users(id)
 );
 
-CREATE INDEX idx_audit_creator ON security_audit_logs(creator_id);
-CREATE INDEX idx_audit_timestamp ON security_audit_logs(timestamp);
-CREATE INDEX idx_trusted_user_device ON trusted_devices(user_id, device_id);
+CREATE INDEX IF NOT EXISTS idx_audit_creator ON security_audit_logs(creator_id);
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON security_audit_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_trusted_user_device ON trusted_devices(user_id, device_id);

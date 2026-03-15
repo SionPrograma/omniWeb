@@ -77,22 +77,25 @@ async def inspect_system(query: str = "project", admin_user: dict = Security(get
     return code_analyzer.inspect_project(query)
 
 @router.get("/state")
-async def get_system_state():
+async def get_system_state(current_user: Optional[OmniUser] = Depends(get_current_user)):
     """
     Unified entry point for full system state.
     """
     from backend.core.system_state.engine import state_engine
-    state = await state_engine.get_state()
+    user_id = current_user.id if current_user else None
+    state = await state_engine.get_state(user_id=user_id)
+    
+    state_data = state.model_dump()
+    state_data["creator_authenticated"] = (current_user and current_user.role == "admin")
     
     # Mode Filter (Phase 14)
     if settings.OMNIWEB_MODE == "user":
-        state_data = state.model_dump()
         state_data["auditor_summary"] = None # Hide sensitive audits in user mode
         state_data["git_branch"] = "stable"
         state_data["git_commit"] = "****"
         return state_data
         
-    return state
+    return state_data
 
 @router.get("/state/summary")
 async def get_state_summary():

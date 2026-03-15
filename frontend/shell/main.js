@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const launcherOverlay = document.getElementById('launcher-overlay');
     const openLauncherBtn = document.getElementById('open-launcher');
+    const closeLauncherBtn = document.getElementById('close-launcher');
     const launcherItems = document.querySelectorAll('.chip-launcher-item');
 
     const navItems = document.querySelectorAll('.nav-item');
@@ -33,29 +34,64 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Onboarding Greeting ---
     async function initGreeting() {
         try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteToken = urlParams.get('invite') || urlParams.get('beta');
+
             const browser_lang = navigator.language.split('-')[0] || 'en';
             const res = await fetch('/api/v1/onboarding/greeting', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     text: "Hola Omni",
-                    browser_lang: browser_lang
+                    browser_lang: browser_lang,
+                    invite_token: inviteToken
                 })
             });
+
+            if (!res.ok) throw new Error("API response not ok");
+
             const data = await res.json();
-            if (data.payload?.title) {
-                document.getElementById('greeting').innerText = data.payload.title;
-                if (data.payload.message) {
-                    addMessage(data.payload.message, 'ai');
+            if (data.payload?.message) {
+                if (data.payload.title) {
+                    const greetingEl = document.getElementById('greeting');
+                    if (greetingEl) greetingEl.innerText = data.payload.title;
                 }
+                addMessage(data.payload.message, 'ai');
+            } else {
+                // Local fallback if message is empty
+                addMessage("Sistema Omni inicializado. Listo para recibir instrucciones.", 'ai');
             }
         } catch (err) {
             console.error("Greeting failed:", err);
+            // Local fallback on error
+            addMessage("Omni Link Establecido. ¿En qué puedo ayudarte hoy, Creador?", 'ai');
         }
     }
     initGreeting();
 
-    // --- Launcher Logic ---
+    // --- Deep Link Handling (Phase 14) ---
+    function handleDeepLink() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const view = urlParams.get('view');
+        const tab = urlParams.get('tab');
+
+        if (view) {
+            if (view === 'mission' && window.creatorEnv) {
+                window.creatorEnv.switchView('mission');
+                if (tab) {
+                    window.creatorEnv.currentTab = tab;
+                    // Update tab UI
+                    document.querySelectorAll('.cockpit-tab').forEach(t => {
+                        t.classList.toggle('active', t.dataset.tab === tab);
+                    });
+                    window.creatorEnv.renderCockpit();
+                }
+            } else if (view === 'chat') {
+                if (window.creatorEnv) window.creatorEnv.switchView('chat');
+            }
+        }
+    }
+    setTimeout(handleDeepLink, 1000); // Wait for other components to init
     function setLauncherActive(active) {
         const isActive = active !== undefined ? active : !launcherOverlay.classList.contains('active');
         launcherOverlay.classList.toggle('active', isActive);
@@ -71,6 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
     openLauncherBtn.addEventListener('click', () => {
         setLauncherActive();
     });
+
+    if (closeLauncherBtn) {
+        closeLauncherBtn.addEventListener('click', () => {
+            setLauncherActive(false);
+        });
+    }
 
     launcherItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -196,20 +238,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Offset the input bar if it's too high (keyboard open)
                 if (window.innerHeight - layoutHeight > 100) {
                     inputBar.style.bottom = `${(window.innerHeight - layoutHeight) + 10}px`;
+                    // Ensure latest message is visible when keyboard opens
+                    setTimeout(scrollToBottom, 300);
                 } else {
                     inputBar.style.bottom = ''; // Revert to CSS default
+                    setTimeout(scrollToBottom, 300);
                 }
             }
         });
     }
 
     // --- Chat / Command Logic ---
-    function addMessage(text, sender = 'ai') {
+    function scrollToBottom(force = false) {
+        const threshold = 150; // tolerance in px
+        const isNearBottom = (aiHostView.scrollHeight - aiHostView.scrollTop - aiHostView.clientHeight) < threshold;
+
+        if (force || isNearBottom) {
+            aiHostView.scrollTo({
+                top: aiHostView.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    function addMessage(text, sender = 'ai', forceScroll = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
-        msgDiv.innerHTML = `<div class="msg-bubble">${text}</div>`;
+        // Support simple markdown-like cleanup (bold)
+        const cleanText = typeof text === 'string' ? text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : text;
+        msgDiv.innerHTML = `<div class="msg-bubble">${cleanText}</div>`;
         chatLog.appendChild(msgDiv);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        scrollToBottom(forceScroll || sender === 'user');
     }
     window.addMessage = addMessage; // Expose to creator.js
 
@@ -218,20 +277,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') processCommand();
     });
 
-    // --- Voice Logic Integration ---
+    // --- Voice Logic Integration (Reconstructed) ---
     const voice = new VoiceInterface({
         onResult: (text) => {
+            console.log("[VOICE_RESULT] Final:", text);
             shellInput.value = text;
             processCommand();
         },
-        onStateChange: (isListening) => {
-            if (isListening) {
+        onStateChange: (state, interimText) => {
+            console.log("[VOICE_STATE]", state);
+            if (state === 'listening') {
                 voiceBtn.classList.add('listening');
-                shellInput.placeholder = "Listening...";
+                shellInput.placeholder = interimText || "Escuchando...";
+                if (interimText) shellInput.value = interimText;
+            } else if (state === 'transcribing') {
+                voiceBtn.classList.add('processing');
+                shellInput.placeholder = "Procesando...";
             } else {
-                voiceBtn.classList.remove('listening');
+                voiceBtn.classList.remove('listening', 'processing');
                 shellInput.placeholder = "Command Omni...";
+                if (state === 'error') {
+                    shellInput.classList.add('input-error');
+                    setTimeout(() => shellInput.classList.remove('input-error'), 2000);
+                }
             }
+        },
+        onError: (error) => {
+            console.error("[VOICE_ERROR_DIAGNOSTIC]", error);
+            let msg = "Error de voz.";
+            if (error === 'not-allowed' || error === 'denied') {
+                msg = "Acceso a micrófono denegado.";
+            } else if (error === 'browser-unsupported' || error === 'unsupported') {
+                msg = "Navegador no soporta voz.";
+            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+                msg = "Requiere HTTPS para voz.";
+            }
+            addMessage(`⚠️ ${msg}`, 'ai');
         },
         onSpeechStart: () => {
             const orb = document.querySelector('.ai-orb');
@@ -245,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (voiceBtn) {
         voiceBtn.addEventListener('click', () => {
+            console.log("[DIAGNOSTIC] Mic button clicked. SecureContext:", window.isSecureContext);
             voice.toggle();
         });
     }
@@ -253,17 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cmd = shellInput.value.trim();
         if (!cmd) return;
 
-        // --- DEV PERMISSION CHECK ---
-        const complexKeywords = ['deploy', 'patch', 'rebuild', 'delete', 'migration', 'modify system'];
-        if (complexKeywords.some(k => cmd.toLowerCase().includes(k))) {
-            const confirmed = await window.creatorEnv.askPermission(
-                "System Modification Request",
-                `Are you sure you want to execute this development command: "${cmd}"?`
-            );
-            if (!confirmed) return;
-        }
-
-        addMessage(cmd, 'user');
+        addMessage(cmd, 'user', true); // Force scroll for user message
         shellInput.value = '';
 
         // Typing indicator + Orb pulse
@@ -274,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         typingDiv.className = 'message ai typing';
         typingDiv.innerHTML = '<div class="msg-bubble">...</div>';
         chatLog.appendChild(typingDiv);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        scrollToBottom();
 
         try {
             const response = await fetch('/api/v1/ai-host/process', {
@@ -291,9 +363,25 @@ document.addEventListener('DOMContentLoaded', () => {
             typingDiv.remove();
 
             if (data.message) {
+                console.log("[EXECUTION_SUCCESS] Response received.");
                 addMessage(data.message, 'ai');
+                console.log("[RESPONSE_RENDERED] Message displayed in UI.");
                 // Voice Feedback
                 voice.speak(data.message);
+            }
+
+            if (data.intent === 'idea_captured') {
+                console.log("[MEMORY_STORED] Thought captured in Idea Cloud.");
+                // Visual feedback: Highlight Knowledge Explorer tab
+                const knowledgeTab = document.querySelector('[data-tab="knowledge"]');
+                if (knowledgeTab) {
+                    knowledgeTab.style.background = 'rgba(50, 255, 150, 0.2)';
+                    knowledgeTab.style.borderColor = '#32ff96';
+                    setTimeout(() => {
+                        knowledgeTab.style.background = '';
+                        knowledgeTab.style.borderColor = '';
+                    }, 3000);
+                }
             }
 
             // Visual Payload Handling (Step 6)
@@ -329,8 +417,34 @@ document.addEventListener('DOMContentLoaded', () => {
             setLauncherActive(false);
 
             if (data.intent === 'open_chip' && data.payload?.target) {
+                const target = data.payload.target;
+                // Visually highlight in launcher if open
+                const launcherItem = document.querySelector(`.chip-launcher-item[data-chip="${target}"]`);
+                if (launcherItem) {
+                    launcherItem.classList.add('active');
+                    setTimeout(() => launcherItem.classList.remove('active'), 2000);
+                }
+
+                const url = `/${target}/`;
+                setTimeout(() => launchChip(url, target), 600);
+            }
+
+            if (data.intent === 'inspect_chip' && data.payload?.target) {
+                if (window.creatorEnv && window.creatorEnv.inspectChip) {
+                    window.creatorEnv.inspectChip(data.payload.target);
+                }
+            }
+
+            if (data.intent === 'navigate_to' && data.payload?.ui_instruction?.view) {
+                const view = data.payload.ui_instruction.view;
+                if (window.creatorEnv && window.creatorEnv.switchView) {
+                    window.creatorEnv.switchView(view);
+                }
+            }
+
+            if (data.intent === 'focus_chip_runtime' && data.payload?.target) {
                 const url = `/${data.payload.target}/`;
-                setTimeout(() => launchChip(url, data.payload.target), 1000);
+                launchChip(url, data.payload.target);
             }
 
             if (data.intent === 'logbook_entry_created') {
@@ -342,6 +456,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // --- Builder Execution Handling ---
+            if (data.intent === 'approve_roadmap' && data.payload?.task_id) {
+                // Show console immediately or wait for start?
+                // User requirement: "UI feedback on current module..."
+                // I'll show it as soon as it's approved.
+                if (window.builderUI) {
+                    window.builderUI.show(data.payload.task_id);
+                }
+            }
+
+            if (data.intent === 'start_execution' && data.payload?.task_id) {
+                if (window.builderUI) {
+                    window.builderUI.show(data.payload.task_id);
+                }
+            }
+
         } catch (error) {
             console.error('AI Host Error:', error);
             typingDiv.remove();
@@ -350,6 +480,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleVisualResponse(visual) {
+        if (!visual) return;
+
+        // Skip empty task reports
+        if (visual.type === 'task-report') {
+            const hasActions = visual.data?.actions && visual.data.actions.length > 0;
+            const hasIssues = visual.data?.issues && visual.data.issues.length > 0;
+            if (!hasActions && !hasIssues) {
+                console.info("[UI_STABILIZATION] Ghost Task Execution panel suppressed.");
+                return;
+            }
+        }
+
         console.log("Rendering visual response:", visual);
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ai-visual type-${visual.type}`;
@@ -389,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         content += `</div>`;
         msgDiv.innerHTML = content;
         chatLog.appendChild(msgDiv);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        scrollToBottom();
     }
 
     // --- Particles Background (Animated) ---

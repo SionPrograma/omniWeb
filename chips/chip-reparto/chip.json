@@ -13,6 +13,7 @@
     "permissions": [
         "storage_read",
         "storage_write",
-        "user_logbook_access"
+        "user_logbook_access",
+        "db_access"
     ]
 }

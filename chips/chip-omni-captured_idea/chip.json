@@ -1,0 +1,10 @@
+{
+    "id": "chip-omni-captured_idea",
+    "slug": "omni-captured_idea",
+    "name": "Omni-Captured_idea",
+    "version": "0.1.0",
+    "description": "Este cluster titulado 'Captured_idea' agrupa 1 conceptos clave. Los temas principales incluyen: Usar drones para entrega en zo.... La visi\u00f3n general sugiere un enfoque hacia captured_idea con 1 puntos",
+    "author": "OmniWeb AI Host",
+    "entry_point": "core/main.py",
+    "dependencies": []
+}

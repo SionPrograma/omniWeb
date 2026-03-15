@@ -1,0 +1,109 @@
+/* Mesh Networking (Phase 26) */
+.mesh-container {
+    padding: 10px;
+}
+
+.mesh-health-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 15px 0;
+}
+
+.mesh-health-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--pass-color), var(--accent));
+    transition: width 0.5s ease;
+}
+
+.peer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.peer-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 15px;
+    position: relative;
+    overflow: hidden;
+}
+
+.peer-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent);
+}
+
+.peer-card.disconnected::before {
+    background: var(--fail-color);
+}
+
+.peer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.peer-id {
+    font-weight: bold;
+    font-family: monospace;
+    color: var(--accent);
+}
+
+.peer-status-tag {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.peer-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.peer-latency {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+.mesh-map-sim {
+    height: 200px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-top: 20px;
+}
+
+.node-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+.connection-line {
+    position: absolute;
+    background: rgba(0, 212, 255, 0.1);
+    height: 1px;
+    transform-origin: left center;
+}

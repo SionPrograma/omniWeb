@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS user_graph_edges (
     FOREIGN KEY (target_node) REFERENCES user_graph_nodes(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_user_graph_nodes_user ON user_graph_nodes(user_id);
-CREATE INDEX idx_user_graph_nodes_entry ON user_graph_nodes(entry_id);
-CREATE INDEX idx_user_graph_edges_user ON user_graph_edges(user_id);
-CREATE INDEX idx_user_graph_edges_source ON user_graph_edges(source_node);
-CREATE INDEX idx_user_graph_edges_target ON user_graph_edges(target_node);
+CREATE INDEX IF NOT EXISTS idx_user_graph_nodes_user ON user_graph_nodes(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_graph_nodes_entry ON user_graph_nodes(entry_id);
+CREATE INDEX IF NOT EXISTS idx_user_graph_edges_user ON user_graph_edges(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_graph_edges_source ON user_graph_edges(source_node);
+CREATE INDEX IF NOT EXISTS idx_user_graph_edges_target ON user_graph_edges(target_node);

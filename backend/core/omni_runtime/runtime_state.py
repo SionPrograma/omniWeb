@@ -11,6 +11,8 @@ class RuntimeState(BaseModel):
     is_portable: bool = False
     system_health: str = "ok"
     active_services: List[str] = []
+    boot_source: str = "local_disk" # usb, container, network, disk
+    runtime_mode: str = "standalone" # standalone, mesh_member
     metadata: Dict[str, Any] = {}
 
     def get_uptime(self) -> float:

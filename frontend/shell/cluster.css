@@ -1,0 +1,111 @@
+/* Cluster Management (Phase 24) */
+.node-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.node-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.node-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary-low);
+}
+
+.node-card.online {
+    border-left: 4px solid #00ff88;
+}
+
+.node-card.offline {
+    border-left: 4px solid #ff4444;
+    opacity: 0.6;
+}
+
+.node-card.draining {
+    border-left: 4px solid #ffcc00;
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.node-id {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+}
+
+.node-role-tag {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    background: rgba(0, 212, 255, 0.1);
+    color: #00d4ff;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.node-metrics {
+    display: flex;
+    gap: 15px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.node-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 10px;
+}
+
+.node-meta {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+    display: flex;
+    gap: 15px;
+}
+
+.node-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.node-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.node-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: #00d4ff;
+}
+
+.metric .label {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 1px;
+}
+
+.metric .value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #00d4ff;
+}

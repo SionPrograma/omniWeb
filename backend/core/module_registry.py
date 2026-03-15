@@ -42,6 +42,7 @@ class ModuleRegistry:
         Main orchestration for module registration.
         Follows the Discovery -> Validation -> Mounting pattern.
         """
+        self.app = app # Store reference for dynamic re-loading
         # 1. Discovery
         metadata_dict = self._load_metadata(module_name)
         metadata = ChipMetadata(**metadata_dict)
@@ -166,7 +167,7 @@ class ModuleRegistry:
             "name": metadata.get("name", module_name),
             "slug": module_name,
             "prefix": final_prefix,
-            "status": "active" if final_prefix else "frontend-only",
+            "status": "active" if final_prefix else ("unloaded_backend" if metadata.get("has_backend") else "frontend-only"),
             "health": "healthy",
             "last_execution": None,
             "metadata": metadata
@@ -252,6 +253,26 @@ class ModuleRegistry:
         except Exception as e:
             logger.error(f"Failed to update chip {slug} status: {e}")
             return False
+
+    def search_chip(self, query: str) -> Optional[Dict[str, Any]]:
+        """
+        Robust chip search by slug or name using prioritized matching.
+        """
+        all_chips = self.discover_all_chips()
+        # Clean query
+        clean_query = query.lower().strip()
+        
+        # Priority 1: Exact slug match
+        for c in all_chips:
+            if c["slug"].lower() == clean_query:
+                return c
+        
+        # Priority 2: Query is in slug or name
+        for c in all_chips:
+            if clean_query in c["slug"].lower() or clean_query in c.get("name", "").lower():
+                return c
+                
+        return None
 
     def log_execution(self, slug: str):
         """Simple tracker for UI feedback."""

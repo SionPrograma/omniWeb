@@ -29,15 +29,14 @@ graph TD
         Auditor[System Auditor]
         AutoFix[AutoFix Engine]
         Insights[Insight Engine]
+        Sync[Sync Engine]
     end
     
-    subgraph Chip Ecosystem
-        C1[Finance Chip]
-        C2[Reparto Chip]
-        C3[Lingua Chip]
-        C_Gen[Chip Generator]
+    subgraph persistence
+        Logbook[Personal Logbook]
+        Graph[Knowledge Graph]
     end
-    
+
     Router --> Registry
     Registry --> C1
     Registry --> C2
@@ -46,6 +45,8 @@ graph TD
     State --> Dashboard
     Auditor --> AutoFix
     Insights --> AIHost
+    Sync --> Logbook
+    Logbook --> Graph
 ```
 
 ## System Components
@@ -56,8 +57,11 @@ The Python-based kernel (FastAPI) handles the heavy lifting: resource orchestrat
 ### 2. The AI Host
 The system's nervous system. It processes natural language, classifies intent, and delegates tasks to specialized processors or chips.
 
-### 3. The Chip Ecosystem
-Modular "sub-apps" that implement specific business logic. Chips are identified by a `chip.json` manifest and offer a sandboxed runtime.
+### 3. Personal Memory & Graph
+The **Personal Logbook** records all user and system activity, which is then semantically mapped into a **Knowledge Graph** to derive relationships and long-term context.
 
-### 4. Autonomous Resilience
-The **System Auditor** and **AutoFix Engine** continuously monitor the platform's health and apply patches or state corrections automatically, ensuring 99.9% uptime for the creator environment.
+### 4. Asset & Workspace Sync
+Ensures multi-device consistency by synchronizing logs, graph data, and chip configurations using a conflict-safe LWW (Last Write Wins) strategy.
+
+### 5. Autonomous Resilience
+The **System Auditor** and **AutoFix Engine** continuously monitor the platform's health and apply patches or state corrections automatically, ensuring high uptime for the creator environment.

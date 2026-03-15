@@ -5,8 +5,8 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from .models import SystemAuditReport, AuditStatus, AuditSector, AuditIssue, AutoFixProposal
-from .fix_engine import fix_engine
+from backend.core.system_auditor.models import SystemAuditReport, AuditStatus, AuditSector, AuditIssue, AutoFixProposal
+from backend.core.system_auditor.fix_engine import fix_engine
 from backend.core.logger import logger
 from backend.core.permissions import set_chip_context
 
@@ -18,6 +18,45 @@ class SystemAuditor:
     
     def __init__(self):
         self.probes = []
+        self.last_audit_state = {
+            "status": None,
+            "issue_fingerprints": set(),
+            "last_log_time": 0
+        }
+
+    def log_entry(self, level: str, message: str, sector: str = "generic", metadata: Dict[str, Any] = {}):
+        """
+        Convenience method to log an external event to the Master Logbook.
+        """
+        from backend.core.master_logbook.manager import master_logbook_manager
+        from backend.core.master_logbook.models import MasterLogbookEntry, EntryType, Priority
+        
+        priority = Priority.LOW
+        if level in ["CRITICAL", "ERROR"]:
+            priority = Priority.CRITICAL
+        elif level == "WARNING":
+            priority = Priority.HIGH
+            
+        # Map sector to EntryType
+        entry_type = EntryType.SYSTEM_EVENT
+        if sector == "user":
+            entry_type = EntryType.USER_ACTION
+        elif sector == "idea" or "idea" in message.lower():
+            entry_type = EntryType.IDEA
+        elif sector == "bug":
+            entry_type = EntryType.BUG
+            
+        from backend.core.permissions import set_chip_context
+        with set_chip_context("core"):
+            entry = MasterLogbookEntry(
+                type=entry_type,
+                content=message,
+                priority=priority,
+                chip_reference="ai-host",
+                metadata=metadata
+            )
+            master_logbook_manager.add_entry(entry)
+        logger.info(f"[AUDITOR_LOG] {level}: {message}")
         
     async def run_full_audit(self) -> SystemAuditReport:
         """
@@ -81,11 +120,27 @@ class SystemAuditor:
             fix_proposals = await fix_engine.analyze_report(report)
             metrics["fix_proposals_count"] = len(fix_proposals)
             
-            # Log to Master Logbook
-            try:
-                await self._log_to_master(report, fix_proposals)
-            except Exception as e:
-                logger.error(f"Failed to log audit to master logbook: {e}")
+            # Log to Master Logbook with Deduplication (Phase 0 Polish)
+            current_fingerprints = set(i.fingerprint or i.message for i in issues)
+            now_ts = time.time()
+            
+            # Logic: Log if status changed, OR issues changed, OR 4 hours passed (heartbeat)
+            status_changed = report.overall_status != self.last_audit_state["status"]
+            issues_changed = current_fingerprints != self.last_audit_state["issue_fingerprints"]
+            time_for_heartbeat = (now_ts - self.last_audit_state["last_log_time"]) > 14400 # 4 hours
+            
+            if status_changed or issues_changed or time_for_heartbeat:
+                try:
+                    await self._log_to_master(report, fix_proposals)
+                    self.last_audit_state.update({
+                        "status": report.overall_status,
+                        "issue_fingerprints": current_fingerprints,
+                        "last_log_time": now_ts
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to log audit to master logbook: {e}")
+            else:
+                logger.debug("Skipping Master Logbook entry: System state invariant.")
             
             logger.info(f"--- System Audit Complete: {overall_status} ---")
             return report
@@ -104,13 +159,33 @@ class SystemAuditor:
             active_modules = module_registry.get_active_modules()
             metrics["mounted_modules_count"] = len(active_modules)
             
-            for mod in active_modules:
-                if mod.get("health") != "healthy":
+            # Cross-check discovery vs registration (Phase 0 stabilization)
+            for c in chips:
+                slug = c.get("slug")
+                reg = module_registry.get_module_data(slug)
+                
+                if c.get("active"):
+                    if not reg:
+                        issues.append(AuditIssue(
+                            sector=AuditSector.BACKEND,
+                            level=AuditStatus.ERROR,
+                            message=f"Chip '{slug}' is active in manifest but MISSING from runtime registry.",
+                            fingerprint=f"registration_failed:{slug}"
+                        ))
+                    elif c.get("has_backend") and not reg.get("prefix"):
+                         issues.append(AuditIssue(
+                            sector=AuditSector.BACKEND,
+                            level=AuditStatus.WARNING,
+                            message=f"Chip '{slug}' backend failed to load. Operating in frontend-only mode.",
+                            fingerprint=f"unloaded_backend:{slug}"
+                        ))
+                
+                if reg and reg.get("health") != "healthy":
                     issues.append(AuditIssue(
                         sector=AuditSector.BACKEND,
                         level=AuditStatus.WARNING,
-                        message=f"Module {mod.get('slug', 'unknown')} is not healthy.",
-                        details=mod
+                        message=f"Module {slug} registry health check failed.",
+                        details=reg
                     ))
         except Exception as e:
             issues.append(AuditIssue(
@@ -121,7 +196,7 @@ class SystemAuditor:
 
         # 2. Check AI Host Processors
         try:
-            from backend.core.ai_host.command_router import ai_command_router
+            from backend.core.ai_host import ai_command_router
             processors = list(ai_command_router.registry._processors.keys())
             metrics["ai_processors"] = processors
             
@@ -229,6 +304,21 @@ class SystemAuditor:
                         message=f"Chip {folder} has no entry point defined."
                     ))
                     
+                # Check router if backend is claimed
+                if manifest.get("has_backend"):
+                    # Support both standard patterns
+                    router_paths = [
+                        os.path.join(chips_dir, folder, "core", "router.py"),
+                        os.path.join(chips_dir, folder, "backend", "router.py")
+                    ]
+                    if not any(os.path.exists(rp) for rp in router_paths):
+                         issues.append(AuditIssue(
+                            sector=AuditSector.CHIPS,
+                            level=AuditStatus.WARNING,
+                            message=f"Chip {folder} claims backend but router.py is missing on disk.",
+                            fingerprint=f"missing_router_file:{folder}"
+                        ))
+
             except Exception as e:
                 issues.append(AuditIssue(
                     sector=AuditSector.CHIPS,

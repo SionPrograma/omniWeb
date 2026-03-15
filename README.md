@@ -1,111 +1,235 @@
-# OmniWeb — Autonomous AI Operating Environment 🌐
+<p align="center">
+  <img src="docs/assets/logo_placeholder.svg" alt="OmniWeb Logo" width="120"/>
+</p>
 
-OmniWeb is a modular, AI-orchestrated platform designed to function as a unified developer environment, personal AI workspace, and a scalable application ecosystem.
+<h1 align="center">OmniWeb</h1>
 
-## 🚀 Vision
-OmniWeb is designed for the modern developer who needs more than just a list of tools. It is an **Autonomous AI Operating Environment** that combines:
-- **AI Orchestration**: A central nervous system that understands intent and delegates tasks.
-- **Modular Chip Architecture**: A plug-and-play system for specialized sub-applications.
-- **Self-Healing Infrastructure**: Autonomous auditing and automatic code patching.
-- **Real-Time Observability**: Living visualizations of system state and dependencies.
-- **Creator Control Tools**: Advanced cockpit for monitoring and system evolution.
+<p align="center">
+  <strong>Distributed AI Knowledge Platform</strong><br/>
+  <em>A self-healing, mesh-networked ecosystem for human development, knowledge economics, and AI-guided governance.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0_beta-blue?style=flat-square" alt="Version"/>
+  <img src="https://img.shields.io/badge/python-3.11+-green?style=flat-square" alt="Python"/>
+  <img src="https://img.shields.io/badge/framework-FastAPI-009688?style=flat-square" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/database-SQLite-003B57?style=flat-square" alt="SQLite"/>
+  <img src="https://img.shields.io/badge/frontend-PWA-FFD700?style=flat-square" alt="PWA"/>
+  <img src="https://img.shields.io/badge/license-MIT-orange?style=flat-square" alt="License"/>
+</p>
 
 ---
 
-## ✨ Core Features
+## 🌐 What is OmniWeb?
 
-### 🤖 AI Host
-The orchestrator of the platform. It processes natural language commands, classifies intent, and executes actions across the kernel or specific chips.
+OmniWeb is a **distributed, AI-orchestrated knowledge platform** that transforms the web into a structured engine for human potential. It replaces centralized architecture with a global mesh of autonomous nodes, where every user is a creator, every fragment of knowledge is a permanent artifact, and every skill is a tradable currency.
 
-### 🧩 Chip Architecture
-A granular modularity system where every application (Chip) is isolated. Chips declare their own capabilities and communicate via a global event bus.
+### Core Pillars
 
-### 🛡️ Self-Healing System
-The system monitors itself via the **System Auditor** and proactively repairs inconsistencies or errors using the **AutoFix Engine**.
-
-### 📺 Creator Mission Control
-The administrative "Cockpit." A high-performance dashboard with health metrics, active processor logs, and system resource monitoring.
-
-### 🌌 Galaxy Map Visualization
-A dynamic, real-time 3D representation of the system's architectural nodes and their current operational status.
-
-### ⛓️ Dependency Flow Mapping
-Visualizes the data and control flow between the AI Host, Kernel, and individual Chips to ensure structural integrity.
-
-### 📓 Personal AI Logbooks
-A persistent memory system that records user activity, ideas, and system events, serving as the foundation for AI context.
-
-### 🧠 Knowledge Graph
-Transforms linear logs into a semantic network, detecting relationships between concepts and projects across the entire workspace.
-
-### 🧩 Actionable Insight Engine
-An intelligence layer that analyzes patterns in user data and system state to suggest proactive tasks or architectural optimizations.
+| Pillar | Description |
+|---|---|
+| 🧠 **AI Host** | Persistent AI orchestrator for system health, user mentorship, and autonomous development |
+| 🌍 **Distributed Runtime** | Peer-to-peer execution surviving total disconnection with offline-first architecture |
+| 📚 **Digital Alexandria** | Fragmented, redundant storage grid ensuring knowledge is never lost or censored |
+| 🏛️ **Governance Engine** | AI-driven leadership detection, reputation graph, and community self-governance |
+| 📡 **Communication Layer** | Natural language messaging and calling with automatic cross-language translation |
 
 ---
 
 ## 🏗️ Architecture Overview
 
-The system is designed as a **Multi-Layered Orchestrator**:
-
-```text
-       [ Device / Browser ]
-                ↓
-      [ OmniWeb Shell (PWA) ]
-                ↓
-         [ AI Host (NLP) ]
-                ↓
-       [ Core Kernel Service ]
-                ↓
-    [ Modular Chip Ecosystem ]
-                ↓
- [ SQLite + Workspace Storage ]
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        OmniWeb Architecture                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │
+│  │  OmniShell   │  │  Dashboard   │  │   Chip UIs (Modular)     │  │
+│  │  (PWA/Mobile)│  │  (Analytics) │  │   Idiomas · Finanzas ·   │  │
+│  └──────┬───────┘  └──────┬───────┘  │   Reparto · Custom       │  │
+│         │                 │          └────────────┬─────────────┘  │
+│  ───────┴─────────────────┴──────────────────────┴──────────────── │
+│                         REST API (FastAPI)                          │
+│  ──────────────────────────────────────────────────────────────── │
+│                                                                     │
+│  ┌──────────┐ ┌────────────┐ ┌────────────┐ ┌─────────────────┐   │
+│  │ AI Host  │ │ Governance │ │ Knowledge  │ │  Communication  │   │
+│  │ Engine   │ │ Engine     │ │ Graph      │ │  Layer          │   │
+│  └──────────┘ └────────────┘ └────────────┘ └─────────────────┘   │
+│                                                                     │
+│  ┌──────────┐ ┌────────────┐ ┌────────────┐ ┌─────────────────┐   │
+│  │ Module   │ │ Education  │ │ Skill      │ │  Stability      │   │
+│  │ Registry │ │ Engine     │ │ Economy    │ │  Loop           │   │
+│  └──────────┘ └────────────┘ └────────────┘ └─────────────────┘   │
+│                                                                     │
+│  ──────────────────────────────────────────────────────────────── │
+│                    Distributed Infrastructure                       │
+│  ┌────────────┐ ┌────────────────┐ ┌────────────┐ ┌────────────┐  │
+│  │ Cluster    │ │ Digital        │ │ Mesh       │ │ Offline    │  │
+│  │ Manager   │ │ Alexandria     │ │ Network    │ │ Runtime    │  │
+│  └────────────┘ └────────────────┘ └────────────┘ └────────────┘  │
+│                                                                     │
+│  ──────────────────────────────────────────────────────────────── │
+│                  SQLite + Migration Engine (30 migrations)          │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### System Layers
-1. **Frontend Shell**: A Vanilla JS/CSS host that provides UI cohesion and PWA capabilities.
-2. **AI Host**: The cognitive layer handling intent and processor delegation.
-3. **Core Services**: Security, Registry, State Engine, and Master Logbook.
-4. **Chip Ecosystem**: Self-contained business logic modules (Finance, Code, Language).
-5. **Persistence Layer**: Individual user workspaces with siloed databases and file storage.
+---
+
+## ✨ Key Features
+
+### AI & Intelligence
+- **AI Host** — Persistent AI orchestrator with 17+ command processors
+- **Natural Language Interface** — Speak commands in English or Spanish
+- **Leadership Detection** — Behavioral analysis for community governance
+- **Hidden Skill Discovery** — AI-detected user strengths
+- **Self-Healing** — Automated system auditing and auto-fix engine
+
+### Distributed Infrastructure
+- **Cluster Architecture** — Multi-node workload distribution
+- **Mesh Networking** — Peer discovery without central authority
+- **Offline-First** — Full functionality during disconnection with sync reconciliation
+- **Digital Alexandria** — Fragmented, replicated storage grid
+
+### Knowledge & Learning
+- **Knowledge Graph** — Semantic connections between concepts
+- **Education Engine** — Adaptive learning with personal skill trees
+- **Skill Economy** — Expertise-based marketplace with real currency
+- **Idea Cloud** — Collaborative ideation with AI clustering
+
+### Communication
+- **Natural Messaging** — `"write to Juan that I'll arrive later"`
+- **Auto-Translation** — Messages translated to contact's language
+- **Call Sessions** — Voice call scaffolding with cross-language support
+- **Contact Graph** — Resolve contacts by name, nickname, or relationship
+
+### Governance & Security
+- **Reputation Graph** — Trust-weighted user connections
+- **AI Governance Advisor** — Automated promotion recommendations
+- **Role Hierarchy** — User → Beta Tester → Admin Candidate → Admin → Creator
+- **Permission Engine** — Chip-level and operation-level access control
+- **QR Access System** — Role-based entry via QR codes
+
+### Platform
+- **Chip System** — Modular plugin architecture for extensible apps
+- **PWA Shell** — Mobile-first progressive web app
+- **Mission Control** — 15-tab Creator cockpit for full system management
+- **Accessibility** — Voice, text, subtitle, and braille scaffolding
 
 ---
 
-## 📂 Project Structure
-```text
-backend/           # Python Kernel (FastAPI), Security, & Core Managers
-frontend/          # Unified Shell, Shared UI Assets, & Creator Cockpit
-chips/             # Modular Application Directory (Individual Micro-apps)
-docs/              # Architectural Specs & System Documentation
-scripts/           # Audit, Maintenance, & Migration Utilities
-tests/             # System Integrity & Reliability Suite
-user_workspace/    # Isolated persistence per authenticated user
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.11+
+- pip
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/sionprograma/omniweb.git
+cd omniweb
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch OmniWeb
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+### Access Points
+| Interface | URL |
+|---|---|
+| OmniShell (Main) | `http://localhost:8000/` |
+| Dashboard | `http://localhost:8000/dashboard` |
+| API Docs | `http://localhost:8000/api/v1/openapi.json` |
+| Health Check | `http://localhost:8000/api/v1/system/health` |
+
+### PWA Installation
+Scan QR codes from `deployment/qr_access/` or navigate to the shell and select **"Add to Home Screen"** from your mobile browser.
+
 ---
 
-## 🛠️ Performance & Security
-- **Vanilla-First**: 0% framework overhead in the shell for instant response times.
-- **Zero Trust**: Mandatory capability declarations for every chip.
-- **Creator Fortress**: Hardware-level MFA and device trust for administrative access.
+## 📁 Repository Structure
 
----
-
-## 👤 Creator
-**Nicolás Alejandro Ordoñez**  
-*System Architect & Lead Developer*
-
-OmniWeb was designed and built as an experimental AI-driven modular system to demonstrate elite engineering standards in system design, autonomy, and developer tooling.
+```
+omniweb/
+├── backend/                    # FastAPI server & core modules
+│   ├── core/                   # 60+ core system modules
+│   │   ├── ai_host/            # AI Host with 17 command processors
+│   │   ├── governance/         # Leadership detection & reputation graph
+│   │   ├── communication/      # Natural language messaging & calls
+│   │   ├── cluster/            # Distributed node management
+│   │   ├── knowledge_graph/    # Semantic knowledge connections
+│   │   ├── education_engine/   # Adaptive learning system
+│   │   ├── stability_loop/     # Self-healing audit loop
+│   │   └── ...                 # 50+ additional modules
+│   ├── data/migrations/        # 30 SQL migration scripts
+│   └── main.py                 # Application entry point
+├── frontend/
+│   ├── shell/                  # OmniShell PWA (Mission Control)
+│   └── dashboard/              # Analytics dashboard
+├── chips/                      # Modular plugin apps
+│   ├── chip-idiomas-ia/        # AI Language Learning
+│   ├── chip-finanzas/          # Financial Literacy
+│   └── chip-reparto/           # Resource Distribution
+├── runtime/                    # Standalone bootable runtime
+├── infrastructure/             # Cluster & mesh configuration
+├── deployment/                 # QR codes & deployment configs
+├── docs/                       # Technical documentation
+├── diagrams/                   # Mermaid architecture diagrams
+└── whitepaper/                 # Technical whitepaper
+```
 
 ---
 
 ## 📖 Documentation
-For a deep dive into the engineering behind OmniWeb, see the [docs/](docs/) directory:
-- [Architecture Overview](docs/architecture_overview.md)
-- [System Components](docs/system_components.md)
-- [AI Host Design](docs/ai_host_design.md)
-- [Chip System Specification](docs/chip_system.md)
-- [Security & Permission Model](docs/security_model.md)
-- [Creator Environment Guide](docs/creator_environment.md)
+
+| Document | Description |
+|---|---|
+| [Architecture](docs/architecture.md) | System architecture deep-dive |
+| [AI Host](docs/ai_host.md) | AI orchestrator & processor pipeline |
+| [Governance Model](docs/governance_model.md) | Leadership detection & reputation graph |
+| [Communication Layer](docs/communication_layer.md) | Natural language messaging system |
+| [Distributed Cluster](docs/distributed_cluster.md) | Node management & workload distribution |
+| [Storage Grid](docs/storage_grid.md) | Digital Alexandria distributed storage |
+| [Roadmap](docs/roadmap.md) | Development roadmap & milestones |
+| [Open Source Modules](docs/open_source_modules.md) | Satellite repository strategy |
+| [Whitepaper](whitepaper/omniweb_whitepaper.md) | Technical whitepaper |
 
 ---
-*© 2026 Nicolás Alejandro Ordoñez. All rights reserved.*
+
+## 🔐 Security & Governance
+
+OmniWeb implements a multi-tier security model:
+
+- **Role-Based Access Control** with chip-level permissions
+- **Creator Override** for critical system operations
+- **AI-Driven Governance** — automated leadership detection and promotion
+- **Audit Trail** — full operation logging with rollback capability
+- **QR-Based Access** — cryptographically distinct entry tokens per role
+
+---
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on code style, pull requests, and chip development.
+
+---
+
+## 📜 License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <strong>OmniWeb: Scaling Human Potential Through Collective Intelligence</strong><br/>
+  <em>Built with 🧠 by the OmniWeb Engineering Team</em>
+</p>
