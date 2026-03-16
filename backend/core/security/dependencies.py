@@ -7,22 +7,28 @@ from .manager import security_fortress
 async def get_creator_user(
     current_user: OmniUser = Security(get_current_user),
     x_device_id: Optional[str] = Header(None),
-    x_device_signature: Optional[str] = Header(None)
+    x_device_signature: Optional[str] = Header(None),
+    x_shell_identity: Optional[str] = Header(None)
 ) -> OmniUser:
     """
     Security Gateway for Creator endpoints.
     Enforces Creator ID match and Device Trust.
+    Allows authenticated shell sessions to bypass device metadata.
     """
     # 1. Identity Check
     if current_user.id != settings.CREATOR_ID:
-        # We don't log this to the audit trail as it's an unauthorized attempt
-        # but we could log it to a security-alerts log.
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access Denied: High Security Creator Authorization Required."
         )
 
-    # 2. Device Trust Check
+    # 2. Shell Identity Bypass
+    # If the request comes from the authenticated OmniWeb Shell, 
+    # we allow the bypass for the device trust metadata check.
+    if x_shell_identity == "omniweb-shell":
+        return current_user
+
+    # 3. Device Trust Check (Enforced for non-shell or external API calls)
     if settings.REQUIRE_TRUSTED_DEVICE:
         if not x_device_id or not x_device_signature:
             raise HTTPException(

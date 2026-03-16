@@ -17,7 +17,13 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
     ],
     "idea_captured": [
         "guardá esta idea", "guarda esta idea", "remember this idea", 
-        "store this thought", "captured thought", "registra esta idea"
+        "store this thought", "captured thought", "registra esta idea",
+        "guarda esto en memoria", "guardar en memoria omniweb", "agrega esto a la memoria",
+        "guardar este chat", "memory save"
+    ],
+    "log_entry": [
+        "anota esto", "guarda en logbook", "anota esto en el logbook",
+        "guardar en logbook", "logbook entry", "registra en logbook"
     ],
     "list_ideas": [
         "listá mis ideas", "lista mis ideas", "ver ideas", "mostrar ideas", 
@@ -96,6 +102,9 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
     "start_execution": [
         "empezá la ejecución", "empeza la ejecución", "start execution", "ejecutá el plan", 
         "ejecuta el plan", "iniciar construcción", "comenzar ejecución"
+    ],
+    "acknowledgment": [
+        "perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", "claro"
     ]
 }
 

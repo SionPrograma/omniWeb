@@ -130,7 +130,10 @@ class CommandRouter:
             "generate_evolution_report": self._handle_memory_task,
             "get_project_timeline": self._handle_memory_task,
             "approve_roadmap": self._handle_builder_task,
-            "start_execution": self._handle_builder_task
+            "start_execution": self._handle_builder_task,
+            "acknowledgment": self._handle_acknowledgment,
+            "creator_analysis": self._handle_brain_task,
+            "creator_plan": self._handle_brain_task
         }
 
     async def route(self, message: str, modality: str = "text", context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
@@ -179,13 +182,15 @@ class CommandRouter:
             
             # --- PRIORITY CHAIN EXECUTION (Phase 0 Polish) ---
             # Define priority groups to ensure commands aren't captured by lower-priority processors
-            system_intents = ["list_chips", "show_system_status", "show_logbook", "healing", "creator_command", "list"]
+            system_intents = ["list_chips", "show_logbook", "healing", "creator_command", "list"]
             chip_intents = ["open_chip", "inspect_chip", "activate", "deactivate"]
             nav_intents = ["navigate_to", "focus_chip_runtime"]
             memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
+            brain_intents = ["creator_analysis", "creator_plan"]
             builder_intents = ["approve_roadmap", "start_execution"]
+            ack_intents = [] # Handled by Brain Layer for contextual continuity
             
-            priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents
+            priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + ack_intents + brain_intents
             
             # 2. Priority Routing: Core Platform Commands (Highest Priority)
             if intent in priority_intents and intent in self.intents:
@@ -206,9 +211,28 @@ class CommandRouter:
                 except Exception as e:
                     logger.error(f"[EXECUTION_FAIL] Messaging processor error: {e}")
 
-            # 4. General Chat / Other Processors
+            # 4. Brain Layer (Reasoning / Analysis / Conversation)
+            from ..brain_router import BrainRouter
+            from backend.core.system_state.engine import state_engine
+            from backend.core.omni_runtime.runtime_controller import runtime_controller
+            
+            brain = BrainRouter(self)
+            system_state = await state_engine.get_state()
+            
+            res = await brain.process(
+                message=msg_clean, 
+                context=context,
+                runtime_context=runtime_controller.state,
+                chip_registry=self.registry,
+                system_state=system_state
+            )
+            if res:
+                return await self._finalize_response(res, message)
+
+            # 5. General Chat / Other Processors
             for name, proc in self.registry._processors.items():
                 if name == "communication": continue # Already checked
+                if name == "chat": continue # Brain router handles chat/acknowledgments better
                 if is_creator_prefixed and name == "chat":
                     continue
                     
@@ -222,12 +246,6 @@ class CommandRouter:
                     logger.error(f"[EXECUTION_FAIL] Processor '{name}' error: {e}")
 
             # Fallback
-            if not res:
-                # Handle via chat if not captured above
-                chat_proc = self.registry.get_processor("chat")
-                if chat_proc:
-                    res = await chat_proc.process(msg_clean, context=context)
-                
             if not res:
                  res = AICommandResponse(intent="unknown", status="error", message="I couldn't process that command. Try 'list chips' or 'inspect system'.")
 
@@ -597,6 +615,22 @@ class CommandRouter:
         return await processor.process(msg)
 
     async def _handle_creator_command(self, msg: str) -> AICommandResponse:
+        from ..brain_router import BrainRouter
+        from backend.core.system_state.engine import state_engine
+        from backend.core.omni_runtime.runtime_controller import runtime_controller
+        
+        brain = BrainRouter(self)
+        system_state = await state_engine.get_state()
+        
+        brain_res = await brain.process(
+            message=msg,
+            runtime_context=runtime_controller.state,
+            chip_registry=self.registry,
+            system_state=system_state
+        )
+        if brain_res:
+            return brain_res
+            
         processor = self.registry.get_processor("creator_control")
         return await processor.process(msg)
 
@@ -650,5 +684,24 @@ class CommandRouter:
             )
             
         return AICommandResponse(intent="builder_error", status="error", message="No pude procesar la tarea del constructor.")
+
+    async def _handle_acknowledgment(self, msg: str) -> AICommandResponse:
+        chat_proc = self.registry.get_processor("chat")
+        return await chat_proc.process(msg)
+
+    async def _handle_brain_task(self, msg: str) -> AICommandResponse:
+        from ..brain_router import BrainRouter
+        from backend.core.system_state.engine import state_engine
+        from backend.core.omni_runtime.runtime_controller import runtime_controller
+        
+        brain = BrainRouter(self)
+        system_state = await state_engine.get_state()
+        
+        return await brain.process(
+            message=msg,
+            runtime_context=runtime_controller.state,
+            chip_registry=self.registry,
+            system_state=system_state
+        )
 
 ai_command_router = CommandRouter()

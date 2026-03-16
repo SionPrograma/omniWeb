@@ -14,6 +14,7 @@ class GeneralChatProcessor(CommandProcessor):
     GREETINGS = ["hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", "buenos días"]
     WHO_ARE_YOU = ["quien eres", "quién eres", "who are you", "que eres", "qué eres", "what are you", "tu nombre", "your name"]
     HOW_ARE_YOU = ["como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", "cómo vas"]
+    ACKNOWLEDGMENTS = ["perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", "bien", "claro", "awesome", "great", "thanks", "got it", "understood"]
 
     async def can_handle(self, command: str) -> bool:
         cmd = command.lower().strip()
@@ -23,8 +24,8 @@ class GeneralChatProcessor(CommandProcessor):
         if any(k in cmd for k in ["responde en", "habla en", "idioma", "language", "speak in", "respond in"]):
             return True
         
-        # Whole word matching for greetings or identity questions
-        all_keywords = self.GREETINGS + self.WHO_ARE_YOU + self.HOW_ARE_YOU
+        # Whole word matching for greetings, identity, or acknowledgments
+        all_keywords = self.GREETINGS + self.WHO_ARE_YOU + self.HOW_ARE_YOU + self.ACKNOWLEDGMENTS
         if any(w in words for w in all_keywords):
             return True
             
@@ -33,7 +34,7 @@ class GeneralChatProcessor(CommandProcessor):
             return True
 
         # Extremely short messages (1 word) that aren't obviously commands
-        if len(words) == 1 and cmd not in ["diagnostic", "diagnóstico", "log", "audit"]:
+        if len(words) == 1 and cmd not in ["diagnostic", "diagnóstico", "log", "audit", "memory", "memoria"]:
             return True
         return False
 
@@ -41,14 +42,14 @@ class GeneralChatProcessor(CommandProcessor):
         cmd = msg.lower().strip()
         from ..sessions import session_state
         
-        # Detect language change (already partly handled in CreatorControl, but good to have here too)
+        # Detect language change
         if any(k in cmd for k in ["responde en", "habla en", "idioma", "language", "speak in", "respond in"]):
             session_state.set_language(cmd)
         
         lang = session_state.language
+        words = cmd.split()
 
         # 1. Greetings
-        words = cmd.split()
         if any(w in words for w in self.GREETINGS):
             if lang == "es":
                 responses = [
@@ -64,7 +65,25 @@ class GeneralChatProcessor(CommandProcessor):
                 ]
             return AICommandResponse(intent="greeting", status="success", message=random.choice(responses))
 
-        # 2. Identity
+        # 2. Acknowledgments
+        if any(w in words for w in self.ACKNOWLEDGMENTS):
+            if lang == "es":
+                responses = [
+                    "¡Excelente! Seguimos adelante.",
+                    "Entendido. Estoy a la espera de tu próxima instrucción.",
+                    "Genial, cuéntame más o dime qué chip quieres abrir ahora.",
+                    "Perfecto. El sistema se mantiene estable."
+                ]
+            else:
+                responses = [
+                    "Excellent! Let's keep going.",
+                    "Understood. Awaiting your next instruction.",
+                    "Great, tell me more or let me know which chip you'd like to open next.",
+                    "Perfect. System remains stable."
+                ]
+            return AICommandResponse(intent="acknowledgment", status="success", message=random.choice(responses))
+
+        # 3. Identity
         if any(w in words or w in cmd for w in self.WHO_ARE_YOU):
             if lang == "es":
                 msg_out = "Soy Omni, el núcleo de inteligencia de OmniWeb. Estoy aquí para ayudarte a construir, auditar y expandir tu ecosistema digital."
@@ -72,7 +91,7 @@ class GeneralChatProcessor(CommandProcessor):
                 msg_out = "I am Omni, the intelligence core of OmniWeb. I'm here to help you build, audit, and expand your digital ecosystem."
             return AICommandResponse(intent="identity", status="success", message=msg_out)
 
-        # 3. Status/How are you
+        # 4. Status/How are you
         if any(w in words or w in cmd for w in self.HOW_ARE_YOU):
             if lang == "es":
                 msg_out = "Sistema operando al 100%. Todos los procesos están estables y los chips sincronizados. ¿En qué trabajamos hoy?"
@@ -80,10 +99,10 @@ class GeneralChatProcessor(CommandProcessor):
                 msg_out = "System operating at 100%. All processes are stable and chips are synchronized. What are we working on today?"
             return AICommandResponse(intent="status_check", status="success", message=msg_out)
 
-        # 4. Fallback conversational reply
+        # 5. Fallback conversational reply
         if lang == "es":
-            res_msg = f"He anotado tu mensaje en la Nube de Ideas ('{msg[:40]}...'). No detecté un comando específico, pero estoy listo para cualquier instrucción operacional."
+            res_msg = f"No detecté un comando operativo específico para '{msg[:40]}...'. Si quieres guardar una idea, prueba con 'guarda esta idea:'. De lo contrario, ¿qué chip te gustaría inspeccionar?"
         else:
-            res_msg = f"I've saved your message to the Idea Cloud ('{msg[:40]}...'). I didn't detect a specific command, but I'm ready for any operational instructions."
+            res_msg = f"I didn't detect a specific operational command for '{msg[:40]}...'. If you want to save an idea, try 'save this idea:'. Otherwise, which chip would you like to inspect?"
             
         return AICommandResponse(intent="general_chat", status="success", message=res_msg)

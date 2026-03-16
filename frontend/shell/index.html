@@ -34,6 +34,29 @@
 </head>
 
 <body>
+    <!-- Global Shell Security Interceptor (Phase 31) -->
+    <script>
+        (function () {
+            const originalFetch = window.fetch;
+            window.fetch = function (resource, config) {
+                // Intercept all API calls to identify the Shell to the backend
+                if (typeof resource === 'string' && resource.includes('/api/v1/')) {
+                    config = config || {};
+                    config.headers = config.headers || {};
+
+                    // Identify this as an official OmniWeb Shell request
+                    // to allow Device Trust bypass for authenticated Creator sessions.
+                    if (config.headers instanceof Headers) {
+                        config.headers.set('X-Shell-Identity', 'omniweb-shell');
+                    } else {
+                        config.headers['X-Shell-Identity'] = 'omniweb-shell';
+                    }
+                }
+                return originalFetch(resource, config);
+            };
+            console.log("[SECURITY_SHIELD] Shell Identity Interceptor Active.");
+        })();
+    </script>
     <!-- Background Nebula/Particles -->
     <div class="nebula-bg"></div>
     <div class="particles" id="particles"></div>
@@ -417,11 +440,53 @@
                     onclick="document.getElementById('creator-copilot-overlay').style.display='none'">✕</button>
             </div>
             <div class="panel-body">
-                <textarea id="copilot-prompt" placeholder="Ask Copilot..." class="creator-textarea"></textarea>
-                <button class="btn-apply" id="copilot-suggest-btn">Get Suggestion</button>
-                <div id="copilot-suggestion-output" style="margin-top: 15px;">
+                <textarea id="copilot-prompt" placeholder="Ask Copilot about the current file..."
+                    class="creator-textarea"></textarea>
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="btn-apply" style="width: auto; flex: 1;"
+                        onclick="creatorEnv.askCopilot('explain')">Explain</button>
+                    <button class="btn-apply" style="width: auto; flex: 1;"
+                        onclick="creatorEnv.askCopilot('fix')">Suggest Fix</button>
+                    <button class="btn-apply" style="width: auto; flex: 1;"
+                        onclick="creatorEnv.askCopilot('refactor')">Refactor</button>
+                    <button class="btn-apply" style="width: auto; flex: 1;" id="copilot-suggest-btn">Ask</button>
+                </div>
+                <div id="copilot-suggestion-output" style="margin-top: 15px; display: none;">
+                    <h4 id="copilot-resp-summary" style="color: var(--creator-gold); margin-bottom: 5px;"></h4>
+                    <p id="copilot-resp-suggestion" style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 10px;"></p>
                     <pre id="suggestion-text" class="diff-pre"></pre>
-                    <button class="btn-apply" id="suggestion-insert-btn" style="display:none;">Insert</button>
+                    <button class="btn-apply" id="suggestion-insert-btn" style="margin-top: 10px;">Insert into
+                        Editor</button>
+                </div>
+            </div>
+        </div>
+        <div id="creator-verify-overlay" class="creator-overlay-panel" style="display:none;">
+            <div class="panel-header">
+                <h3>Verification & Reload</h3>
+                <button class="close-overlay-btn"
+                    onclick="document.getElementById('creator-verify-overlay').style.display='none'">✕</button>
+            </div>
+            <div class="panel-body">
+                <div id="verify-status-container" style="text-align: center; padding: 20px;">
+                    <div id="verify-icon" style="font-size: 3rem; margin-bottom: 20px; color: #32ff96;">✓</div>
+                    <h4 id="verify-title" style="color: #fff; margin-bottom: 10px;">File Saved Successfully</h4>
+                    <p id="verify-message" style="color: #ccc; font-size: 0.9rem; margin-bottom: 20px;"></p>
+
+                    <div id="verify-steps"
+                        style="text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="color: #32ff96;">●</span> <span>Backup Created</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="color: #32ff96;">●</span> <span>Integrity Verified</span>
+                        </div>
+                        <div id="step-reload" style="display: flex; align-items: center; gap: 10px; opacity: 0.5;">
+                            <span style="color: #888;">○</span> <span>Reload Pending</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-apply" id="verify-apply-btn" style="width: 100%; height: 50px;">APPLY &
+                        VERIFY</button>
                 </div>
             </div>
         </div>

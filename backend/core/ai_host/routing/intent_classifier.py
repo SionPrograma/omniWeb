@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 from .patterns import INTENT_PATTERNS, any_pattern_matches
 
@@ -29,30 +30,44 @@ class IntentClassifier:
                 return intent
                 
         # 2. Platform Operations
-        if any_pattern_matches(msg, self.rules.get("launch_pipeline", ["launch pipeline", "pipeline", "workflow"])):
-            return "launch_pipeline"
-
-        # Specialized check for logbook vs log entry
-        if "logbook" in msg:
-            if any(w in msg for w in ["show", "ver", "mues", "list", "get", "rec"]):
+        
+        # Specialized check for logbook vs log entry - Use whole word matching
+        if re.search(r"\blogbook\b", msg):
+            if any(re.search(rf"\b{w}\b", msg) for w in ["show", "ver", "mues", "list", "get", "rec"]):
                 return "show_logbook"
         
-        if any(w in msg for w in ["log", "anota", "registra", "guarda", "anótame", "registre"]):
-            if "logbook" not in msg or any(w in msg for w in ["logbook entry", "in the logbook", "en el logbook"]):
-                return "log_entry"
+        # Log Entry Trigger - Tightened to explicit keywords at start or as pure commands
+        log_triggers = ["log", "anota", "registra", "guarda", "anótame", "registre"]
+        if any(re.search(rf"\b{w}\b", msg) for w in log_triggers):
+             # Only if it's not a generic conversation like "guarda silencio" (though unusual)
+             # and specifically check for memory context if possible
+             if any(re.search(rf"\b{w}\b", msg) for w in ["log", "logbook", "memoria", "idea", "pensamiento", "nota"]):
+                 return "log_entry"
         
-        if ("show" in msg or "ver" in msg or "muestrame" in msg or "get" in msg) and \
-           ("logbook" in msg or "recent" in msg or "historial" in msg or "roadmap" in msg or "entradas" in msg):
-            return "show_logbook"
+        if any(re.search(rf"\b{w}\b", msg) for w in ["show", "ver", "muestrame", "get"]):
+             if any(re.search(rf"\b{w}\b", msg) for w in ["logbook", "recent", "historial", "roadmap", "entradas"]):
+                 return "show_logbook"
 
-        if "system" in msg or "estado" in msg or "how is" in msg or "how's" in msg or "sistema" in msg:
+        # Creator Analysis & Planning (Brain Layer)
+        if any(re.search(rf"\b{w}\b", msg) for w in ["analiza", "analyze", "problema", "problem", "bottleneck", "cuello de botella"]):
+             return "creator_analysis"
+             
+        if any(re.search(rf"\b{w}\b", msg) for w in ["plan", "paso a paso", "mejora", "improve", "propón", "propose", "sugiere", "suggest"]):
+             return "creator_plan"
+
+        if any(re.search(rf"\b{w}\b", msg) for w in ["system", "estado", "sistema"]) or "how is" in msg or "how's" in msg:
             return "show_system_status"
             
-        if any(w in msg for w in ["arregla", "cura", "sana", "fix system", "repara", "heal"]):
+        if any(re.search(rf"\b{w}\b", msg) for w in ["arregla", "cura", "sana", "fix system", "repara", "heal"]):
              return "healing"
             
-        if any(w in msg for w in ["open", "abrir", "abre"]) and "chip" in msg:
+        if any(re.search(rf"\b{w}\b", msg) for w in ["open", "abrir", "abre"]) and re.search(r"\bchip\b", msg):
             return "open_chip"
+
+        # Acknowledgment Intent (New Stage 5)
+        ack_words = ["perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", "claro"]
+        if any(re.search(rf"^{w}\b", msg) for w in ack_words) or (len(msg.split()) == 1 and msg.strip(",.!") in ack_words):
+             return "acknowledgment"
 
         # 3. Fallback to generic rule matching
         for intent, patterns in self.rules.items():

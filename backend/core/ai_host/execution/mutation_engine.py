@@ -106,12 +106,18 @@ class FileMutationEngine:
             # 4. Success Logging
             await self._log_mutation(batch, "SUCCESS")
             
-            # 5. Hot Reload
-            from .hot_reload import hot_reload_engine
+            # 5. Hot Reload & Runtime Sync (Stage 15: Self-Edit Loop)
+            from backend.core.runtime.self_edit_runtime import self_edit_runtime
             files = [op.path for op in batch.operations]
-            reload_results = await hot_reload_engine.notify_changes(files)
+            sync_results = await self_edit_runtime.apply_runtime_sync(files, batch.id)
             
-            return True, reload_results
+            if sync_results["status"] not in ["SUCCESS"]:
+                logger.error(f"[MUTATION_ENGINE] Sync failed ({sync_results['status']}). Rolling back file changes.")
+                await self._rollback(backups, created_paths)
+                await self._log_mutation(batch, "FAILED_SYNC_ROLLBACK", error=sync_results.get("error"))
+                return False, sync_results.get("reloaded_modules", [])
+            
+            return True, sync_results.get("reloaded_modules", [])
 
         except Exception as e:
             logger.error(f"[MUTATION_FAILED] Error in batch {batch.id}: {e}")

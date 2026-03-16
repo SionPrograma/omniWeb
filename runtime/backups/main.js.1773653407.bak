@@ -927,5 +927,4 @@ function initCreatorTools() {
         editorOverlay.style.display = 'flex';
         console.log("[COPILOT] Code inserted into editor.");
     };
-// test omniweb mobile edit
 }

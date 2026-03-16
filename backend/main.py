@@ -43,6 +43,8 @@ from backend.core.governance.router import router as governance_router
 from backend.core.communication.communication_router import router as communication_router
 from backend.core.integration_layer.integration_router import router as integration_router
 from backend.core.qr_gateway.qr_gateway_router import router as qr_router
+from backend.core.creator_fs.file_system_router import router as creator_fs_router
+from backend.core.creator_copilot.router import router as creator_copilot_router
 
 # Ensure the root of the project is in the Python path
 sys.path.append(os.getcwd())
@@ -110,6 +112,8 @@ app.include_router(insight_router, prefix=f"{settings.API_V1_STR}/user/insights"
 app.include_router(sync_router, prefix=f"{settings.API_V1_STR}/system/sync", tags=["sync"])
 app.include_router(admin_router, prefix=f"{settings.API_V1_STR}/system/admin", tags=["admin"])
 app.include_router(creator_control_router, prefix=f"{settings.API_V1_STR}/creator/control", tags=["creator-control"])
+app.include_router(creator_fs_router, prefix=f"{settings.API_V1_STR}/creator/fs", tags=["creator-fs"])
+app.include_router(creator_copilot_router, prefix=f"{settings.API_V1_STR}/creator/copilot", tags=["creator-copilot"])
 app.include_router(cluster_router, prefix=f"{settings.API_V1_STR}/system/cluster", tags=["cluster"])
 app.include_router(governance_router, prefix=f"{settings.API_V1_STR}/governance", tags=["governance"])
 app.include_router(communication_router, prefix=f"{settings.API_V1_STR}/communication", tags=["communication"])

@@ -114,8 +114,17 @@ class HotReloadEngine:
         try:
             logger.info(f"[HOT_RELOAD] Reloading {module_name}...")
             if module_name in sys.modules:
-                # We use importlib.reload to update the module in-place
-                importlib.reload(sys.modules[module_name])
+                importlib.invalidate_caches()
+                mod = sys.modules[module_name]
+                try:
+                    importlib.reload(mod)
+                except Exception as e:
+                    logger.warning(f"[HOT_RELOAD] Standard reload failed for {module_name}: {e}. Trying fallback.")
+                    # Fallback to manual exec if reload hits a transient error or bad state
+                    with open(mod.__file__, "r", encoding="utf-8") as f:
+                        code = compile(f.read(), mod.__file__, "exec")
+                        exec(code, mod.__dict__)
+                
                 await self._log_reload(module_name, trigger_files, "SUCCESS")
                 return True
             return False
