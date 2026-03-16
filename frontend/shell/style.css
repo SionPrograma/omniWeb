@@ -773,14 +773,8 @@ button {
 
 @media screen and (max-width: 768px) {
     #context-panel {
-        width: 100vw;
+        width: 100%;
         max-width: none;
-        left: 0;
-        transform: translateX(100%);
-    }
-
-    #context-panel.active {
-        transform: translateX(0);
     }
 }
 

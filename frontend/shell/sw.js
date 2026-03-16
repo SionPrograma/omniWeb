@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniweb-shell-v1';
+const CACHE_NAME = 'omniweb-shell-v1.1';
 const ASSETS = [
     '/shell/',
     '/shell/index.html',
@@ -18,6 +18,7 @@ self.addEventListener('install', (event) => {
             return cache.addAll(ASSETS);
         })
     );
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -26,20 +27,40 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
 self.addEventListener('fetch', (event) => {
-    // Strategy: Cache First, then Network
+    // SECURITY/DEV BYPASS: Bypass SW for local development assets to avoid stale caches
+    const url = new URL(event.request.url);
+    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+
+    // Strategy: Network First, falling back to cache
+    // For local dev, we prefer the network to always see latest changes
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request).catch(() => {
-                // If it's a page navigation and offline, return cached shell
-                if (event.request.mode === 'navigate') {
-                    return caches.match('/shell/index.html');
+        fetch(event.request)
+            .then((response) => {
+                // If it's a valid GET response, update cache in background
+                if (response && response.ok && event.request.method === 'GET' && !isLocal) {
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
                 }
-            });
-        })
+                return response;
+            })
+            .catch(() => {
+                // Network failed or offline, try cache
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    // If it's a page navigation and offline, return cached shell
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('/shell/index.html');
+                    }
+                });
+            })
     );
 });

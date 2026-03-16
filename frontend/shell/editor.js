@@ -70,7 +70,7 @@ class CreatorEditor {
         if (!treeRoot) return;
 
         try {
-            const res = await fetch(`/api/v1/editor/files?root=${this.currentRoot}`, {
+            const res = await fetch(`/api/v1/ai-host/editor/files?root=${this.currentRoot}`, {
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
             const data = await res.json();
@@ -120,7 +120,7 @@ class CreatorEditor {
 
         try {
             pathDisplay.innerText = "Loading...";
-            const res = await fetch(`/api/v1/editor/file/read?path=${encodeURIComponent(path)}`, {
+            const res = await fetch(`/api/v1/ai-host/editor/file/read?path=${encodeURIComponent(path)}`, {
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
             const data = await res.json();
@@ -166,7 +166,7 @@ class CreatorEditor {
         proposeBtn.disabled = true;
 
         try {
-            const res = await fetch('/api/v1/editor/file/propose-edit', {
+            const res = await fetch('/api/v1/ai-host/editor/propose-edit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ class CreatorEditor {
         assistContent.innerHTML = `<div class="loading-indicator">Consulting Copilot...</div>`;
 
         try {
-            const res = await fetch('/api/v1/editor/copilot/assist', {
+            const res = await fetch('/api/v1/ai-host/editor/copilot/assist', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

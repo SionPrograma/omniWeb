@@ -19,6 +19,7 @@ class BuilderModuleType(str, Enum):
     AUDIT = "audit"
     TESTING = "testing"
     REFACTORING = "refactoring"
+    VERIFICATION = "verification"
 
 class BuilderModule(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

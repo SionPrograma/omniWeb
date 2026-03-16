@@ -142,20 +142,52 @@ class FileMutationEngine:
                 logger.error(f"[ROLLBACK_ERROR] Failed to remove {path}: {e}")
 
     async def _log_mutation(self, batch: MutationBatch, status: str, error: Optional[str] = None):
+        """Records the result of a mutation batch in the database and Master Logbook."""
         try:
             with db_manager.get_connection() as conn:
-                files = [op.path for op in batch.operations]
-                ops = [op.op_type for op in batch.operations]
-                
                 conn.execute("""
-                    INSERT INTO builder_mutations (id, batch_id, task_id, module_id, files_affected, operations, status, error_message, origin, timestamp)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO builder_mutations (
+                        id, batch_id, task_id, module_id, files_affected, operations, status, error_message, origin, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    str(uuid.uuid4()), batch.id, batch.task_id, batch.module_id,
-                    json.dumps(files), json.dumps(ops), status, error, batch.origin, batch.timestamp
+                    str(uuid.uuid4()),
+                    batch.id,
+                    batch.task_id,
+                    batch.module_id,
+                    json.dumps([op.path for op in batch.operations]),
+                    json.dumps([op.op_type.value for op in batch.operations]),
+                    status,
+                    error,
+                    batch.origin,
+                    time.time()
                 ))
                 conn.commit()
+            
+            # --- Phase 3: Hot Reload System - Evidence Capture ---
+            from backend.core.master_logbook.manager import master_logbook_manager
+            from backend.core.master_logbook.models import MasterLogbookEntry, EntryType, Priority, EntryStatus
+            
+            files_str = ", ".join([os.path.basename(op.path) for op in batch.operations])
+            log_content = f"Mutación aplicada ({status}): {files_str}"
+            if error:
+                log_content += f" | Error: {error}"
+                
+            entry = MasterLogbookEntry(
+                type=EntryType.AUTO_FIX if batch.origin == "Copilot" else EntryType.SYSTEM_EVENT,
+                content=log_content,
+                priority=Priority.MEDIUM if status == "SUCCESS" else Priority.HIGH,
+                status=EntryStatus.DONE if status == "SUCCESS" else EntryStatus.OPEN,
+                metadata={
+                    "batch_id": batch.id,
+                    "task_id": batch.task_id,
+                    "files": [op.path for op in batch.operations],
+                    "status": status,
+                    "origin": batch.origin
+                }
+            )
+            master_logbook_manager.add_entry(entry)
+
         except Exception as e:
-            logger.error(f"[MUTATION_LOG_ERROR] {e}")
+            logger.error(f"[LOG_MUTATION_ERROR] {e}")
 
 mutation_engine = FileMutationEngine()

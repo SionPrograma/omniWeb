@@ -13,14 +13,10 @@ class NavigationSystem {
 
     init() {
         console.log("OmniWeb Navigation Initialized");
-        try {
-            const lastSession = localStorage.getItem('omniweb_last_session');
-            if (lastSession) {
-                console.log("Validating last session:", lastSession);
-                // Potential check if chipId still exists here in real implementation
-            }
-        } catch (e) {
-            console.warn("[SAFE_BOOT] Nav system restore blocked.");
+        // Restaurar última sesión si existe
+        const lastSession = localStorage.getItem('omniweb_last_session');
+        if (lastSession) {
+            console.log("Restoring last session:", lastSession);
         }
     }
 

@@ -39,6 +39,8 @@ class HotReloadEngine:
                 rel_path = file_path
                 
             if not rel_path.endswith(".py"):
+                if any(rel_path.endswith(ext) for ext in [".html", ".css", ".js"]):
+                    return f"frontend_asset::{rel_path}"
                 return None
                 
             # Normalize and remove .py extension
@@ -83,6 +85,12 @@ class HotReloadEngine:
             if is_protected:
                 logger.warning(f"[HOT_RELOAD] Skipping protected module: {module_name}")
                 results.append({"module": module_name, "status": "PROTECTED"})
+                continue
+            
+            if module_name.startswith("frontend_asset::"):
+                asset_path = module_name.split("::")[1]
+                logger.info(f"[HOT_RELOAD] Frontend asset changed: {asset_path}")
+                results.append({"module": asset_path, "status": "RELOADED"})
                 continue
                 
             # Check if loaded

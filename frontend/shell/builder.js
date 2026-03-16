@@ -176,9 +176,53 @@ class BuilderUI {
             </div>
         `).join('');
 
+        // Trigger iframe reload if any reloaded module is a chip or chip asset
+        const reloadedEntities = data.modules.flatMap(mod => mod.result?.hot_reload || []);
+
+        const hasChipChange = reloadedEntities.some(r =>
+            r.status === 'RELOADED' && (r.module.includes('chips.chip_') || r.module.includes('chips/chip-'))
+        );
+
+        if (hasChipChange && window.reloadActiveChip) {
+            window.reloadActiveChip();
+        }
+
+        const hasShellChange = reloadedEntities.some(r =>
+            r.status === 'RELOADED' && (r.module.includes('frontend/shell/') || r.module.includes('backend/core/'))
+        );
+        if (hasShellChange) {
+            console.warn("Core shell asset modified. Manual refresh might be required for full effect.");
+        }
+
+        // Show verification details if available
+        const verificationMod = data.modules.find(m => m.module_type === 'verification' && m.status === 'COMPLETED');
+        if (verificationMod && verificationMod.result && verificationMod.result.details) {
+            this.renderVerificationDetails(verificationMod.result);
+        }
+
         if (data.status === 'EXECUTING') {
             this.fetchMutations(data.id);
         }
+    }
+
+    renderVerificationDetails(result) {
+        const container = document.getElementById('builder-mutations-container');
+        const list = document.getElementById('builder-mutations-list');
+        container.style.display = 'block';
+
+        const issuesText = result.issues_remaining > 0
+            ? `<span class="text-fail">⚠️ ${result.issues_remaining} issues remaining.</span>`
+            : `<span class="text-pass">✅ System fully verified and stable.</span>`;
+
+        list.innerHTML += `
+            <div style="margin-top: 10px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-weight: bold; color: var(--creator-gold);">VERIFICATION:</div>
+                <div>${issuesText}</div>
+                ${result.details.map(i => `
+                    <div style="font-size: 0.65rem; opacity: 0.7; margin-left: 5px;">- [${i.severity}] ${i.title}</div>
+                `).join('')}
+            </div>
+        `;
     }
 
     async fetchMutations(taskId) {
@@ -216,7 +260,7 @@ class BuilderUI {
         this.currentPreviewId = previewId;
 
         try {
-            const res = await fetch(`/api/v1/ai-host/execution/builder/preview/${previewId}`, {
+            const res = await fetch(`/api/v1/ai-host/copilot/builder/preview/${previewId}`, {
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
             const preview = await res.json();
@@ -249,7 +293,7 @@ class BuilderUI {
     async decidePreview(approved) {
         if (!this.currentPreviewId) return;
         try {
-            await fetch(`/api/v1/ai-host/execution/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
+            await fetch(`/api/v1/ai-host/copilot/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });

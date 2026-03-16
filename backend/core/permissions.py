@@ -109,6 +109,11 @@ def enforce_permission(required_permission: str):
         
     is_creator = (user_id == settings.CREATOR_ID)
 
+    # 0. Creator Bypass (Phase 3: Hot Reload System)
+    # The Creator has absolute authority over all chips and core systems.
+    if is_creator:
+        return True
+
     if system_mode == SystemMode.LOCKDOWN:
         if not is_creator and chip_slug != "core":
             logger.critical(f"LOCKDOWN BLOCKED: User {user_id} attempted {required_permission}")

@@ -16,7 +16,7 @@ class CreatorEnvironment {
         this.triggerLightBurst();
         this.startStatusPolling();
         this.setupPermissionModal();
-        this.setupMissionControl();
+        //this.setupMissionControl();
         this.bindAIVisual();
         this.setupQRScanner();
 
@@ -24,8 +24,8 @@ class CreatorEnvironment {
         setTimeout(() => {
             if (document.body.classList.contains('creator-authenticated') || !document.body.classList.contains('user-mode')) {
                 console.log("Restoring Creator session...");
-                this.switchView('mission');
-                if (window.masterLogbook) window.masterLogbook.toggle(true);
+                this.switchView('chat');
+                //if (window.masterLogbook) window.masterLogbook.toggle(true);
             }
         }, 1500);
     }
@@ -47,9 +47,8 @@ class CreatorEnvironment {
                 });
                 this.systemState = await res.json();
                 this.updateUI(this.systemState);
-                if (document.getElementById('mission-control-view').classList.contains('active')) {
-                    this.renderCockpit();
-                }
+                //if (document.getElementById('mission-control-view').classList.contains('active')) {
+                this.renderCockpit();
             } catch (err) {
                 console.warn("Status polling offline.");
             }
@@ -177,7 +176,7 @@ class CreatorEnvironment {
         const missionNav = document.querySelector('[data-view="mission"]');
         if (missionNav) {
             missionNav.onclick = () => {
-                this.switchView('mission');
+                this.switchView('cockpit');
                 this.renderCockpit();
             };
         }
@@ -187,9 +186,13 @@ class CreatorEnvironment {
         document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
+        // Ensure context panel is closed when switching views (Mission Fix)
+        const contextPanel = document.getElementById('context-panel');
+        if (contextPanel) contextPanel.classList.remove('active');
+
         if (viewName === 'mission') {
-            document.getElementById('mission-control-view').classList.add('active');
-            document.querySelector('[data-view="mission"]').classList.add('active');
+            //document.getElementById('mission-control-view').classList.add('active');
+            //document.querySelector('[data-view="mission"]').classList.add('active');
         } else if (viewName === 'chat') {
             document.getElementById('ai-host-view').classList.add('active');
             document.querySelector('[data-view="chat"]').classList.add('active');
@@ -1167,7 +1170,9 @@ class CreatorEnvironment {
         const container = document.getElementById('sync-audit-log-container');
         if (!container) return;
         try {
-            const res = await fetch('/api/v1/system/sync/status');
+            const res = await fetch('/api/v1/system/sync/status', {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const data = await res.json();
             if (data.recent_logs.length === 0) {
                 container.innerHTML = '<p style="opacity: 0.5; padding: 20px; text-align: center;">No sync history found.</p>';
@@ -1191,11 +1196,16 @@ class CreatorEnvironment {
     async triggerSync() {
         this.triggerLightBurst();
         try {
-            const res = await fetch('/api/v1/system/sync/package');
+            const res = await fetch('/api/v1/system/sync/package', {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const packageData = await res.json();
             const ingestRes = await fetch('/api/v1/system/sync/ingest', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
                 body: JSON.stringify(packageData)
             });
             const result = await ingestRes.json();
@@ -1216,7 +1226,9 @@ class CreatorEnvironment {
         const container = document.getElementById('checkpoints-list');
         if (!container) return;
         try {
-            const res = await fetch('/api/v1/system/admin/checkpoints');
+            const res = await fetch('/api/v1/system/admin/checkpoints', {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const data = await res.json();
 
             container.innerHTML = `
@@ -1242,7 +1254,10 @@ class CreatorEnvironment {
     async rollback(checkpointId) {
         if (await this.askPermission("ULTIMATE SECURITY OVERRIDE", "Are you sure? This will revert the entire system state. Current session will be lost.")) {
             this.triggerLightBurst();
-            const res = await fetch(`/api/v1/system/admin/rollback/${checkpointId}`, { method: 'POST' });
+            const res = await fetch(`/api/v1/system/admin/rollback/${checkpointId}`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const result = await res.json();
             if (result.status === 'success') {
                 alert("Rollback successful. System re-initialized.");
@@ -1257,7 +1272,9 @@ class CreatorEnvironment {
         const container = document.getElementById('admin-ops-log-container');
         if (!container) return;
         try {
-            const res = await fetch('/api/v1/system/admin/logs');
+            const res = await fetch('/api/v1/system/admin/logs', {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const logs = await res.json();
             container.innerHTML = logs.map(l => `
                 < div class="fix-item" style = "border-left: 2px solid var(--primary-color); margin-bottom: 8px; background: rgba(0, 212, 255, 0.03);" >
@@ -1277,7 +1294,9 @@ class CreatorEnvironment {
         const container = document.getElementById('admin-suggestions-container');
         if (!container) return;
         try {
-            const res = await fetch('/api/v1/system/admin/suggestions/pending');
+            const res = await fetch('/api/v1/system/admin/suggestions/pending', {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const data = await res.json();
             container.innerHTML = data.map(s => `
                 < div class="insight-item" style = "background: rgba(255,255,255,0.03); padding: 10px; margin-bottom: 8px;" >
@@ -1298,7 +1317,10 @@ class CreatorEnvironment {
 
     async reviewSuggestion(sid, status) {
         if (await this.askPermission("Admin Review", `Confirm ${status} for ${sid} ? `)) {
-            await fetch(`/api/v1/system/admin/suggestions/${sid}/review?status=${status}`, { method: 'POST' });
+            await fetch(`/api/v1/system/admin/suggestions/${sid}/review?status=${status}`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             this.fetchAdminData();
         }
     }
@@ -1309,7 +1331,10 @@ class CreatorEnvironment {
 
         if (await this.askPermission("System Checkpoint", "Create a full system snapshot? This includes the database and core state.")) {
             this.triggerLightBurst();
-            const res = await fetch(`/api/v1/system/admin/checkpoint/create?label=${encodeURIComponent(label)}`, { method: 'POST' });
+            const res = await fetch(`/api/v1/system/admin/checkpoint/create?label=${encodeURIComponent(label)}`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const data = await res.json();
             alert(`Checkpoint Created: ${label} `);
             this.fetchAdminData();
@@ -1400,7 +1425,10 @@ class CreatorEnvironment {
     }
 
     async actionInsight(insightId) {
-        await fetch(`/api/v1/user/insights/action/${insightId}`, { method: 'POST' });
+        await fetch(`/api/v1/user/insights/action/${insightId}`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+        });
         this.triggerLightBurst();
         alert("Insight actioned: Task queued in your logbook.");
     }
@@ -1412,7 +1440,9 @@ class CreatorEnvironment {
         resEl.innerHTML = '<p>Analyzing system structure...</p>';
 
         try {
-            const res = await fetch(`/api/v1/system/inspect?query=${query}`);
+            const res = await fetch(`/api/v1/system/inspect?query=${query}`, {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
             const data = await res.json();
             resEl.innerHTML = `
                 < div style = "margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;" >
@@ -1429,7 +1459,10 @@ class CreatorEnvironment {
     async applyFix(proposalId) {
         if (await this.askPermission("Confirm System Modification", `Apply auto - fix ${proposalId}? This will patch system files and reload modules.`)) {
             try {
-                const res = await fetch(`/api/v1/system/audit/fix/apply?proposal_id=${proposalId}`, { method: 'POST' });
+                const res = await fetch(`/api/v1/system/audit/fix/apply?proposal_id=${proposalId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+                });
                 const data = await res.json();
                 if (data.status === 'success') {
                     this.triggerLightBurst();
@@ -1459,6 +1492,11 @@ class CreatorEnvironment {
     }
 
     // 4. PERMISSION SYSTEM
+    setupPermissionModal() {
+        // Initializes the modular permission prompt
+        console.log("Permission system ready.");
+    }
+
     async askPermission(title, message) {
         return new Promise((resolve) => {
             const modal = document.getElementById('permission-modal');
@@ -1479,7 +1517,10 @@ class CreatorEnvironment {
         if (await this.askPermission("System Governance", `Change system mode to ${mode.toUpperCase()}? This may restrict user access instantly.`)) {
             const res = await fetch('/api/v1/creator/control/mode', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
                 body: JSON.stringify(mode)
             });
             if (res.ok) {
@@ -1499,7 +1540,10 @@ class CreatorEnvironment {
         if (await this.askPermission("Maintenance Schedule", "Confirm maintenance window?")) {
             await fetch('/api/v1/creator/control/maintenance/schedule', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
                 body: JSON.stringify({ start_time: start, duration, message })
             });
             alert("Maintenance scheduled.");
@@ -2482,7 +2526,7 @@ class CreatorEnvironment {
             simBtn.onclick = () => {
                 const mockTokens = ["creator_auth_token_882", "admin_session_x99", "beta_access_k12"];
                 const randomToken = mockTokens[Math.floor(Math.random() * mockTokens.length)];
-                this.handleQRResult(`http://localhost:8000/api/v1/qr/join?token=${randomToken}`);
+                this.handleQRResult(`${window.location.protocol}//${window.location.host}/api/v1/qr/join?token=${randomToken}`);
             };
         }
     }

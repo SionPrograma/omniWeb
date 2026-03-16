@@ -18,19 +18,11 @@ class StateManager {
     }
 
     restoreState(chipId) {
-        try {
-            const saved = localStorage.getItem(`omniweb_chip_${chipId}`);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed && typeof parsed === 'object' && parsed.data) {
-                    this.states[chipId] = parsed;
-                    console.log(`Restored state for ${chipId}`);
-                    return parsed.data;
-                }
-            }
-        } catch (err) {
-            console.warn(`[SAFE_BOOT] Failed to restore state for ${chipId}, removing corrupted data.`);
-            localStorage.removeItem(`omniweb_chip_${chipId}`);
+        const saved = localStorage.getItem(`omniweb_chip_${chipId}`);
+        if (saved) {
+            this.states[chipId] = JSON.parse(saved);
+            console.log(`Restored state for ${chipId}`);
+            return this.states[chipId].data;
         }
         return null;
     }

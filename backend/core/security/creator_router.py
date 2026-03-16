@@ -8,6 +8,9 @@ from backend.core.system_auditor.auditor import auditor
 from backend.core.system_auditor.fix_engine import fix_engine
 from backend.core.chip_generator.engine import chip_generator
 from backend.core.ai_developer.code_analyzer import code_analyzer
+from pydantic import BaseModel
+import os
+import importlib
 
 router = APIRouter()
 
@@ -59,3 +62,68 @@ async def get_audit_trail(limit: int = 50, creator: OmniUser = Depends(get_creat
                 (limit,)
             ).fetchall()
             return [dict(r) for r in rows]
+
+# --- LIGHTWEIGHT CREATOR TOOLS (PART 3, 5, 6) ---
+
+class FileSavePayload(BaseModel):
+    path: str
+    content: str
+
+@router.post("/save-file")
+async def save_file(payload: FileSavePayload, creator: OmniUser = Depends(get_creator_user)):
+    """
+    Saves a file to the project directory with safety checks.
+    """
+    # 1. Path validation (prevent path traversal)
+    project_root = os.path.abspath(os.getcwd())
+    target_path = os.path.abspath(os.path.join(project_root, payload.path))
+    
+    if not target_path.startswith(project_root):
+        raise HTTPException(status_code=403, detail="Access denied: Path is outside project root.")
+    
+    # 2. Prevent access to sensitive files
+    forbidden_segments = [".env", "database.db", "backend.db", "venv", ".venv", ".git"]
+    for seg in forbidden_segments:
+        if seg in target_path:
+             raise HTTPException(status_code=403, detail=f"Access denied: Restricted segment '{seg}' found in path.")
+
+    # 3. Save file safely
+    try:
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(payload.content)
+            
+        # Log action
+        security_fortress.log_creator_action(creator.id, "save_file", payload.path, {})
+
+        # Part 6: Hot Reload (Backend)
+        if target_path.endswith(".py") and "backend" in target_path:
+            try:
+                # Basic attempt to reload if already imported
+                # In a real system, we'd map path to module name
+                module_name = payload.path.replace("/", ".").replace("\\", ".").replace(".py", "")
+                if module_name in sys.modules:
+                    importlib.reload(sys.modules[module_name])
+                    print(f"[HOT_RELOAD] Reloaded module: {module_name}")
+            except Exception as re:
+                print(f"[HOT_RELOAD] Failed to reload {payload.path}: {re}")
+            
+        return {"status": "success", "path": payload.path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CopilotPayload(BaseModel):
+    prompt: str
+    file: str
+
+@router.post("/copilot")
+async def creator_copilot(payload: CopilotPayload, creator: OmniUser = Depends(get_creator_user)):
+    """
+    Lightweight Copilot for Creator Mode.
+    """
+    security_fortress.log_creator_action(creator.id, "copilot_assist", payload.file, {"prompt": payload.prompt})
+    
+    # Simple placeholder logic for suggestion
+    suggestion = f"// Suggestion for {payload.file}\n// Focus: {payload.prompt}\n\ndef modified_function():\n    # TODO: Implement based on creator request\n    pass"
+    
+    return {"suggestion": suggestion}

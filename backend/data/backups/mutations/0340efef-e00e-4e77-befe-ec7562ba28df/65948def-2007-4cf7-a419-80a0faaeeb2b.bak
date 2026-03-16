@@ -136,7 +136,7 @@
         <!-- MISSION CONTROL (COCKPIT) -->
         <main id="mission-control-view">
             <header class="cockpit-header">
-                <h1>Omni Command Center</h1>
+                <h1>Mission Control</h1>
                 <div class="cockpit-tabs">
                     <button class="cockpit-tab active" data-tab="health">General Health</button>
                     <button class="cockpit-tab" data-tab="map">Galaxy Map</button>
@@ -269,33 +269,6 @@
             </button>
         </nav>
 
-        <!-- CREATOR TOOLBAR (PART 2) -->
-        <div id="creator-toolbar" class="creator-floating-toolbar">
-            <button id="toolbar-editor" title="Editor">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                <span>Editor</span>
-            </button>
-            <button id="toolbar-copilot" title="Copilot">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 8V4H8" />
-                    <rect x="4" y="8" width="16" height="12" rx="2" />
-                    <path d="M12 12v4" />
-                    <path d="M16 12v4" />
-                </svg>
-                <span>Copilot</span>
-            </button>
-            <button id="toolbar-reload" title="Reload">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6" />
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                <span>Reload</span>
-            </button>
-        </div>
-
         <!-- LAUNCHER OVERLAY -->
         <div id="launcher-overlay">
             <div class="launcher-header">
@@ -368,62 +341,6 @@
                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
             </button>
-        </div>
-
-        <!-- LIGHTWEIGHT CREATOR PANELS (PART 3, 4, 5) -->
-        <div id="creator-editor-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Creator Editor</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-editor-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <input type="text" id="editor-file-path" placeholder="relative/path/to/file.py" class="creator-input">
-                <button class="btn-apply" id="editor-open-btn" style="width: auto; margin: 10px 0;">Open File</button>
-                <textarea id="editor-content" placeholder="File content..." class="creator-textarea"></textarea>
-                <button class="btn-apply" id="editor-save-btn">Save Changes</button>
-            </div>
-        </div>
-
-        <div id="creator-patch-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Patch Preview</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-patch-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <div class="patch-diff-container">
-                    <div style="flex:1">
-                        <h4>Original</h4>
-                        <pre id="patch-original" class="diff-pre"></pre>
-                    </div>
-                    <div style="flex:1">
-                        <h4>Modified</h4>
-                        <pre id="patch-modified" class="diff-pre"></pre>
-                    </div>
-                </div>
-                <div style="display:flex; gap: 10px; margin-top: 15px;">
-                    <button class="btn-cancel"
-                        onclick="document.getElementById('creator-patch-overlay').style.display='none'">Cancel</button>
-                    <button class="btn-apply" id="patch-apply-btn">Apply Patch</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="creator-copilot-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Creator Copilot</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-copilot-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <textarea id="copilot-prompt" placeholder="Ask Copilot..." class="creator-textarea"></textarea>
-                <button class="btn-apply" id="copilot-suggest-btn">Get Suggestion</button>
-                <div id="copilot-suggestion-output" style="margin-top: 15px;">
-                    <pre id="suggestion-text" class="diff-pre"></pre>
-                    <button class="btn-apply" id="suggestion-insert-btn" style="display:none;">Insert</button>
-                </div>
-            </div>
         </div>
     </div>
 

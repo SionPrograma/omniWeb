@@ -285,8 +285,8 @@ class SystemAuditor:
                         message=f"Chip {folder} manifest missing required fields: {', '.join(missing)}"
                     ))
                 
-                # Check entry point (can be 'entry' or 'entry_frontend')
-                entry = manifest.get("entry") or manifest.get("entry_frontend")
+                # Check entry point (can be 'entry', 'entry_frontend' or 'entry_point')
+                entry = manifest.get("entry") or manifest.get("entry_frontend") or manifest.get("entry_point")
                 if entry:
                     entry_path = os.path.join(chips_dir, folder, entry)
                     if not os.path.exists(entry_path):
@@ -297,12 +297,15 @@ class SystemAuditor:
                         ))
                     else:
                         valid_chips += 1
-                else:
+                elif manifest.get("has_frontend", True): # Default to true for legacy support
                     issues.append(AuditIssue(
                         sector=AuditSector.CHIPS,
                         level=AuditStatus.WARNING,
                         message=f"Chip {folder} has no entry point defined."
                     ))
+                else:
+                    # Backend-only chip with no entry point is valid
+                    valid_chips += 1
                     
                 # Check router if backend is claimed
                 if manifest.get("has_backend"):

@@ -256,6 +256,33 @@ class BuilderExecutionEngine:
                 module.status = BuilderStatus.COMPLETED
                 module.progress = 100.0
 
+            elif module.module_type == BuilderModuleType.VERIFICATION:
+                # Post-patch verification
+                module.status = BuilderStatus.EXECUTING
+                module.progress = 10.0
+                await self._persist_module(module)
+                
+                logger.info(f"[BUILDER_VERIFY] Verifying system state after change...")
+                await asyncio.sleep(1) # Simulated check time
+                
+                from backend.core.ai_host.execution.system_auditor import system_auditor
+                issues = await system_auditor.audit_system()
+                
+                # If it was a targeted fix for a chip, audit that chip specifically
+                target_chip = module.payload.get("chip_slug")
+                if target_chip:
+                    chip_issues = await system_auditor.audit_chip(target_chip)
+                    issues.extend(chip_issues)
+
+                module.result = {
+                    "success": True, 
+                    "issues_remaining": len(issues),
+                    "message": "Verification sequence completed.",
+                    "details": [i.dict() for i in issues]
+                }
+                module.status = BuilderStatus.COMPLETED
+                module.progress = 100.0
+
             else:
                 # Unknown type - simulation
                 await asyncio.sleep(2)

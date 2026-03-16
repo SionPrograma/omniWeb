@@ -1,4 +1,66 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Safe UI Boot (Phase 31) ---
+    const UI_VERSION = "1.5";
+    const panelRegistry = ['chat', 'mission', 'map', 'storage', 'health', 'network', 'context'];
+
+    try {
+        if (localStorage.getItem("ui_state_version") !== UI_VERSION) {
+            console.warn("[SAFE_BOOT] Version mismatch or legacy state detected. Resetting storage.");
+            localStorage.clear();
+            localStorage.setItem("ui_state_version", UI_VERSION);
+        }
+    } catch (err) {
+        console.warn("[SAFE_BOOT] LocalStorage restricted or unavailable.");
+    }
+
+    // --- Creator Mode Activation (PART 1) ---
+    const params = new URLSearchParams(window.location.search);
+    const creatorEnabled = params.get("creator") === "true" || params.get("shell") === "creator";
+
+    if (creatorEnabled) {
+        document.body.classList.add("creator-authenticated");
+        console.log("[CREATOR_MODE] Activation triggered via URL.");
+
+        // Ensure switchView('chat') as per mission requirement
+        if (window.creatorEnv) {
+            try {
+                window.creatorEnv.switchView('chat');
+            } catch (err) {
+                console.error("[SAFE_BOOT] Failed to switch to default creator view, force reset.");
+                localStorage.clear();
+                window.location.reload();
+            }
+        }
+
+        // Initialize Creator Tools Logic (PART 3, 4, 5, 6)
+        initCreatorTools();
+    }
+
+    // --- State & Restoration (Phase 31) ---
+    let savedView = 'chat';
+    try {
+        const isMobile = window.innerWidth <= 768;
+        const stored = localStorage.getItem("activePanel") || localStorage.getItem("activeView");
+
+        if (stored && panelRegistry.includes(stored)) {
+            // Validate that the element exists (Task 1)
+            const targetEl = document.querySelector(`[data-view="${stored}"]`) || document.getElementById(`${stored}-view`);
+            if (targetEl) {
+                savedView = stored;
+            }
+        }
+
+        // Rule 4: Force chat on mobile startup to ensure a safe cockpit
+        if (isMobile) {
+            console.log("[SAFE_BOOT] Mobile detected, enforcing default Chat view.");
+            savedView = 'chat';
+        }
+    } catch (e) {
+        console.warn("[SAFE_BOOT] State restoration bypassed.");
+    }
+
+    let activeView = savedView;
+
     // DOM Elements
     const aiHostView = document.getElementById('ai-host-view');
     const chipView = document.getElementById('active-chip-view');
@@ -29,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- State ---
-    let activeView = 'chat';
 
     // --- Onboarding Greeting ---
     async function initGreeting() {
@@ -101,7 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.omniShell = {
-        closeLauncher: () => setLauncherActive(false)
+        closeLauncher: () => setLauncherActive(false),
+        reloadActiveChip: reloadActiveChip
     };
 
     openLauncherBtn.addEventListener('click', () => {
@@ -144,6 +206,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
     });
 
+    // --- Hot Reload Interface ---
+    function reloadActiveChip() {
+        if (chipView.classList.contains('active') && chipFrame.src) {
+            console.log("Hot reloading active chip iframe...");
+            // Use a cache-busting param if needed, or just reload
+            chipFrame.contentWindow.location.reload();
+        }
+    }
+    window.reloadActiveChip = reloadActiveChip;
+
     // --- Navigation Logic ---
     navItems.forEach(nav => {
         nav.addEventListener('click', () => {
@@ -158,17 +230,28 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 toggleContext(false);
             }
+
+            // Persist state safely (Task 1)
+            try {
+                localStorage.setItem("activeView", view);
+            } catch (e) { }
         });
     });
 
     function toggleContext(show) {
-        if (show) {
-            setLauncherActive(false);
-            contextPanel.classList.add('active');
-            activeView = 'context';
-        } else {
-            contextPanel.classList.remove('active');
-            activeView = 'chat';
+        try {
+            if (show) {
+                setLauncherActive(false);
+                if (contextPanel) contextPanel.classList.add('active');
+                activeView = 'context';
+            } else {
+                if (contextPanel) contextPanel.classList.remove('active');
+                activeView = 'chat';
+            }
+        } catch (err) {
+            console.error("[SAFE_BOOT] toggleContext failed:", err);
+            // Fallback (Task 2)
+            localStorage.clear();
         }
     }
 
@@ -220,14 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: true });
 
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/shell/sw.js')
-                .then(reg => console.log('SW Registered', reg))
-                .catch(err => console.error('SW Registration Failed', err));
-        });
-    }
+    // Service Worker registration moved to index.html for centralization.
 
     // Handle virtual keyboard orientation/resize
     if (window.visualViewport) {
@@ -309,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 msg = "Acceso a micrófono denegado.";
             } else if (error === 'browser-unsupported' || error === 'unsupported') {
                 msg = "Navegador no soporta voz.";
-            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+            } else if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
                 msg = "Requiere HTTPS para voz.";
             }
             addMessage(`⚠️ ${msg}`, 'ai');
@@ -578,4 +654,151 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
+
+    // --- Final UI Bootstrap (Phase 31) ---
+    try {
+        if (activeView === 'context') {
+            toggleContext(true);
+            const nav = document.querySelector('[data-view="context"]');
+            if (nav) nav.classList.add('active');
+        } else {
+            toggleContext(false);
+            const nav = document.querySelector('[data-view="chat"]');
+            if (nav) nav.classList.add('active');
+        }
+    } catch (err) {
+        console.error("[SAFE_BOOT] UI Bootstrap failed, forcing reset.");
+        localStorage.clear();
+        toggleContext(false);
+    }
 });
+
+// --- Creator Tools Logic (PART 3, 4, 5, 6) ---
+function initCreatorTools() {
+    const toolbarEditor = document.getElementById('toolbar-editor');
+    const toolbarCopilot = document.getElementById('toolbar-copilot');
+    const toolbarReload = document.getElementById('toolbar-reload');
+
+    const editorOverlay = document.getElementById('creator-editor-overlay');
+    const copilotOverlay = document.getElementById('creator-copilot-overlay');
+    const patchOverlay = document.getElementById('creator-patch-overlay');
+
+    const editorFilePath = document.getElementById('editor-file-path');
+    const editorContent = document.getElementById('editor-content');
+    const editorOpenBtn = document.getElementById('editor-open-btn');
+    const editorSaveBtn = document.getElementById('editor-save-btn');
+
+    const copilotPrompt = document.getElementById('copilot-prompt');
+    const copilotSuggestBtn = document.getElementById('copilot-suggest-btn');
+    const suggestionText = document.getElementById('suggestion-text');
+    const suggestionInsertBtn = document.getElementById('suggestion-insert-btn');
+
+    const patchOriginal = document.getElementById('patch-original');
+    const patchModified = document.getElementById('patch-modified');
+    const patchApplyBtn = document.getElementById('patch-apply-btn');
+
+    let originalState = "";
+
+    // Toolbar Button Actions
+    if (toolbarEditor) toolbarEditor.onclick = () => {
+        editorOverlay.style.display = 'flex';
+        copilotOverlay.style.display = 'none';
+    };
+
+    if (toolbarCopilot) toolbarCopilot.onclick = () => {
+        copilotOverlay.style.display = 'flex';
+        editorOverlay.style.display = 'none';
+    };
+
+    if (toolbarReload) toolbarReload.onclick = () => {
+        console.log("[RELOAD] Triggering app reload...");
+        window.location.reload();
+    };
+
+    // Editor Logic
+    if (editorOpenBtn) editorOpenBtn.onclick = async () => {
+        const path = editorFilePath.value.trim();
+        if (!path) return alert("Please enter a path.");
+
+        try {
+            const res = await fetch(`/api/v1/creator/inspect?query=${encodeURIComponent(path)}`, {
+                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+            });
+            const data = await res.json();
+            if (data.file_content) {
+                editorContent.value = data.file_content;
+                originalState = data.file_content;
+            } else if (data.analysis) {
+                alert("File found. Analysis received.");
+            } else {
+                alert("File information not found.");
+            }
+        } catch (err) {
+            alert("Failed to load file information.");
+        }
+    };
+
+    if (editorSaveBtn) editorSaveBtn.onclick = () => {
+        const modifiedContent = editorContent.value;
+        patchOriginal.textContent = originalState;
+        patchModified.textContent = modifiedContent;
+        patchOverlay.style.display = 'flex';
+    };
+
+    if (patchApplyBtn) patchApplyBtn.onclick = async () => {
+        const path = editorFilePath.value.trim();
+        const content = editorContent.value;
+
+        try {
+            const res = await fetch('/api/v1/creator/save-file', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
+                body: JSON.stringify({ path, content })
+            });
+
+            if (res.ok) {
+                alert("File saved successfully!");
+                patchOverlay.style.display = 'none';
+                originalState = content;
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const err = await res.json();
+                alert("Error saving: " + err.detail);
+            }
+        } catch (err) {
+            alert("Failed to save file.");
+        }
+    };
+
+    // Copilot Logic
+    if (copilotSuggestBtn) copilotSuggestBtn.onclick = async () => {
+        const prompt = copilotPrompt.value.trim();
+        const file = editorFilePath.value.trim();
+
+        try {
+            const res = await fetch('/api/v1/creator/copilot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                },
+                body: JSON.stringify({ prompt, file })
+            });
+
+            const data = await res.json();
+            suggestionText.textContent = data.suggestion;
+            suggestionInsertBtn.style.display = 'block';
+        } catch (err) {
+            alert("Copilot failed.");
+        }
+    };
+
+    if (suggestionInsertBtn) suggestionInsertBtn.onclick = () => {
+        editorContent.value += "\n" + suggestionText.textContent;
+        copilotOverlay.style.display = 'none';
+        editorOverlay.style.display = 'flex';
+    };
+}

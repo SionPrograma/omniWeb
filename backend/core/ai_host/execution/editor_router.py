@@ -120,11 +120,23 @@ async def propose_edit(
     
     module = BuilderModule(
         task_id=task.id,
-        title=f"Editing {os.path.basename(path)}",
+        title=f"Applying Changes: {os.path.basename(path)}",
         sequence_order=0,
-        status=BuilderStatus.AWAITING_APPROVAL
+        status=BuilderStatus.AWAITING_APPROVAL,
+        module_type=BuilderModuleType.IMPLEMENTATION
     )
+    
+    verify_module = BuilderModule(
+        task_id=task.id,
+        title="Post-Edit Verification",
+        sequence_order=1,
+        status=BuilderStatus.PENDING,
+        module_type=BuilderModuleType.VERIFICATION,
+        payload={"path": path}
+    )
+    
     task.modules.append(module)
+    task.modules.append(verify_module)
     
     # Persist task/module so the approval endpoint can find them
     await builder_execution_engine._persist_task(task)

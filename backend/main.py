@@ -197,7 +197,7 @@ for chip_metadata in all_chips:
          # Explicitly register frontend-only chips to satisfy auditor and health checks
          module_registry._register_module_state(module_name, None, chip_metadata)
 
-app.mount("/shell", StaticFiles(directory="frontend/shell"), name="shell_static")
+app.mount("/shell", StaticFiles(directory="frontend/shell", html=True), name="shell_static")
 app.mount("/dashboard-static", StaticFiles(directory="frontend/dashboard"), name="dashboard_static")
 app.mount("/core", StaticFiles(directory="core"), name="core_static")
 
