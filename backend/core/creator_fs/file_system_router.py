@@ -69,7 +69,18 @@ async def read_file(path: str, creator: OmniUser = Depends(get_creator_user)):
     try:
         with open(target_path, "r", encoding="utf-8") as f:
             content = f.read()
-        return {"status": "success", "content": content}
+            
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        raw_res = AICommandResponse(
+            intent="fs_read",
+            status="success",
+            message=f"Lectura del archivo '{path}' completada.",
+            payload={"content": content}
+        )
+        unified = await orchestrator.orchestrate(f"read file {path}", {"mode": "direct_response", "intent_group": "FILESYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+        return {"status": "success", "payload": unified.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 
@@ -87,19 +98,29 @@ async def preview_diff(payload: FileOperation, creator: OmniUser = Depends(get_c
             original_content = f.read()
             
     # Generate unified diff
-    diff = list(difflib.unified_diff(
+    diff_lines = list(difflib.unified_diff(
         original_content.splitlines(keepends=True),
         new_content.splitlines(keepends=True),
         fromfile='original',
         tofile='modified'
     ))
+    diff_str = "".join(diff_lines)
     
-    return {
-        "status": "success",
-        "original_content": original_content,
-        "modified_content": new_content,
-        "diff": "".join(diff)
-    }
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="fs_diff",
+        status="success",
+        message=f"Vista previa de cambios generada para '{payload.path}'.",
+        payload={
+            "original_content": original_content,
+            "modified_content": new_content,
+            "diff": diff_str
+        }
+    )
+    unified = await orchestrator.orchestrate(f"diff for {payload.path}", {"mode": "direct_response", "intent_group": "FILESYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/write")
 async def write_file(payload: FileOperation, creator: OmniUser = Depends(get_creator_user)):
@@ -142,7 +163,17 @@ async def write_file(payload: FileOperation, creator: OmniUser = Depends(get_cre
             payload={"backup_created": backup_path is not None}
         )
         
-        return {"status": "success", "backup": backup_path}
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        raw_res = AICommandResponse(
+            intent="fs_write",
+            status="success",
+            message=f"Cambios guardados exitosamente en '{payload.path}'.",
+            payload={"backup": backup_path}
+        )
+        unified = await orchestrator.orchestrate(f"write to {payload.path}", {"mode": "direct_response", "intent_group": "FILESYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+        return {"status": "success", "payload": unified.model_dump()}
     except Exception as e:
         # Failsafe: Restore backup if write failed midway
         if backup_path and os.path.exists(backup_path):
@@ -171,17 +202,24 @@ async def apply_changes(payload: FileOperation, creator: OmniUser = Depends(get_
 
     if reload_type == "backend":
         # Simulate backend hot-reload notification
-        # In a production scenario, this might interface with a process manager or importlib
         print(f"[STAGE 4] Backend reload triggered for: {payload.path}")
         message = "Backend module identified. Reload strategy: Safe Restart Simulation."
     else:
         print(f"[STAGE 4] Frontend reload triggered for: {payload.path}")
         message = "Frontend assets modified. Reload strategy: Browser Sync."
 
-    return {
-        "status": "success",
-        "reload_type": reload_type,
-        "verified": verified,
-        "message": message,
-        "path": payload.path
-    }
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="fs_apply",
+        status="success",
+        message=message,
+        payload={
+            "reload_type": reload_type,
+            "verified": verified,
+            "path": payload.path
+        }
+    )
+    unified = await orchestrator.orchestrate(f"apply changes for {payload.path}", {"mode": "direct_response", "intent_group": "FILESYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}

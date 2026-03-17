@@ -75,8 +75,30 @@ class BrainRouter:
 
         # 3. ROUTE BY MODE (With Bypass Safety for broken layers)
         try:
-            if mode == "reflective":
+            if mode == "reflective" or mode == "reflective_analysis":
                  res = await self._handle_reflective_reasoning(msg_clean, lang)
+            elif mode == "direct_response":
+                 # Simple conversational response via chat processor
+                 chat_proc = self.command_router.registry.get_processor("chat")
+                 if chat_proc and await chat_proc.can_handle(msg_clean):
+                     res = await chat_proc.process(msg_clean, context=context)
+                 else:
+                     res = self._generate_natural_fallback(lang)
+            elif mode == "action_execution":
+                 # Route to appropriate action handler based on intent group
+                 if intent in ["BUILD_INTENT"] or "crea" in msg_clean or "build" in msg_clean:
+                     res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
+                 elif intent in ["REMEDIATION_INTENT"] or "fix" in msg_clean or "arregla" in msg_clean:
+                     res = await self._handle_remediation(msg_clean, delib_context, lang)
+                 elif intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
+                     res = await self._handle_chip_action(msg_clean, intent, delib_context, lang)
+                 else:
+                     # Generic action acknowledgment
+                     chat_proc = self.command_router.registry.get_processor("chat")
+                     if chat_proc and await chat_proc.can_handle(msg_clean):
+                         res = await chat_proc.process(msg_clean, context=context)
+                     else:
+                         res = self._generate_natural_fallback(lang)
             elif mode == "remediation":
                  res = await self._handle_remediation(msg_clean, delib_context, lang)
             elif mode == "swarm_orchestration":
@@ -102,8 +124,7 @@ class BrainRouter:
                  if chat_proc and await chat_proc.can_handle(msg_clean):
                      res = await chat_proc.process(msg_clean, context=context)
                  else:
-                     # Elevated Conversational: Use reflective reasoning for complex natural language
-                     res = await self._handle_reflective_reasoning(msg_clean, lang)
+                     res = self._generate_natural_fallback(lang)
         except Exception as e:
             logger.error(f"[PIPELINE_ERROR] Reasoning layer '{mode}' failed: {e}. Bypassing to stable response.")
             # Final Bypass to ensure communication doesn't break

@@ -205,14 +205,26 @@ async def sync_knowledge_graph(admin_user: dict = Security(get_admin_user)):
     with set_chip_context("core"):
         builder = GraphBuilder()
         builder.process_all_memories()
-        return {"status": "success", "message": "Graph synchronized with long-term memory."}
+        
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        raw_res = AICommandResponse(intent="system_sync", status="success", message="Graph synchronized with long-term memory.")
+        unified = await orchestrator.orchestrate("sync graph", {"mode": "direct_response", "intent_group": "SYSTEM"}, raw_response=raw_res)
+        return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/semantic/sync")
 async def sync_semantic_layer(admin_user: dict = Security(get_admin_user)):
     from backend.core.semantic_layer.embedding_synchronizer import embedding_synchronizer
     with set_chip_context("core"):
         await embedding_synchronizer.sync_all()
-        return {"status": "success", "message": "Semantic layer synchronized."}
+        
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        raw_res = AICommandResponse(intent="system_sync", status="success", message="Semantic layer synchronized.")
+        unified = await orchestrator.orchestrate("sync semantic", {"mode": "direct_response", "intent_group": "SYSTEM"}, raw_response=raw_res)
+        return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/semantic/summary")
 async def get_semantic_summary():
@@ -245,7 +257,13 @@ async def restore_db_from_backup(filename: str, admin_user: dict = Security(get_
     with set_chip_context("core"):
         try:
             db_manager.restore_db(source_path)
-            return {"status": "success", "message": f"Database restored from {filename}"}
+            
+            from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+            from backend.core.ai_host.processors.base import AICommandResponse
+            orchestrator = CognitiveOrchestrator()
+            raw_res = AICommandResponse(intent="db_restore", status="success", message=f"Database restored from {filename}")
+            unified = await orchestrator.orchestrate("restore db", {"mode": "direct_response", "intent_group": "SYSTEM"}, raw_response=raw_res)
+            return {"status": "success", "payload": unified.model_dump()}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -304,8 +322,15 @@ async def apply_fix(proposal_id: str, admin_user: dict = Security(get_admin_user
     from backend.core.system_auditor.auditor import auditor
     new_report = await auditor.run_full_audit()
     
-    return {
-        "status": "success",
-        "message": f"Fix {proposal_id} applied successfully.",
-        "new_report_status": new_report.overall_status.value
-    }
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="apply_fix", 
+        status="success", 
+        message=f"Fix {proposal_id} applied successfully.",
+        payload={"new_report_status": new_report.overall_status.value}
+    )
+    unified = await orchestrator.orchestrate("apply fix", {"mode": "direct_response", "intent_group": "REMEDIATION"}, raw_response=raw_res)
+    
+    return {"status": "success", "payload": unified.model_dump()}

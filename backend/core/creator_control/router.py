@@ -13,16 +13,39 @@ async def get_creator_control_status(creator: OmniUser = Depends(get_creator_use
     maint = await creator_control_manager.get_active_maintenance()
     announcement = await creator_control_manager.get_active_announcement()
     
-    return {
+    status_data = {
         "mode": mode,
         "maintenance": maint,
         "announcement": announcement
     }
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="creator_control_status",
+        status="success",
+        message=f"Estado de control del Creador recuperado. Modo: {mode.upper()}.",
+        payload=status_data
+    )
+    unified = await orchestrator.orchestrate("get creator control status", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/mode")
 async def set_system_mode(mode: SystemMode, creator: OmniUser = Depends(get_creator_user)):
     await creator_control_manager.set_system_mode(mode, creator.id)
-    return {"status": "success", "new_mode": mode}
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="creator_control_mode",
+        status="success",
+        message=f"Modo del sistema actualizado a: {mode.upper()}.",
+        payload={"new_mode": mode}
+    )
+    unified = await orchestrator.orchestrate(f"set system mode to {mode}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/maintenance/schedule")
 async def schedule_maintenance(
@@ -32,7 +55,18 @@ async def schedule_maintenance(
     creator: OmniUser = Depends(get_creator_user)
 ):
     await creator_control_manager.schedule_maintenance(start_time, duration, message, creator.id)
-    return {"status": "success"}
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="creator_control_maintenance",
+        status="success",
+        message=f"Mantenimiento programado: {message}.",
+        payload={"start_time": start_time, "duration": duration}
+    )
+    unified = await orchestrator.orchestrate("schedule maintenance", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/announcement")
 async def publish_announcement(
@@ -42,13 +76,35 @@ async def publish_announcement(
     creator: OmniUser = Depends(get_creator_user)
 ):
     await creator_control_manager.publish_announcement(message, type, creator.id, expires_in_minutes)
-    return {"status": "success"}
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="creator_control_announcement",
+        status="success",
+        message=f"Anuncio global publicado: {message[:50]}...",
+        payload={"message": message, "type": type}
+    )
+    unified = await orchestrator.orchestrate("publish announcement", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/rollback")
 async def force_rollback(label: str = Body(...), creator: OmniUser = Depends(get_creator_user)):
     try:
         res = await creator_control_manager.force_rollback(label, creator.id)
-        return {"status": "success", "details": res}
+        
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        raw_res = AICommandResponse(
+            intent="creator_control_rollback",
+            status="success",
+            message=f"Rollback forzado a la versión: {label}.",
+            payload={"details": res}
+        )
+        unified = await orchestrator.orchestrate(f"force rollback to {label}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+        return {"status": "success", "payload": unified.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -58,7 +114,6 @@ async def node_operation(
     operation: str = Body(...), # 'drain', 'restart', 'disable', 'resume'
     creator: OmniUser = Depends(get_creator_user)
 ):
-    # Scaffold for node operations
     from backend.core.security.manager import security_fortress
     security_fortress.log_creator_action(
         creator_id=creator.id,
@@ -67,5 +122,14 @@ async def node_operation(
         payload={"operation": operation}
     )
     
-    # Simulate operation for now as per instructions
-    return {"status": "success", "message": f"Operation {operation} triggered for node {node_id}"}
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="creator_control_node_op",
+        status="success",
+        message=f"Operación {operation} iniciada para el nodo {node_id}.",
+        payload={"node_id": node_id, "operation": operation}
+    )
+    unified = await orchestrator.orchestrate(f"node operation {operation} on {node_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}

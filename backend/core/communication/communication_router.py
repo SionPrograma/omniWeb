@@ -76,15 +76,59 @@ async def send_natural_message(request: Request, current_user: OmniUser = Depend
     """
     data = await request.json()
     command = data.get("command", "")
-    result = await message_intent_engine.process_message_command(current_user.id, command)
-    return result
+    
+    # ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    
+    # 1. Get raw result from engine
+    raw_result = await message_intent_engine.process_message_command(current_user.id, command)
+    
+    # 2. Convert to AICommandResponse for orchestration
+    # We use the confirmation_prompt as the message if it exists, otherwise the standard message
+    msg_text = raw_result.get("confirmation_prompt") or raw_result.get("message", "")
+    raw_res = AICommandResponse(
+        intent="communication_message",
+        status=raw_result.get("status", "success"),
+        message=msg_text,
+        payload=raw_result
+    )
+    
+    # 3. Orchestrate (Naturalize + Unify)
+    orchestrator = CognitiveOrchestrator()
+    unified_res = await orchestrator.orchestrate(
+        message=command,
+        understanding={"mode": "direct_response", "intent_group": "COMMUNICATION"},
+        context={"user_id": current_user.id},
+        raw_response=raw_res
+    )
+    
+    # 4. Return unified result (preserving the expected flat structure if possible, 
+    # but strictly following the cognitive output rule)
+    return unified_res.model_dump()
 
 
 @router.post("/message/confirm/{message_id}")
 async def confirm_message(message_id: str, current_user: OmniUser = Depends(get_current_user)):
     """Confirms and sends a pending message draft."""
-    result = await message_intent_engine.confirm_send(current_user.id, message_id)
-    return result
+    raw_result = await message_intent_engine.confirm_send(current_user.id, message_id)
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    
+    orchestrator = CognitiveOrchestrator()
+    unified_res = await orchestrator.orchestrate(
+        message="confirm message",
+        understanding={"mode": "direct_response", "intent_group": "COMMUNICATION"},
+        context={"user_id": current_user.id},
+        raw_response=AICommandResponse(
+            intent="communication_confirm",
+            status=raw_result.get("status", "success"),
+            message=raw_result.get("message", ""),
+            payload=raw_result
+        )
+    )
+    return unified_res.model_dump()
 
 
 # ==========================================
@@ -99,15 +143,47 @@ async def start_call(request: Request, current_user: OmniUser = Depends(get_curr
     """
     data = await request.json()
     command = data.get("command", "")
-    result = await call_intent_engine.process_call_command(current_user.id, command)
-    return result
+    raw_result = await call_intent_engine.process_call_command(current_user.id, command)
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    
+    orchestrator = CognitiveOrchestrator()
+    unified_res = await orchestrator.orchestrate(
+        message=command,
+        understanding={"mode": "direct_response", "intent_group": "COMMUNICATION"},
+        context={"user_id": current_user.id},
+        raw_response=AICommandResponse(
+            intent="call_start",
+            status=raw_result.get("status", "success"),
+            message=raw_result.get("message", ""),
+            payload=raw_result
+        )
+    )
+    return unified_res.model_dump()
 
 
 @router.post("/call/end/{session_id}")
 async def end_call(session_id: str, current_user: OmniUser = Depends(get_current_user)):
     """Ends an active call session."""
-    result = await call_intent_engine.end_call(current_user.id, session_id)
-    return result
+    raw_result = await call_intent_engine.end_call(current_user.id, session_id)
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    
+    orchestrator = CognitiveOrchestrator()
+    unified_res = await orchestrator.orchestrate(
+        message="end call",
+        understanding={"mode": "direct_response", "intent_group": "COMMUNICATION"},
+        context={"user_id": current_user.id},
+        raw_response=AICommandResponse(
+            intent="call_end",
+            status=raw_result.get("status", "success"),
+            message=raw_result.get("message", ""),
+            payload=raw_result
+        )
+    )
+    return unified_res.model_dump()
 
 
 @router.get("/call/active")

@@ -21,7 +21,26 @@ async def register_device(device_id: str, device_name: str, creator: OmniUser = 
     Note: Requires an already trusted device (or bootstrap session) to authorize.
     """
     key = security_fortress.register_device(creator.id, device_id, device_name)
-    return {"status": "success", "signature_key": key}
+    
+    # ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    
+    raw_res = AICommandResponse(
+        intent="device_registration",
+        status="success",
+        message=f"Device '{device_name}' has been successfully registered and secured.",
+        payload={"signature_key": key}
+    )
+    
+    unified = await orchestrator.orchestrate(
+        message=f"register device {device_id}",
+        understanding={"mode": "direct_response", "intent_group": "SYSTEM"},
+        context={"user_id": creator.id},
+        raw_response=raw_res
+    )
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/inspect")
 async def inspect_system(query: str, creator: OmniUser = Depends(get_creator_user)):
@@ -31,13 +50,52 @@ async def inspect_system(query: str, creator: OmniUser = Depends(get_creator_use
 @router.post("/audit")
 async def run_audit(creator: OmniUser = Depends(get_creator_user)):
     security_fortress.log_creator_action(creator.id, "audit", "system_health", {})
-    return await auditor.run_full_audit()
+    report = await auditor.run_full_audit()
+    
+    # ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    
+    raw_res = AICommandResponse(
+        intent="system_audit",
+        status="success",
+        message=f"System audit completed. Overall status is {report.overall_status.value}.",
+        payload=report.model_dump()
+    )
+    
+    unified = await orchestrator.orchestrate(
+        message="run system audit",
+        understanding={"mode": "reflective_analysis", "intent_group": "REMEDIATION_INTENT"},
+        context={"user_id": creator.id},
+        raw_response=raw_res
+    )
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/patch")
 async def apply_patch(proposal_id: str, creator: OmniUser = Depends(get_creator_user)):
     security_fortress.log_creator_action(creator.id, "patch", f"proposal:{proposal_id}", {})
     success = await fix_engine.apply_fix(proposal_id)
-    return {"status": "success" if success else "failed"}
+    
+    # ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    
+    raw_res = AICommandResponse(
+        intent="apply_patch",
+        status="success" if success else "failed",
+        message=f"The requested patch {proposal_id} has been applied to the system." if success else "I encountered an error trying to apply the patch.",
+        payload={"proposal_id": proposal_id}
+    )
+    
+    unified = await orchestrator.orchestrate(
+        message=f"apply patch {proposal_id}",
+        understanding={"mode": "action_execution", "intent_group": "REMEDIATION_INTENT"},
+        context={"user_id": creator.id},
+        raw_response=raw_res
+    )
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/generate_chip")
 async def generate_chip(slug: str, name: str = None, creator: OmniUser = Depends(get_creator_user)):
@@ -108,7 +166,25 @@ async def save_file(payload: FileSavePayload, creator: OmniUser = Depends(get_cr
             except Exception as re:
                 print(f"[HOT_RELOAD] Failed to reload {payload.path}: {re}")
             
-        return {"status": "success", "path": payload.path}
+        # ENFORCE COGNITIVE PIPELINE
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        
+        raw_res = AICommandResponse(
+            intent="save_file",
+            status="success",
+            message=f"Changes to {payload.path} have been saved and applied.",
+            payload={"path": payload.path}
+        )
+        
+        unified = await orchestrator.orchestrate(
+            message=f"save file {payload.path}",
+            understanding={"mode": "action_execution", "intent_group": "BUILD_INTENT"},
+            context={"user_id": creator.id},
+            raw_response=raw_res
+        )
+        return {"status": "success", "payload": unified.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

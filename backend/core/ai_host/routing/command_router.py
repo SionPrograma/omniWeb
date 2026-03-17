@@ -198,50 +198,42 @@ class CommandRouter:
                 if intent in priority_intents and intent in self.intents and intent not in brain_intents:
                     logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
                     res = await self.intents[intent](msg_clean)
-                    if res:
-                        return await self._finalize_response(res, message)
 
-                # 3. Cognitive Orchestration Layer (Replaces fragmented Brain/Fallback/Messaging layers)
+                # 3. UNIFIED COGNITIVE PIPELINE
                 from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
-                
-                # We instantiate here to avoid circular imports. In a future refactor it can be a singleton.
                 orchestrator = CognitiveOrchestrator(self)
                 
                 res = await orchestrator.orchestrate(
                     message=msg_clean, 
                     understanding=understanding,
-                    context=context
+                    context=context,
+                    raw_response=res
                 )
         except Exception as e:
             logger.error(f"[PIPELINE_ERROR] Route failed: {e}")
-            res = AICommandResponse(
+            from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+            orchestrator = CognitiveOrchestrator(self)
+            
+            error_res = AICommandResponse(
                 intent="recovery", 
                 status="success", 
-                message="He detectado un problema en una de mis capas de razonamiento, pero sigo operacional. ¿En qué puedo ayudarte?" if "es" in message.lower() else "I've detected an issue in one of my reasoning layers, but I remain operational. How can I help you?"
+                message="hmm… algo no terminó de tomar forma ahí" if "es" in message.lower() else "hmm… something didn't quite take shape there"
+            )
+            
+            # FORCE orchestration even for errors
+            res = await orchestrator.orchestrate(
+                message=message,
+                understanding={"mode": "direct_response", "intent_group": "RECOVERY"},
+                context=context,
+                raw_response=error_res
             )
 
         return await self._finalize_response(res, message)
 
     async def _finalize_response(self, res: AICommandResponse, original_msg: str) -> AICommandResponse:
-        """Adds final touches and telemetry to response."""
-        # Antimodal adaptation (Phase 6)
-        res.message = antimodal_controller.process_ai_response(res.message)
-
-        # Telemetry (Phase F)
-        try:
-            from backend.core.usage.usage_tracker import usage_tracker
-            usage_tracker.log_event(
-                event_type="ai_command_executed",
-                chip_slug="ai-host",
-                metadata={
-                    "intent": res.intent,
-                    "status": res.status,
-                    "message_preview": original_msg[:50]
-                }
-            )
-        except:
-            pass
-
+        """Adds final touches to response logging."""
+        # Antimodal adaptation and Telemetry are now handled by CognitiveOrchestrator
+        # for a single unified pipeline.
         logger.info(f"[RESPONSE_READY] Intent: {res.intent} | Message: {res.message[:50]}...")
         return res
 

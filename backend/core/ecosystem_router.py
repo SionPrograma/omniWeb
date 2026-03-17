@@ -10,7 +10,13 @@ router = APIRouter()
 async def get_skill_profile(user_id: str = "default_user"):
     from backend.core.skill_engine.skill_profile_builder import skill_profile_builder
     profile = skill_profile_builder.get_profile(user_id)
-    return {"status": "ok", "profile": profile.model_dump()}
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(intent="skill_profile", status="success", message=f"Skill profile for {user_id} retrieved.", payload={"profile": profile.model_dump()})
+    unified = await orchestrator.orchestrate("get profile", {"mode": "direct_response", "intent_group": "METRICS"}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/development/opportunities")
 async def get_opportunities(user_id: str = "default_user"):
@@ -18,7 +24,13 @@ async def get_opportunities(user_id: str = "default_user"):
     from backend.core.opportunity_engine.opportunity_matcher import opportunity_matcher
     profile = skill_profile_builder.get_profile(user_id)
     matches = opportunity_matcher.find_matches(profile.top_skills)
-    return {"status": "ok", "opportunities": [m.model_dump() for m in matches]}
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(intent="opportunities", status="success", message="System opportunities identified.", payload={"opportunities": [m.model_dump() for m in matches]})
+    unified = await orchestrator.orchestrate("get opportunities", {"mode": "direct_response", "intent_group": "METRICS"}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 # --- Interface ---
 @router.get("/interface/windows")

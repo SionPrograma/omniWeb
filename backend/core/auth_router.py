@@ -57,4 +57,9 @@ async def logout(token: str = Depends(oauth2_scheme)):
         with db_manager.get_connection() as conn:
             conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
             conn.commit()
-    return {"status": "success", "message": "Logged out successfully"}
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(intent="logout", status="success", message="Logged out successfully")
+    unified = await orchestrator.orchestrate("logout", {"mode": "direct_response", "intent_group": "AUTH"}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}

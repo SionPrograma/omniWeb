@@ -22,7 +22,26 @@ async def create_plan(payload: Dict[str, Any], current_user: OmniUser = Depends(
             raise HTTPException(status_code=400, detail="Missing prompt or evidence")
             
         plan = await copilot_engine.generate_plan(prompt, multimodal_evidence=evidence)
-        return plan
+        
+        # ENFORCE COGNITIVE PIPELINE
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        
+        raw_res = AICommandResponse(
+            intent="copilot_plan",
+            status="success",
+            message=plan.summary or f"He trazado un plan para: {prompt[:30]}...",
+            payload=plan.dict()
+        )
+        
+        unified = await orchestrator.orchestrate(
+            message=prompt or "generate plan",
+            understanding={"mode": "reflective_analysis", "intent_group": "ANALYSIS_INTENT"},
+            context={"user_id": current_user.id},
+            raw_response=raw_res
+        )
+        return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/execute-step")
 async def execute_step(payload: Dict[str, str], current_user: OmniUser = Depends(get_current_user)):
@@ -38,7 +57,27 @@ async def execute_step(payload: Dict[str, str], current_user: OmniUser = Depends
             raise HTTPException(status_code=400, detail="Missing plan_id or step_id")
             
         result = await copilot_engine.execute_step(plan_id, step_id)
-        return result
+        
+        # ENFORCE COGNITIVE PIPELINE
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        
+        msg = result.get("message", "Paso ejecutado correctamente.")
+        raw_res = AICommandResponse(
+            intent="execute_step",
+            status="success" if result.get("success") else "failed",
+            message=msg,
+            payload=result
+        )
+        
+        unified = await orchestrator.orchestrate(
+            message=f"execute step {step_id}",
+            understanding={"mode": "action_execution", "intent_group": "BUILD_INTENT"},
+            context={"user_id": current_user.id},
+            raw_response=raw_res
+        )
+        return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/plan/{plan_id}", response_model=CopilotActionPlan)
 async def get_plan(plan_id: str, current_user: OmniUser = Depends(get_current_user)):
@@ -93,16 +132,39 @@ async def control_builder_task(task_id: str, action: str, current_user: OmniUser
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         
+        msg = ""
         if action == "retry":
             if task.current_module_id:
                 await builder_execution_engine.retry_module(task_id, task.current_module_id)
-                return {"success": True, "message": "Module retry initiated"}
+                msg = "Module retry initiated"
+            else:
+                msg = "No module to retry"
         elif action == "cancel":
             task.status = BuilderStatus.CANCELLED
             await builder_execution_engine._persist_task(task)
-            return {"success": True, "message": "Task cancelled"}
+            msg = "Task cancelled"
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
             
-        raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
+        # ENFORCE COGNITIVE PIPELINE
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        
+        raw_res = AICommandResponse(
+            intent="builder_control",
+            status="success",
+            message=msg,
+            payload={"task_id": task_id, "action": action}
+        )
+        
+        unified = await orchestrator.orchestrate(
+            message=f"builder {action} {task_id}",
+            understanding={"mode": "direct_response", "intent_group": "SYSTEM"},
+            context={"user_id": current_user.id},
+            raw_response=raw_res
+        )
+        return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/builder/preview/{preview_id}/decide")
 async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser = Depends(get_current_user)):
@@ -114,7 +176,7 @@ async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser
         preview = await patch_preview_engine.get_preview(preview_id)
         if not preview:
             raise HTTPException(status_code=404, detail="Preview not found")
-        
+        results = None
         if approved:
             # Apply mutation
             results = await mutation_engine.execute_batch(preview.batch)
@@ -132,7 +194,23 @@ async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser
                     # Continue execution loop
                     import asyncio
                     asyncio.create_task(builder_execution_engine._execute_loop(task))
-            
-            return {"success": True, "message": "Patch applied successfully", "reload_results": results}
-        else:
-            return {"success": True, "message": "Patch rejected"}
+        
+        # ENFORCE COGNITIVE PIPELINE
+        from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+        from backend.core.ai_host.processors.base import AICommandResponse
+        orchestrator = CognitiveOrchestrator()
+        
+        raw_res = AICommandResponse(
+            intent="preview_decide",
+            status="success",
+            message="Patch applied successfully" if approved else "Patch rejected",
+            payload={"approved": approved, "reload_results": results if approved else None}
+        )
+        
+        unified = await orchestrator.orchestrate(
+            message=f"approve preview {preview_id}" if approved else f"reject preview {preview_id}",
+            understanding={"mode": "direct_response", "intent_group": "SYSTEM"},
+            context={"user_id": current_user.id},
+            raw_response=raw_res
+        )
+        return {"status": "success", "payload": unified.model_dump()}

@@ -155,11 +155,26 @@ async def propose_edit(
     module.result = {"preview_id": preview.id, "type": "patch_preview"}
     await builder_execution_engine._persist_module(module)
 
-    return {
-        "preview_id": preview.id,
-        "task_id": task.id,
-        "message": "Patch preview generated. Approval required to apply."
-    }
+    # 2. ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    
+    raw_res = AICommandResponse(
+        intent="patch_preview",
+        status="success",
+        message="Patch preview generated. Approval required to apply.",
+        payload={"preview_id": preview.id, "task_id": task.id}
+    )
+    
+    unified = await orchestrator.orchestrate(
+        message=f"edit {path}",
+        understanding={"mode": "action_execution", "intent_group": "BUILD_INTENT"},
+        context={"user_id": creator.id},
+        raw_response=raw_res
+    )
+    
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/copilot/assist")
 async def copilot_assist(
@@ -182,14 +197,32 @@ async def copilot_assist(
         except:
             pass
 
-    # Use copilot to generate a response (text only, usually)
+    # Use copilot to generate a response
     plan = await copilot_engine.generate_plan(f"System Request: {prompt}")
     
-    # Extract response from plan or just use the plan summary
-    return {
-        "response": plan.summary,
-        "steps": [step.dict() for step in plan.steps]
-    }
+    # ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    
+    raw_res = AICommandResponse(
+        intent="copilot_assist",
+        status="success",
+        message=plan.summary or plan.description or "I've analyzed the request.",
+        payload={
+            "steps": [step.dict() for step in plan.steps],
+            "plan_id": plan.id
+        }
+    )
+    
+    unified = await orchestrator.orchestrate(
+        message=f"copilot {action} on {path}",
+        understanding={"mode": "reflective_analysis", "intent_group": "ANALYSIS_INTENT"},
+        context={"user_id": creator.id},
+        raw_response=raw_res
+    )
+    
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/reload")
 async def manual_reload(

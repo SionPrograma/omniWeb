@@ -18,6 +18,8 @@ class CopilotStep(BaseModel):
 class CopilotActionPlan(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     prompt: str
+    summary: str = ""
+    description: str = ""
     steps: List[CopilotStep] = []
     status: str = "planning" # planning, pending_approval, executing, completed, failed
     created_at: float = Field(default_factory=time.time)
@@ -39,9 +41,11 @@ class CreatorCopilotEngine:
         p_lower = prompt.lower()
         
         plan = CopilotActionPlan(prompt=prompt, multimodal_evidence=multimodal_evidence)
+        plan.summary = f"Análisis de {prompt[:30]}..."
         
         # Scenario: Audit System
         if "audit" in p_lower and "sistem" in p_lower:
+            plan.summary = "Iniciando auditoría completa del núcleo."
             plan.steps = [
                 CopilotStep(
                     description="Ejecutar auditoría completa del sistema",

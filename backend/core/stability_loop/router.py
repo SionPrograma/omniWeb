@@ -11,9 +11,31 @@ async def get_task_status(task_id: str):
     status = loop_controller.get_task_status(task_id)
     if not status:
         raise HTTPException(status_code=404, detail="Stability task not found")
-    return status
+        
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="stability_status",
+        status="success",
+        message=f"Estado de la tarea de estabilidad {task_id} recuperado.",
+        payload=status
+    )
+    unified = await orchestrator.orchestrate(f"stability status {task_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/active")
 async def get_active_tasks(admin_user: OmniUser = Security(get_admin_user)):
-    """Returns all active tasks currently being managed by the loop controller."""
-    return list(loop_controller.active_tasks.values())
+    tasks = list(loop_controller.active_tasks.values())
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="stability_active",
+        status="success",
+        message=f"Se encontraron {len(tasks)} tareas de estabilidad activas.",
+        payload={"tasks": tasks}
+    )
+    unified = await orchestrator.orchestrate("active stability tasks", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": admin_user.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}

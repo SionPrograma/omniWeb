@@ -54,9 +54,28 @@ async def contextual_copilot(payload: ContextualCopilotPayload, creator: OmniUse
         suggestion = "I've analyzed the file. Here is a suggested improvement for clarity."
         code = f"# Suggestion for {os.path.basename(path)}\n# Improvement: Added structured logging\nimport logging\nlogger = logging.getLogger(__name__)\n\nlogger.info('Operation started')"
 
-    return {
-        "status": "success",
-        "summary": summary,
-        "suggestion": suggestion,
-        "code": code
-    }
+    # ENFORCE COGNITIVE PIPELINE
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    
+    raw_res = AICommandResponse(
+        intent="contextual_copilot",
+        status="success",
+        message=f"{summary}: {suggestion}",
+        payload={
+            "summary": summary,
+            "suggestion": suggestion,
+            "code": code,
+            "path": path
+        }
+    )
+    
+    unified = await orchestrator.orchestrate(
+        message=f"contextual analysis for {path}",
+        understanding={"mode": "reflective_analysis", "intent_group": "ANALYSIS_INTENT"},
+        context={"user_id": creator.id},
+        raw_response=raw_res
+    )
+    
+    return {"status": "success", "payload": unified.model_dump()}
