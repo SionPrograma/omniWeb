@@ -1,32 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- State & Restoration (Phase 35 Reset) ---
-    const params = new URLSearchParams(window.location.search);
-    const creatorEnabled = params.get("creator") === "true" || params.get("shell") === "creator";
-    const isMobile = window.innerWidth <= 768;
-
-    if (creatorEnabled) {
-        document.body.classList.add("creator-authenticated");
-        console.log("[CREATOR_MODE] Activation triggered via URL.");
-    }
-
-    const panelRegistry = ['chat', 'mission', 'map', 'storage', 'health', 'network', 'context'];
-    let savedView = 'chat';
-    try {
-        const stored = localStorage.getItem("activePanel") || localStorage.getItem("activeView");
-        if (!isMobile && stored && panelRegistry.includes(stored)) {
-            savedView = stored;
-        }
-    } catch (e) { }
-
-    let activeView = savedView;
-
-    // Initialize Creator Tools if enabled
-    if (creatorEnabled) {
-        if (typeof initCreatorTools === 'function') initCreatorTools();
-        if (typeof initDraggableToolbar === 'function') initDraggableToolbar();
-    }
-
-
     // DOM Elements
     const aiHostView = document.getElementById('ai-host-view');
     const chipView = document.getElementById('active-chip-view');
@@ -57,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- State ---
+    let activeView = 'chat';
 
     // --- Onboarding Greeting ---
     async function initGreeting() {
@@ -128,8 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.omniShell = {
-        closeLauncher: () => setLauncherActive(false),
-        reloadActiveChip: reloadActiveChip
+        closeLauncher: () => setLauncherActive(false)
     };
 
     openLauncherBtn.addEventListener('click', () => {
@@ -172,16 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
     });
 
-    // --- Hot Reload Interface ---
-    function reloadActiveChip() {
-        if (chipView.classList.contains('active') && chipFrame.src) {
-            console.log("Hot reloading active chip iframe...");
-            // Use a cache-busting param if needed, or just reload
-            chipFrame.contentWindow.location.reload();
-        }
-    }
-    window.reloadActiveChip = reloadActiveChip;
-
     // --- Navigation Logic ---
     navItems.forEach(nav => {
         nav.addEventListener('click', () => {
@@ -196,32 +158,20 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 toggleContext(false);
             }
-
-            // Persist state safely (Task 1)
-            try {
-                localStorage.setItem("activeView", view);
-            } catch (e) { }
         });
     });
 
     function toggleContext(show) {
-        try {
-            if (show) {
-                setLauncherActive(false);
-                if (contextPanel) contextPanel.classList.add('active');
-                activeView = 'context';
-            } else {
-                if (contextPanel) contextPanel.classList.remove('active');
-                activeView = 'chat';
-            }
-        } catch (err) {
-            console.error("[SAFE_BOOT] toggleContext failed:", err);
-            // Fallback (Task 2)
-            localStorage.clear();
+        if (show) {
+            setLauncherActive(false);
+            contextPanel.classList.add('active');
+            activeView = 'context';
+        } else {
+            contextPanel.classList.remove('active');
+            activeView = 'chat';
         }
     }
 
-    // --- Interaction ---
     // --- Interactive Drag for Context Panel ---
     let ctxTouchStartX = 0;
     let ctxCurrentX = 0;
@@ -270,41 +220,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: true });
 
-    // --- MOBILE KEYBOARD & VIEWPORT STABILIZATION (Phase 35) ---
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            const viewport = window.visualViewport;
-            const toolbar = document.getElementById('creator-toolbar');
-            const inputBar = document.querySelector('.input-bar');
-
-            // Keyboard Detection: If viewport height shrinks significantly
-            const keyboardOpen = viewport.height < window.innerHeight * 0.85;
-
-            if (keyboardOpen) {
-                document.body.classList.add('keyboard-open');
-                if (toolbar) toolbar.classList.add('minimized');
-
-                // Lift input bar above keyboard
-                if (inputBar) {
-                    const offset = (window.innerHeight - viewport.height) + 10;
-                    inputBar.style.bottom = `${offset}px`;
-                    inputBar.style.transform = 'translateX(-50%) scale(0.98)'; // Slight shrink to fit
-                }
-            } else {
-                document.body.classList.remove('keyboard-open');
-                if (inputBar) {
-                    inputBar.style.bottom = ''; // Back to CSS
-                    inputBar.style.transform = '';
-                }
-            }
-            setTimeout(scrollToBottom, 200);
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/shell/sw.js')
+                .then(reg => console.log('SW Registered', reg))
+                .catch(err => console.error('SW Registration Failed', err));
         });
     }
 
-    // --- Chat / Command Core (Phase 35 Restored) ---
+    // Handle virtual keyboard orientation/resize
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            const inputBar = document.querySelector('.input-bar');
+            if (inputBar) {
+                const layoutHeight = window.visualViewport.height;
+                // Offset the input bar if it's too high (keyboard open)
+                if (window.innerHeight - layoutHeight > 100) {
+                    inputBar.style.bottom = `${(window.innerHeight - layoutHeight) + 10}px`;
+                    // Ensure latest message is visible when keyboard opens
+                    setTimeout(scrollToBottom, 300);
+                } else {
+                    inputBar.style.bottom = ''; // Revert to CSS default
+                    setTimeout(scrollToBottom, 300);
+                }
+            }
+        });
+    }
+
+    // --- Chat / Command Logic ---
     function scrollToBottom(force = false) {
-        const threshold = 150;
+        const threshold = 150; // tolerance in px
         const isNearBottom = (aiHostView.scrollHeight - aiHostView.scrollTop - aiHostView.clientHeight) < threshold;
+
         if (force || isNearBottom) {
             aiHostView.scrollTo({
                 top: aiHostView.scrollHeight,
@@ -316,29 +264,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(text, sender = 'ai', forceScroll = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
+        // Support simple markdown-like cleanup (bold)
         const cleanText = typeof text === 'string' ? text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : text;
         msgDiv.innerHTML = `<div class="msg-bubble">${cleanText}</div>`;
         chatLog.appendChild(msgDiv);
         scrollToBottom(forceScroll || sender === 'user');
     }
-    window.addMessage = addMessage;
+    window.addMessage = addMessage; // Expose to creator.js
 
-    if (shellForm) {
-        shellForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            processCommand();
-        });
-    }
-
-    if (sendBtn) {
-        sendBtn.addEventListener('touchstart', (e) => {
-            const cmd = shellInput.value.trim();
-            if (cmd) {
-                e.preventDefault();
-                processCommand();
-            }
-        }, { passive: false });
-    }
+    sendBtn.addEventListener('click', processCommand);
+    shellInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') processCommand();
+    });
 
     // --- Voice Logic Integration (Reconstructed) ---
     const voice = new VoiceInterface({
@@ -372,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 msg = "Acceso a micrófono denegado.";
             } else if (error === 'browser-unsupported' || error === 'unsupported') {
                 msg = "Navegador no soporta voz.";
-            } else if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
                 msg = "Requiere HTTPS para voz.";
             }
             addMessage(`⚠️ ${msg}`, 'ai');
@@ -394,14 +331,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let isProcessingCommand = false;
     async function processCommand() {
         const cmd = shellInput.value.trim();
-        if (!cmd || isProcessingCommand) return;
+        if (!cmd) return;
 
-        isProcessingCommand = true;
-        // Don't clear immediately, wait for dispatch verification
-        addMessage(cmd, 'user', true);
+        addMessage(cmd, 'user', true); // Force scroll for user message
+        shellInput.value = '';
 
         // Typing indicator + Orb pulse
         const orb = document.querySelector('.ai-orb');
@@ -418,17 +353,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer omniweb-dev-secret-token'
+                    'Authorization': 'Bearer omniweb-dev-secret-token' // Default dev token
                 },
                 body: JSON.stringify({ message: cmd })
             });
-
-            if (response.ok) {
-                shellInput.value = ''; // Success, clear now
-            } else {
-                console.warn("[SEND_FAILURE] Core rejected message.");
-                // Keep text in input for retry
-            }
 
             const data = await response.json();
             if (orb) orb.classList.remove('processing');
@@ -530,27 +458,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- Builder Execution Handling ---
             if (data.intent === 'approve_roadmap' && data.payload?.task_id) {
-                if (window.innerWidth <= 768 && window.mobileWorkflow) {
-                    window.mobileWorkflow.trackTask(data.payload.task_id);
-                } else if (window.builderUI) {
+                // Show console immediately or wait for start?
+                // User requirement: "UI feedback on current module..."
+                // I'll show it as soon as it's approved.
+                if (window.builderUI) {
                     window.builderUI.show(data.payload.task_id);
                 }
             }
 
             if (data.intent === 'start_execution' && data.payload?.task_id) {
-                if (window.innerWidth <= 768 && window.mobileWorkflow) {
-                    window.mobileWorkflow.trackTask(data.payload.task_id);
-                } else if (window.builderUI) {
+                if (window.builderUI) {
                     window.builderUI.show(data.payload.task_id);
                 }
             }
 
         } catch (error) {
             console.error('AI Host Error:', error);
-            if (typingDiv) typingDiv.remove();
+            typingDiv.remove();
             addMessage("I'm having trouble connecting to the core system. Please verify connection.", 'ai');
-        } finally {
-            isProcessingCommand = false;
         }
     }
 
@@ -653,409 +578,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
-
-    // --- Final UI Bootstrap (Phase 31) ---
-    try {
-        if (activeView === 'context') {
-            toggleContext(true);
-            const nav = document.querySelector('[data-view="context"]');
-            if (nav) nav.classList.add('active');
-        } else {
-            toggleContext(false);
-            const nav = document.querySelector('[data-view="chat"]');
-            if (nav) nav.classList.add('active');
-        }
-    } catch (err) {
-        console.error("[SAFE_BOOT] UI Bootstrap failed, forcing reset.");
-        localStorage.clear();
-        toggleContext(false);
-    }
 });
-
-// --- Creator Tools Logic (PART 3, 4, 5, 6) ---
-function initCreatorTools() {
-    const toolbarEditor = document.getElementById('toolbar-editor');
-    const toolbarCopilot = document.getElementById('toolbar-copilot');
-    const toolbarReload = document.getElementById('toolbar-reload');
-
-    const editorOverlay = document.getElementById('creator-editor-overlay');
-    const copilotOverlay = document.getElementById('creator-copilot-overlay');
-    const patchOverlay = document.getElementById('creator-patch-overlay');
-
-    const editorFilePath = document.getElementById('editor-file-path');
-    const editorContent = document.getElementById('editor-content');
-    const editorOpenBtn = document.getElementById('editor-open-btn');
-    const editorSaveBtn = document.getElementById('editor-save-btn');
-
-    const copilotPrompt = document.getElementById('copilot-prompt');
-    const copilotSuggestBtn = document.getElementById('copilot-suggest-btn');
-    const suggestionText = document.getElementById('suggestion-text');
-    const suggestionInsertBtn = document.getElementById('suggestion-insert-btn');
-
-    const patchOriginal = document.getElementById('patch-original');
-    const patchModified = document.getElementById('patch-modified');
-    const patchApplyBtn = document.getElementById('patch-apply-btn');
-
-    let originalState = "";
-
-    // Toolbar Button Actions
-    if (toolbarEditor) toolbarEditor.onclick = () => {
-        editorOverlay.style.display = 'flex';
-        copilotOverlay.style.display = 'none';
-    };
-
-    if (toolbarCopilot) toolbarCopilot.onclick = () => {
-        copilotOverlay.style.display = 'flex';
-        editorOverlay.style.display = 'none';
-    };
-
-    if (toolbarReload) toolbarReload.onclick = () => {
-        console.log("[RELOAD] Triggering app reload...");
-        window.location.reload();
-    };
-
-    // Editor Logic (Stage 2: FS Integration)
-    if (editorOpenBtn) editorOpenBtn.onclick = async () => {
-        const path = editorFilePath.value.trim();
-        if (!path) return alert("Please enter a path.");
-
-        try {
-            const res = await fetch(`/api/v1/creator/fs/read?path=${encodeURIComponent(path)}`, {
-                headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
-            });
-            const data = await res.json();
-            if (res.ok && data.content !== undefined) {
-                editorContent.value = data.content;
-                originalState = data.content;
-                console.log(`[FS] File loaded: ${path}`);
-            } else {
-                alert(`Load failed: ${data.detail || 'Unknown error'}`);
-            }
-        } catch (err) {
-            alert("Failed to reach file system API.");
-        }
-    };
-
-    if (editorSaveBtn) editorSaveBtn.onclick = async () => {
-        const path = editorFilePath.value.trim();
-        const modifiedContent = editorContent.value;
-
-        if (!path) return alert("Open a file first.");
-
-        try {
-            // Generate Diff Preview
-            const res = await fetch('/api/v1/creator/fs/diff', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer omniweb-dev-secret-token'
-                },
-                body: JSON.stringify({ path, content: modifiedContent })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                patchOriginal.textContent = data.original_content;
-                patchModified.textContent = data.modified_content;
-
-                // If diff is available, we could log it or display it in a third panel if it existed.
-                // For now, original/modified is sufficient as per Stage 1 pattern.
-                patchOverlay.style.display = 'flex';
-                console.log("[FS] Diff generated.");
-            } else {
-                alert("Failed to generate diff preview.");
-            }
-        } catch (err) {
-            alert("Diff estimation failed.");
-        }
-    };
-
-    if (patchApplyBtn) patchApplyBtn.onclick = async () => {
-        const path = editorFilePath.value.trim();
-        const content = editorContent.value;
-
-        try {
-            const res = await fetch('/api/v1/creator/fs/write', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer omniweb-dev-secret-token'
-                },
-                body: JSON.stringify({ path, content })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                console.log(`[FS] File saved: ${path}. Backup: ${data.backup}`);
-                patchOverlay.style.display = 'none';
-                originalState = content;
-
-                // --- Start Stage 4: Verification Loop ---
-                triggerVerificationFlow(path);
-            } else {
-                const err = await res.json();
-                alert("Error saving: " + err.detail);
-            }
-        } catch (err) {
-            alert("Safe write failed.");
-        }
-    };
-
-    async function triggerVerificationFlow(path) {
-        const verifyOverlay = document.getElementById('creator-verify-overlay');
-        const verifyMessage = document.getElementById('verify-message');
-        const verifyApplyBtn = document.getElementById('verify-apply-btn');
-        const stepReload = document.getElementById('step-reload');
-
-        if (!verifyOverlay) return;
-
-        verifyOverlay.style.display = 'flex';
-        verifyMessage.textContent = `Analyzing impact for ${path.split('/').pop()}...`;
-        verifyApplyBtn.disabled = false;
-        verifyApplyBtn.textContent = "APPLY & VERIFY";
-        stepReload.style.opacity = "0.5";
-        stepReload.innerHTML = `<span style="color: #888;">○</span> <span>Reload Pending</span>`;
-
-        verifyApplyBtn.onclick = async () => {
-            verifyApplyBtn.disabled = true;
-            verifyApplyBtn.textContent = "APPLYING...";
-
-            try {
-                const res = await fetch('/api/v1/creator/fs/apply', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer omniweb-dev-secret-token'
-                    },
-                    body: JSON.stringify({ path })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.verified) {
-                    stepReload.innerHTML = `<span style="color: #32ff96;">●</span> <span>${data.reload_type.toUpperCase()} Verified</span>`;
-                    stepReload.style.opacity = "1";
-                    verifyMessage.textContent = data.message;
-
-                    setTimeout(() => {
-                        verifyApplyBtn.textContent = "SUCCESS - ALL CLEAR";
-                        if (data.reload_type === 'frontend') {
-                            console.log("[STAGE 4] Frontend refresh pending...");
-                            setTimeout(() => window.location.reload(), 1000);
-                        } else {
-                            console.log("[STAGE 4] Backend applied safely.");
-                            setTimeout(() => verifyOverlay.style.display = 'none', 3000);
-                        }
-                    }, 1000);
-                } else {
-                    alert("Apply failed: " + (data.detail || "System verification rejected the change."));
-                    verifyApplyBtn.disabled = false;
-                    verifyApplyBtn.textContent = "RETRY APPLY";
-                }
-            } catch (err) {
-                alert("Critical failure during shell verification.");
-                verifyApplyBtn.disabled = false;
-                verifyApplyBtn.textContent = "RETRY";
-            }
-        };
-    }
-
-    // --- Stage 3: Contextual Copilot ---
-    const copilotRespSummary = document.getElementById('copilot-resp-summary');
-    const copilotRespSuggestion = document.getElementById('copilot-resp-suggestion');
-    const copilotOutput = document.getElementById('copilot-suggestion-output');
-
-    async function callContextualCopilot(customPrompt) {
-        const path = editorFilePath.value.trim();
-        const content = editorContent.value;
-        const prompt = customPrompt || copilotPrompt.value.trim();
-
-        if (!prompt) return alert("Please enter a prompt or use a quick action.");
-
-        try {
-            const res = await fetch('/api/v1/creator/copilot/contextual', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer omniweb-dev-secret-token'
-                },
-                body: JSON.stringify({ path, content, prompt })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                copilotRespSummary.textContent = data.summary;
-                copilotRespSuggestion.textContent = data.suggestion;
-                suggestionText.textContent = data.code;
-
-                copilotOutput.style.display = 'block';
-                suggestionInsertBtn.style.display = 'block';
-                console.log("[COPILOT] Contextual suggestion received.");
-            } else {
-                alert("Copilot context analysis failed.");
-            }
-        } catch (err) {
-            console.error("[COPILOT] Error:", err);
-            alert("Copilot is currently offline.");
-        }
-    }
-
-    if (copilotSuggestBtn) copilotSuggestBtn.onclick = () => callContextualCopilot();
-
-    // Map global creatorEnv method for buttons in HTML
-    if (window.creatorEnv) {
-        window.creatorEnv.askCopilot = (mode) => {
-            let p = "";
-            if (mode === 'explain') p = "Explain this file and its main logic.";
-            if (mode === 'fix') p = "Find potential bugs in this file and suggest a fix.";
-            if (mode === 'refactor') p = "Suggest a safe refactor for this code to improve modularity.";
-
-            copilotPrompt.value = p;
-            callContextualCopilot(p);
-        };
-    }
-
-    if (suggestionInsertBtn) suggestionInsertBtn.onclick = () => {
-        const codeToInsert = suggestionText.textContent;
-        if (!codeToInsert) return;
-
-        // Task 4: Insert Into Editor safely (append at end if no selection logic exists yet)
-        editorContent.value += "\n\n" + codeToInsert;
-
-        // Return to editor
-        copilotOverlay.style.display = 'none';
-        editorOverlay.style.display = 'flex';
-        console.log("[COPILOT] Code inserted into editor.");
-    };
-
-    function initDraggableToolbar() {
-        const toolbar = document.getElementById('creator-toolbar');
-        if (!toolbar) return;
-
-        let isDragging = false;
-        let startX, startY, initialX, initialY;
-
-        // Load saved position
-        const savedPos = JSON.parse(localStorage.getItem('creator_toolbar_pos'));
-        if (savedPos) {
-            toolbar.style.top = 'auto'; // Reset top
-            toolbar.style.left = savedPos.x !== undefined ? savedPos.x + 'px' : 'auto';
-            toolbar.style.right = savedPos.right !== undefined ? savedPos.right + 'px' : '20px';
-            toolbar.style.bottom = savedPos.bottom !== undefined ? savedPos.bottom + 'px' : '100px';
-            if (savedPos.x === undefined) toolbar.style.left = 'auto';
-        }
-
-        const minToggle = document.getElementById('toolbar-minimize');
-        if (minToggle) {
-            minToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toolbar.classList.toggle('minimized');
-                resetIdleTimer();
-            });
-        }
-
-        let idleTimer;
-        const resetIdleTimer = () => {
-            clearTimeout(idleTimer);
-            toolbar.classList.remove('minimized');
-            idleTimer = setTimeout(() => {
-                if (!isDragging) toolbar.classList.add('minimized');
-            }, 5000); // 5s idle to minimize
-        };
-
-        const onStart = (e) => {
-            resetIdleTimer();
-            // Allow dragging from handle OR any part of the toolbar that isn't a button
-            const isHandle = e.target.closest('.toolbar-drag-handle');
-            const isButton = e.target.closest('button');
-
-            if (isButton && !isHandle) return; // Regular button click
-
-            isDragging = true;
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-
-            startX = clientX;
-            startY = clientY;
-            const rect = toolbar.getBoundingClientRect();
-            initialX = rect.left;
-            initialY = rect.top;
-
-            toolbar.style.transition = 'none';
-            if (e.type.includes('touch')) e.preventDefault();
-        };
-
-        const onMove = (e) => {
-            if (!isDragging) return;
-            resetIdleTimer();
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-
-            const dx = clientX - startX;
-            const dy = clientY - startY;
-
-            let newX = initialX + dx;
-            let newY = initialY + dy;
-
-            // Constrain within screen
-            newX = Math.max(0, Math.min(newX, window.innerWidth - toolbar.offsetWidth));
-            newY = Math.max(0, Math.min(newY, window.innerHeight - toolbar.offsetHeight));
-
-            toolbar.style.left = newX + 'px';
-            toolbar.style.top = newY + 'px';
-        };
-
-        const onEnd = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            toolbar.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            resetIdleTimer();
-
-            // Snap to nearest edge
-            const rect = toolbar.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const screenWidth = window.innerWidth;
-            const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-            let finalX, finalRight, finalBottom;
-            if (centerX < screenWidth / 2) {
-                finalX = 15; // Snap left
-                finalRight = 'auto';
-            } else {
-                finalX = 'auto'; // Snap right
-                finalRight = 15;
-            }
-
-            // Avoid Input Bar
-            const inputBar = document.querySelector('.input-bar');
-            const inputBottomLimit = inputBar ? (screenHeight - inputBar.getBoundingClientRect().top) + 20 : 160;
-
-            // Avoid Status Bar (top 80px)
-            const topLimit = 80;
-            const bottomMax = screenHeight - rect.height - topLimit;
-
-            finalBottom = Math.max(inputBottomLimit, Math.min(screenHeight - rect.top - rect.height, bottomMax));
-
-            toolbar.style.left = finalX === 'auto' ? 'auto' : finalX + 'px';
-            toolbar.style.right = finalRight === 'auto' ? 'auto' : finalRight + 'px';
-            toolbar.style.bottom = finalBottom + 'px';
-            toolbar.style.top = 'auto';
-
-            // Save position
-            localStorage.setItem('creator_toolbar_pos', JSON.stringify({
-                x: finalX === 'auto' ? undefined : finalX,
-                right: finalRight === 'auto' ? undefined : finalRight,
-                bottom: finalBottom
-            }));
-        };
-
-        toolbar.addEventListener('mousedown', onStart);
-        toolbar.addEventListener('touchstart', onStart, { passive: false });
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('touchmove', (e) => { if (isDragging) e.preventDefault(); onMove(e); }, { passive: false });
-        window.addEventListener('mouseup', onEnd);
-        window.addEventListener('touchend', onEnd);
-
-        toolbar.style.pointerEvents = 'auto';
-        resetIdleTimer();
-    }
-}

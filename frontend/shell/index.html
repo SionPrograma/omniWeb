@@ -11,8 +11,6 @@
         rel="stylesheet">
     <link rel="stylesheet" href="/shell/style.css">
     <link rel="stylesheet" href="/shell/logbook.css">
-    <link rel="stylesheet" href="/shell/editor.css">
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/shell/creator.css">
     <link rel="stylesheet" href="/shell/cluster.css">
     <link rel="stylesheet" href="/shell/workload.css">
@@ -25,6 +23,7 @@
     <link rel="stylesheet" href="/shell/scaling_beta.css">
     <link rel="stylesheet" href="/shell/creator_theme.css">
     <link rel="stylesheet" href="/shell/builder.css">
+    <link rel="stylesheet" href="/shell/editor.css">
     <link rel="manifest" href="/shell/manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -34,29 +33,6 @@
 </head>
 
 <body>
-    <!-- Global Shell Security Interceptor (Phase 31) -->
-    <script>
-        (function () {
-            const originalFetch = window.fetch;
-            window.fetch = function (resource, config) {
-                // Intercept all API calls to identify the Shell to the backend
-                if (typeof resource === 'string' && resource.includes('/api/v1/')) {
-                    config = config || {};
-                    config.headers = config.headers || {};
-
-                    // Identify this as an official OmniWeb Shell request
-                    // to allow Device Trust bypass for authenticated Creator sessions.
-                    if (config.headers instanceof Headers) {
-                        config.headers.set('X-Shell-Identity', 'omniweb-shell');
-                    } else {
-                        config.headers['X-Shell-Identity'] = 'omniweb-shell';
-                    }
-                }
-                return originalFetch(resource, config);
-            };
-            console.log("[SECURITY_SHIELD] Shell Identity Interceptor Active.");
-        })();
-    </script>
     <!-- Background Nebula/Particles -->
     <div class="nebula-bg"></div>
     <div class="particles" id="particles"></div>
@@ -159,7 +135,7 @@
         <!-- MISSION CONTROL (COCKPIT) -->
         <main id="mission-control-view">
             <header class="cockpit-header">
-                <h1>Omni Command Center</h1>
+                <h1>Mission Control</h1>
                 <div class="cockpit-tabs">
                     <button class="cockpit-tab active" data-tab="health">General Health</button>
                     <button class="cockpit-tab" data-tab="map">Galaxy Map</button>
@@ -292,41 +268,6 @@
             </button>
         </nav>
 
-        <!-- CREATOR TOOLBAR (PART 2) -->
-        <div id="creator-toolbar" class="creator-floating-toolbar">
-            <div class="toolbar-drag-handle">
-                <span class="handle-bar"></span>
-            </div>
-            <button id="toolbar-editor" title="Editor">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                <span>Editor</span>
-            </button>
-            <button id="toolbar-copilot" title="Copilot">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 8V4H8" />
-                    <rect x="4" y="8" width="16" height="12" rx="2" />
-                    <path d="M12 12v4" />
-                    <path d="M16 12v4" />
-                </svg>
-                <span>Copilot</span>
-            </button>
-            <button id="toolbar-reload" title="Reload">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6" />
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                <span>Reload</span>
-            </button>
-            <button id="toolbar-minimize" class="min-toggle" title="Minimize">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
-            </button>
-        </div>
-
         <!-- LAUNCHER OVERLAY -->
         <div id="launcher-overlay">
             <div class="launcher-header">
@@ -377,16 +318,16 @@
             <div class="evidence-grid" id="shell-media-grid"></div>
         </div>
 
-        <form class="input-bar" id="shell-input-form" onsubmit="return false;">
+        <div class="input-bar">
             <input type="file" id="global-media-upload" multiple accept="image/*,video/*" style="display:none;"
                 onchange="creatorEnv.handleMediaUpload(this)">
-            <button type="button" id="media-upload-trigger"
-                onclick="document.getElementById('global-media-upload').click()">
+            <button id="media-upload-trigger" onclick="document.getElementById('global-media-upload').click()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12" />
                 </svg>
             </button>
-            <button type="button" id="voice-command">
+            <input type="text" placeholder="Command Omni..." id="shell-input">
+            <button id="voice-command">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
@@ -394,132 +335,11 @@
                     <line x1="8" y1="23" x2="16" y2="23" />
                 </svg>
             </button>
-            <input type="text" placeholder="Command Omni..." id="shell-input" autocomplete="off">
-            <button type="submit" id="send-command" class="send-action-btn">
+            <button id="send-command">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
             </button>
-        </form>
-
-        <!-- MOBILE CREATOR WORKFLOW LAYER (MISSION 33) -->
-        <div id="mobile-workflow-layer" class="mobile-workflow-layer">
-            <div class="mw-header">
-                <h4>Creator Workflow</h4>
-                <div id="mw-status" class="mw-status-badge">Standby</div>
-            </div>
-            <div class="mw-body">
-                <div id="mw-proposal-text" class="mw-proposal-info">No active proposal</div>
-                <div id="mw-patch-status" class="mw-patch-status">
-                    Waiting for mission plan...
-                </div>
-            </div>
-            <div class="mw-actions">
-                <button class="mw-btn" id="mw-reject-btn" onclick="mobileWorkflow.cancelTask()">Reject</button>
-                <button class="mw-btn primary" id="mw-approve-btn"
-                    onclick="mobileWorkflow.approveTask()">Approve</button>
-                <button class="mw-btn" id="mw-retry-btn" style="display:none;"
-                    onclick="mobileWorkflow.retryTask()">Retry</button>
-                <button class="mw-btn danger" id="mw-rollback-btn">Rollback</button>
-            </div>
-        </div>
-
-        <!-- LIGHTWEIGHT CREATOR PANELS (PART 3, 4, 5) -->
-        <div id="creator-editor-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Creator Editor</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-editor-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <input type="text" id="editor-file-path" placeholder="relative/path/to/file.py" class="creator-input">
-                <button class="btn-apply" id="editor-open-btn" style="width: auto; margin: 10px 0;">Open File</button>
-                <textarea id="editor-content" placeholder="File content..." class="creator-textarea"></textarea>
-                <button class="btn-apply" id="editor-save-btn">Save Changes</button>
-            </div>
-        </div>
-
-        <div id="creator-patch-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Patch Preview</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-patch-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <div class="patch-diff-container">
-                    <div style="flex:1">
-                        <h4>Original</h4>
-                        <pre id="patch-original" class="diff-pre"></pre>
-                    </div>
-                    <div style="flex:1">
-                        <h4>Modified</h4>
-                        <pre id="patch-modified" class="diff-pre"></pre>
-                    </div>
-                </div>
-                <div style="display:flex; gap: 10px; margin-top: 15px;">
-                    <button class="btn-cancel"
-                        onclick="document.getElementById('creator-patch-overlay').style.display='none'">Cancel</button>
-                    <button class="btn-apply" id="patch-apply-btn">Apply Patch</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="creator-copilot-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Creator Copilot</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-copilot-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <textarea id="copilot-prompt" placeholder="Ask Copilot about the current file..."
-                    class="creator-textarea"></textarea>
-                <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button class="btn-apply" style="width: auto; flex: 1;"
-                        onclick="creatorEnv.askCopilot('explain')">Explain</button>
-                    <button class="btn-apply" style="width: auto; flex: 1;"
-                        onclick="creatorEnv.askCopilot('fix')">Suggest Fix</button>
-                    <button class="btn-apply" style="width: auto; flex: 1;"
-                        onclick="creatorEnv.askCopilot('refactor')">Refactor</button>
-                    <button class="btn-apply" style="width: auto; flex: 1;" id="copilot-suggest-btn">Ask</button>
-                </div>
-                <div id="copilot-suggestion-output" style="margin-top: 15px; display: none;">
-                    <h4 id="copilot-resp-summary" style="color: var(--creator-gold); margin-bottom: 5px;"></h4>
-                    <p id="copilot-resp-suggestion" style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 10px;"></p>
-                    <pre id="suggestion-text" class="diff-pre"></pre>
-                    <button class="btn-apply" id="suggestion-insert-btn" style="margin-top: 10px;">Insert into
-                        Editor</button>
-                </div>
-            </div>
-        </div>
-        <div id="creator-verify-overlay" class="creator-overlay-panel" style="display:none;">
-            <div class="panel-header">
-                <h3>Verification & Reload</h3>
-                <button class="close-overlay-btn"
-                    onclick="document.getElementById('creator-verify-overlay').style.display='none'">✕</button>
-            </div>
-            <div class="panel-body">
-                <div id="verify-status-container" style="text-align: center; padding: 20px;">
-                    <div id="verify-icon" style="font-size: 3rem; margin-bottom: 20px; color: #32ff96;">✓</div>
-                    <h4 id="verify-title" style="color: #fff; margin-bottom: 10px;">File Saved Successfully</h4>
-                    <p id="verify-message" style="color: #ccc; font-size: 0.9rem; margin-bottom: 20px;"></p>
-
-                    <div id="verify-steps"
-                        style="text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="color: #32ff96;">●</span> <span>Backup Created</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="color: #32ff96;">●</span> <span>Integrity Verified</span>
-                        </div>
-                        <div id="step-reload" style="display: flex; align-items: center; gap: 10px; opacity: 0.5;">
-                            <span style="color: #888;">○</span> <span>Reload Pending</span>
-                        </div>
-                    </div>
-
-                    <button class="btn-apply" id="verify-apply-btn" style="width: 100%; height: 50px;">APPLY &
-                        VERIFY</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -553,24 +373,13 @@
     <script src="/shell/voice.js"></script>
     <script src="/shell/builder.js"></script>
     <script>
-        // --- OMNI SHELL HARD RESET (PHASE 35) ---
-        // Force unregister all service workers and purge caches to ensure single-source-of-truth
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for (let registration of registrations) {
-                    registration.unregister().then(success => {
-                        if (success) console.warn("[SHELL_RESET] ServiceWorker Unregistered.");
-                    });
-                }
-            });
-        }
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                for (let name of names) {
-                    caches.delete(name).then(() => {
-                        console.warn("[SHELL_RESET] Cache Purged:", name);
-                    });
-                }
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/shell/sw.js').then(reg => {
+                    console.log('OmniWeb Service Worker Registered.');
+                }).catch(err => {
+                    console.error('Service Worker Registration Failed:', err);
+                });
             });
         }
     </script>
@@ -578,7 +387,6 @@
     <script src="/shell/creator.js"></script>
     <script src="/shell/editor.js"></script>
     <script src="/shell/logbook.js"></script>
-    <script src="/shell/mobile_workflow.js"></script>
     <script src="/shell/main.js"></script>
 
 </body>

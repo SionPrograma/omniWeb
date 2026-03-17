@@ -31,7 +31,7 @@ class VoiceInterface {
         }
 
         // Secure Context Check (Critical for mobile)
-        if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
             this.permissionStatus = 'unsecure';
             console.warn("DIAGNOSTIC: Voice requires HTTPS for mobile access.");
         }
