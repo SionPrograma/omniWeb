@@ -171,14 +171,21 @@ class CommandRouter:
             
             res = None
             
-            # 1. Intent classification
-            intent = intent_classifier.classify(msg_clean)
+            # 1. SEMANTIC INTENT UNDERSTANDING (Mandatory Entry Point)
+            from ..intent_understanding.intent_engine import intent_engine
+            session_id = str(context.get("user_id", "default_user"))
+            # The Intent Engine handles pattern matching, context reconstruction and history tracking
+            understanding = await intent_engine.understand(msg_clean, session_id)
             
-            # Explicit override for creator prefixes (only if no specific intent detected)
+            intent = understanding["specific_intent"]
+            intent_group = understanding["intent_group"]
+            semantic_ctx = understanding["context"]
+            
+            # Explicit override for creator prefixes (only if no specific intent detected by engine)
             if is_creator_prefixed and (not intent or intent == "chat"):
                 intent = "creator_command"
                 
-            logger.info(f"[INTENT_DETECTED] Intent: {intent}")
+            logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
             
             # --- PRIORITY CHAIN EXECUTION (Phase 0 Polish) ---
             # Define priority groups to ensure commands aren't captured by lower-priority processors
@@ -192,8 +199,9 @@ class CommandRouter:
             
             priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + ack_intents + brain_intents
             
-            # 2. Priority Routing: Core Platform Commands (Highest Priority)
-            if intent in priority_intents and intent in self.intents:
+            # 2. Priority Routing: Core Platform Commands (Highest Priority for granular ops)
+            # Most reasoning tasks should fall through to the Brain Layer (4)
+            if intent in priority_intents and intent in self.intents and intent not in brain_intents:
                 logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
                 res = await self.intents[intent](msg_clean)
                 if res:
@@ -211,7 +219,7 @@ class CommandRouter:
                 except Exception as e:
                     logger.error(f"[EXECUTION_FAIL] Messaging processor error: {e}")
 
-            # 4. Brain Layer (Reasoning / Analysis / Conversation)
+            # 4. Brain Layer (Reasoning / Analysis / Conversation / Complex Missions)
             from ..brain_router import BrainRouter
             from backend.core.system_state.engine import state_engine
             from backend.core.omni_runtime.runtime_controller import runtime_controller
@@ -224,7 +232,8 @@ class CommandRouter:
                 context=context,
                 runtime_context=runtime_controller.state,
                 chip_registry=self.registry,
-                system_state=system_state
+                system_state=system_state,
+                understanding=understanding
             )
             if res:
                 return await self._finalize_response(res, message)

@@ -294,6 +294,9 @@
 
         <!-- CREATOR TOOLBAR (PART 2) -->
         <div id="creator-toolbar" class="creator-floating-toolbar">
+            <div class="toolbar-drag-handle">
+                <span class="handle-bar"></span>
+            </div>
             <button id="toolbar-editor" title="Editor">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 20h9" />
@@ -316,6 +319,11 @@
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                 </svg>
                 <span>Reload</span>
+            </button>
+            <button id="toolbar-minimize" class="min-toggle" title="Minimize">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
             </button>
         </div>
 
@@ -369,16 +377,16 @@
             <div class="evidence-grid" id="shell-media-grid"></div>
         </div>
 
-        <div class="input-bar">
+        <form class="input-bar" id="shell-input-form" onsubmit="return false;">
             <input type="file" id="global-media-upload" multiple accept="image/*,video/*" style="display:none;"
                 onchange="creatorEnv.handleMediaUpload(this)">
-            <button id="media-upload-trigger" onclick="document.getElementById('global-media-upload').click()">
+            <button type="button" id="media-upload-trigger"
+                onclick="document.getElementById('global-media-upload').click()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12" />
                 </svg>
             </button>
-            <input type="text" placeholder="Command Omni..." id="shell-input">
-            <button id="voice-command">
+            <button type="button" id="voice-command">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
@@ -386,11 +394,34 @@
                     <line x1="8" y1="23" x2="16" y2="23" />
                 </svg>
             </button>
-            <button id="send-command">
+            <input type="text" placeholder="Command Omni..." id="shell-input" autocomplete="off">
+            <button type="submit" id="send-command" class="send-action-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
             </button>
+        </form>
+
+        <!-- MOBILE CREATOR WORKFLOW LAYER (MISSION 33) -->
+        <div id="mobile-workflow-layer" class="mobile-workflow-layer">
+            <div class="mw-header">
+                <h4>Creator Workflow</h4>
+                <div id="mw-status" class="mw-status-badge">Standby</div>
+            </div>
+            <div class="mw-body">
+                <div id="mw-proposal-text" class="mw-proposal-info">No active proposal</div>
+                <div id="mw-patch-status" class="mw-patch-status">
+                    Waiting for mission plan...
+                </div>
+            </div>
+            <div class="mw-actions">
+                <button class="mw-btn" id="mw-reject-btn" onclick="mobileWorkflow.cancelTask()">Reject</button>
+                <button class="mw-btn primary" id="mw-approve-btn"
+                    onclick="mobileWorkflow.approveTask()">Approve</button>
+                <button class="mw-btn" id="mw-retry-btn" style="display:none;"
+                    onclick="mobileWorkflow.retryTask()">Retry</button>
+                <button class="mw-btn danger" id="mw-rollback-btn">Rollback</button>
+            </div>
         </div>
 
         <!-- LIGHTWEIGHT CREATOR PANELS (PART 3, 4, 5) -->
@@ -522,13 +553,24 @@
     <script src="/shell/voice.js"></script>
     <script src="/shell/builder.js"></script>
     <script>
+        // --- OMNI SHELL HARD RESET (PHASE 35) ---
+        // Force unregister all service workers and purge caches to ensure single-source-of-truth
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/shell/sw.js').then(reg => {
-                    console.log('OmniWeb Service Worker Registered.');
-                }).catch(err => {
-                    console.error('Service Worker Registration Failed:', err);
-                });
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister().then(success => {
+                        if (success) console.warn("[SHELL_RESET] ServiceWorker Unregistered.");
+                    });
+                }
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                for (let name of names) {
+                    caches.delete(name).then(() => {
+                        console.warn("[SHELL_RESET] Cache Purged:", name);
+                    });
+                }
             });
         }
     </script>
@@ -536,6 +578,7 @@
     <script src="/shell/creator.js"></script>
     <script src="/shell/editor.js"></script>
     <script src="/shell/logbook.js"></script>
+    <script src="/shell/mobile_workflow.js"></script>
     <script src="/shell/main.js"></script>
 
 </body>

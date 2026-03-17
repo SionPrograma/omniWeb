@@ -30,6 +30,20 @@ class ExecutionHistory(BaseModel):
     evidence_used: List[str]
     timestamp: datetime = Field(default_factory=datetime.now)
 
+class LearningRecord(BaseModel):
+    pattern: str
+    context: str
+    reliability: float
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+class MissionReasoningRecord(BaseModel):
+    creator_command: str
+    interpreted_goal: str
+    generated_plan: Dict[str, Any]
+    audit_findings: List[str]
+    execution_outcome: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+
 class CognitiveCore:
     """
     Unified "world model" shared by Omni Brain, Creator Copilot, Chips, and Execution Controller.
@@ -44,6 +58,8 @@ class CognitiveCore:
             cls._instance.hypotheses: Dict[str, HypothesisRegistry] = {}
             cls._instance.execution_history: List[ExecutionHistory] = []
             cls._instance.evidence_snapshots: List[Dict[str, Any]] = []
+            cls._instance.learning_records: List[LearningRecord] = []
+            cls._instance.mission_history: List[MissionReasoningRecord] = []
         return cls._instance
 
     def update_world_state(self, system_health: Optional[str] = None, active_chips: Optional[List[str]] = None, flow_metrics: Optional[Dict[str, Any]] = None):
@@ -57,6 +73,33 @@ class CognitiveCore:
         
         self.world_state.runtime_snapshot_timestamp = datetime.now()
         logger.info(f"[COGNITIVE_CORE] World state updated: {self.world_state.system_health}")
+
+    def add_learning_record(self, pattern: str, context: str, reliability: float):
+        """Stores a validated learning pattern extracted by Shadow agents."""
+        record = LearningRecord(pattern=pattern, context=context, reliability=reliability)
+        self.learning_records.append(record)
+        logger.info(f"[COGNITIVE_CORE] New knowledge reinforced: {pattern}")
+
+    def add_mission_record(self, command: str, goal: str, plan: Dict[str, Any], audit: List[str], outcome: str):
+        """Records a high-level creator mission for structural learning."""
+        record = MissionReasoningRecord(
+            creator_command=command,
+            interpreted_goal=goal,
+            generated_plan=plan,
+            audit_findings=audit,
+            execution_outcome=outcome
+        )
+        self.mission_history.append(record)
+        logger.info(f"[COGNITIVE_CORE] Mission Reasoning Record stored: {goal} ({outcome})")
+
+    def get_recent_topic(self) -> Optional[str]:
+        """Infers the most recent topic from execution history or hypotheses."""
+        if not self.execution_history:
+            if self.hypotheses:
+                latest_h = list(self.hypotheses.values())[-1]
+                return latest_h.description
+            return None
+        return self.execution_history[-1].plan_id
 
     def register_hypothesis(self, description: str, supporting_evidence: List[str], confidence: float, status: str = "active"):
         """Registers or updates a reasoning hypothesis."""

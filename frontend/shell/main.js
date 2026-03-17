@@ -1,65 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Safe UI Boot (Phase 31) ---
-    const UI_VERSION = "1.5";
-    const panelRegistry = ['chat', 'mission', 'map', 'storage', 'health', 'network', 'context'];
-
-    try {
-        if (localStorage.getItem("ui_state_version") !== UI_VERSION) {
-            console.warn("[SAFE_BOOT] Version mismatch or legacy state detected. Resetting storage.");
-            localStorage.clear();
-            localStorage.setItem("ui_state_version", UI_VERSION);
-        }
-    } catch (err) {
-        console.warn("[SAFE_BOOT] LocalStorage restricted or unavailable.");
-    }
-
-    // --- Creator Mode Activation (PART 1) ---
+    // --- State & Restoration (Phase 35 Reset) ---
     const params = new URLSearchParams(window.location.search);
     const creatorEnabled = params.get("creator") === "true" || params.get("shell") === "creator";
+    const isMobile = window.innerWidth <= 768;
 
     if (creatorEnabled) {
         document.body.classList.add("creator-authenticated");
         console.log("[CREATOR_MODE] Activation triggered via URL.");
-
-        // Ensure switchView('chat') as per mission requirement
-        if (window.creatorEnv) {
-            try {
-                window.creatorEnv.switchView('chat');
-            } catch (err) {
-                console.error("[SAFE_BOOT] Failed to switch to default creator view, force reset.");
-                localStorage.clear();
-                window.location.reload();
-            }
-        }
-
-        // Initialize Creator Tools Logic (PART 3, 4, 5, 6)
-        initCreatorTools();
     }
 
-    // --- State & Restoration (Phase 31) ---
+    const panelRegistry = ['chat', 'mission', 'map', 'storage', 'health', 'network', 'context'];
     let savedView = 'chat';
     try {
-        const isMobile = window.innerWidth <= 768;
         const stored = localStorage.getItem("activePanel") || localStorage.getItem("activeView");
-
-        if (stored && panelRegistry.includes(stored)) {
-            // Validate that the element exists (Task 1)
-            const targetEl = document.querySelector(`[data-view="${stored}"]`) || document.getElementById(`${stored}-view`);
-            if (targetEl) {
-                savedView = stored;
-            }
+        if (!isMobile && stored && panelRegistry.includes(stored)) {
+            savedView = stored;
         }
-
-        // Rule 4: Force chat on mobile startup to ensure a safe cockpit
-        if (isMobile) {
-            console.log("[SAFE_BOOT] Mobile detected, enforcing default Chat view.");
-            savedView = 'chat';
-        }
-    } catch (e) {
-        console.warn("[SAFE_BOOT] State restoration bypassed.");
-    }
+    } catch (e) { }
 
     let activeView = savedView;
+
+    // Initialize Creator Tools if enabled
+    if (creatorEnabled) {
+        if (typeof initCreatorTools === 'function') initCreatorTools();
+        if (typeof initDraggableToolbar === 'function') initDraggableToolbar();
+    }
+
 
     // DOM Elements
     const aiHostView = document.getElementById('ai-host-view');
@@ -255,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Interaction ---
     // --- Interactive Drag for Context Panel ---
     let ctxTouchStartX = 0;
     let ctxCurrentX = 0;
@@ -303,32 +270,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: true });
 
-    // Service Worker registration moved to index.html for centralization.
-
-    // Handle virtual keyboard orientation/resize
+    // --- MOBILE KEYBOARD & VIEWPORT STABILIZATION (Phase 35) ---
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
+            const viewport = window.visualViewport;
+            const toolbar = document.getElementById('creator-toolbar');
             const inputBar = document.querySelector('.input-bar');
-            if (inputBar) {
-                const layoutHeight = window.visualViewport.height;
-                // Offset the input bar if it's too high (keyboard open)
-                if (window.innerHeight - layoutHeight > 100) {
-                    inputBar.style.bottom = `${(window.innerHeight - layoutHeight) + 10}px`;
-                    // Ensure latest message is visible when keyboard opens
-                    setTimeout(scrollToBottom, 300);
-                } else {
-                    inputBar.style.bottom = ''; // Revert to CSS default
-                    setTimeout(scrollToBottom, 300);
+
+            // Keyboard Detection: If viewport height shrinks significantly
+            const keyboardOpen = viewport.height < window.innerHeight * 0.85;
+
+            if (keyboardOpen) {
+                document.body.classList.add('keyboard-open');
+                if (toolbar) toolbar.classList.add('minimized');
+
+                // Lift input bar above keyboard
+                if (inputBar) {
+                    const offset = (window.innerHeight - viewport.height) + 10;
+                    inputBar.style.bottom = `${offset}px`;
+                    inputBar.style.transform = 'translateX(-50%) scale(0.98)'; // Slight shrink to fit
+                }
+            } else {
+                document.body.classList.remove('keyboard-open');
+                if (inputBar) {
+                    inputBar.style.bottom = ''; // Back to CSS
+                    inputBar.style.transform = '';
                 }
             }
+            setTimeout(scrollToBottom, 200);
         });
     }
 
-    // --- Chat / Command Logic ---
+    // --- Chat / Command Core (Phase 35 Restored) ---
     function scrollToBottom(force = false) {
-        const threshold = 150; // tolerance in px
+        const threshold = 150;
         const isNearBottom = (aiHostView.scrollHeight - aiHostView.scrollTop - aiHostView.clientHeight) < threshold;
-
         if (force || isNearBottom) {
             aiHostView.scrollTo({
                 top: aiHostView.scrollHeight,
@@ -340,18 +316,29 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(text, sender = 'ai', forceScroll = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
-        // Support simple markdown-like cleanup (bold)
         const cleanText = typeof text === 'string' ? text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : text;
         msgDiv.innerHTML = `<div class="msg-bubble">${cleanText}</div>`;
         chatLog.appendChild(msgDiv);
         scrollToBottom(forceScroll || sender === 'user');
     }
-    window.addMessage = addMessage; // Expose to creator.js
+    window.addMessage = addMessage;
 
-    sendBtn.addEventListener('click', processCommand);
-    shellInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') processCommand();
-    });
+    if (shellForm) {
+        shellForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            processCommand();
+        });
+    }
+
+    if (sendBtn) {
+        sendBtn.addEventListener('touchstart', (e) => {
+            const cmd = shellInput.value.trim();
+            if (cmd) {
+                e.preventDefault();
+                processCommand();
+            }
+        }, { passive: false });
+    }
 
     // --- Voice Logic Integration (Reconstructed) ---
     const voice = new VoiceInterface({
@@ -407,12 +394,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    let isProcessingCommand = false;
     async function processCommand() {
         const cmd = shellInput.value.trim();
-        if (!cmd) return;
+        if (!cmd || isProcessingCommand) return;
 
-        addMessage(cmd, 'user', true); // Force scroll for user message
-        shellInput.value = '';
+        isProcessingCommand = true;
+        // Don't clear immediately, wait for dispatch verification
+        addMessage(cmd, 'user', true);
 
         // Typing indicator + Orb pulse
         const orb = document.querySelector('.ai-orb');
@@ -429,10 +418,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer omniweb-dev-secret-token' // Default dev token
+                    'Authorization': 'Bearer omniweb-dev-secret-token'
                 },
                 body: JSON.stringify({ message: cmd })
             });
+
+            if (response.ok) {
+                shellInput.value = ''; // Success, clear now
+            } else {
+                console.warn("[SEND_FAILURE] Core rejected message.");
+                // Keep text in input for retry
+            }
 
             const data = await response.json();
             if (orb) orb.classList.remove('processing');
@@ -534,24 +530,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- Builder Execution Handling ---
             if (data.intent === 'approve_roadmap' && data.payload?.task_id) {
-                // Show console immediately or wait for start?
-                // User requirement: "UI feedback on current module..."
-                // I'll show it as soon as it's approved.
-                if (window.builderUI) {
+                if (window.innerWidth <= 768 && window.mobileWorkflow) {
+                    window.mobileWorkflow.trackTask(data.payload.task_id);
+                } else if (window.builderUI) {
                     window.builderUI.show(data.payload.task_id);
                 }
             }
 
             if (data.intent === 'start_execution' && data.payload?.task_id) {
-                if (window.builderUI) {
+                if (window.innerWidth <= 768 && window.mobileWorkflow) {
+                    window.mobileWorkflow.trackTask(data.payload.task_id);
+                } else if (window.builderUI) {
                     window.builderUI.show(data.payload.task_id);
                 }
             }
 
         } catch (error) {
             console.error('AI Host Error:', error);
-            typingDiv.remove();
+            if (typingDiv) typingDiv.remove();
             addMessage("I'm having trouble connecting to the core system. Please verify connection.", 'ai');
+        } finally {
+            isProcessingCommand = false;
         }
     }
 
@@ -927,5 +926,136 @@ function initCreatorTools() {
         editorOverlay.style.display = 'flex';
         console.log("[COPILOT] Code inserted into editor.");
     };
-// test omniweb mobile edit
+
+    function initDraggableToolbar() {
+        const toolbar = document.getElementById('creator-toolbar');
+        if (!toolbar) return;
+
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        // Load saved position
+        const savedPos = JSON.parse(localStorage.getItem('creator_toolbar_pos'));
+        if (savedPos) {
+            toolbar.style.top = 'auto'; // Reset top
+            toolbar.style.left = savedPos.x !== undefined ? savedPos.x + 'px' : 'auto';
+            toolbar.style.right = savedPos.right !== undefined ? savedPos.right + 'px' : '20px';
+            toolbar.style.bottom = savedPos.bottom !== undefined ? savedPos.bottom + 'px' : '100px';
+            if (savedPos.x === undefined) toolbar.style.left = 'auto';
+        }
+
+        const minToggle = document.getElementById('toolbar-minimize');
+        if (minToggle) {
+            minToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toolbar.classList.toggle('minimized');
+                resetIdleTimer();
+            });
+        }
+
+        let idleTimer;
+        const resetIdleTimer = () => {
+            clearTimeout(idleTimer);
+            toolbar.classList.remove('minimized');
+            idleTimer = setTimeout(() => {
+                if (!isDragging) toolbar.classList.add('minimized');
+            }, 5000); // 5s idle to minimize
+        };
+
+        const onStart = (e) => {
+            resetIdleTimer();
+            // Allow dragging from handle OR any part of the toolbar that isn't a button
+            const isHandle = e.target.closest('.toolbar-drag-handle');
+            const isButton = e.target.closest('button');
+
+            if (isButton && !isHandle) return; // Regular button click
+
+            isDragging = true;
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+            startX = clientX;
+            startY = clientY;
+            const rect = toolbar.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+
+            toolbar.style.transition = 'none';
+            if (e.type.includes('touch')) e.preventDefault();
+        };
+
+        const onMove = (e) => {
+            if (!isDragging) return;
+            resetIdleTimer();
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            let newX = initialX + dx;
+            let newY = initialY + dy;
+
+            // Constrain within screen
+            newX = Math.max(0, Math.min(newX, window.innerWidth - toolbar.offsetWidth));
+            newY = Math.max(0, Math.min(newY, window.innerHeight - toolbar.offsetHeight));
+
+            toolbar.style.left = newX + 'px';
+            toolbar.style.top = newY + 'px';
+        };
+
+        const onEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            toolbar.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            resetIdleTimer();
+
+            // Snap to nearest edge
+            const rect = toolbar.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+            let finalX, finalRight, finalBottom;
+            if (centerX < screenWidth / 2) {
+                finalX = 15; // Snap left
+                finalRight = 'auto';
+            } else {
+                finalX = 'auto'; // Snap right
+                finalRight = 15;
+            }
+
+            // Avoid Input Bar
+            const inputBar = document.querySelector('.input-bar');
+            const inputBottomLimit = inputBar ? (screenHeight - inputBar.getBoundingClientRect().top) + 20 : 160;
+
+            // Avoid Status Bar (top 80px)
+            const topLimit = 80;
+            const bottomMax = screenHeight - rect.height - topLimit;
+
+            finalBottom = Math.max(inputBottomLimit, Math.min(screenHeight - rect.top - rect.height, bottomMax));
+
+            toolbar.style.left = finalX === 'auto' ? 'auto' : finalX + 'px';
+            toolbar.style.right = finalRight === 'auto' ? 'auto' : finalRight + 'px';
+            toolbar.style.bottom = finalBottom + 'px';
+            toolbar.style.top = 'auto';
+
+            // Save position
+            localStorage.setItem('creator_toolbar_pos', JSON.stringify({
+                x: finalX === 'auto' ? undefined : finalX,
+                right: finalRight === 'auto' ? undefined : finalRight,
+                bottom: finalBottom
+            }));
+        };
+
+        toolbar.addEventListener('mousedown', onStart);
+        toolbar.addEventListener('touchstart', onStart, { passive: false });
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('touchmove', (e) => { if (isDragging) e.preventDefault(); onMove(e); }, { passive: false });
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
+
+        toolbar.style.pointerEvents = 'auto';
+        resetIdleTimer();
+    }
 }

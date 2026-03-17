@@ -69,6 +69,41 @@ async def get_builder_mutations(task_id: str, current_user: OmniUser = Depends(g
         mutations = mutation_engine.get_batch_by_task(task_id)
         return [m.dict() for m in mutations]
 
+@router.get("/builder/active", response_model=List[BuilderTask])
+async def get_active_builder_tasks(current_user: OmniUser = Depends(get_current_user)):
+    with set_chip_context("ai-host", current_user.id):
+        enforce_permission("creator_access")
+        # Return tasks that are currently being processed in memory
+        return list(builder_execution_engine.active_tasks.values())
+
+@router.get("/builder/status/{task_id}", response_model=BuilderTask)
+async def get_builder_status(task_id: str, current_user: OmniUser = Depends(get_current_user)):
+    with set_chip_context("ai-host", current_user.id):
+        enforce_permission("creator_access")
+        task = await builder_execution_engine.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
+
+@router.post("/builder/control/{task_id}")
+async def control_builder_task(task_id: str, action: str, current_user: OmniUser = Depends(get_current_user)):
+    with set_chip_context("ai-host", current_user.id):
+        enforce_permission("creator_access")
+        task = await builder_execution_engine.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        if action == "retry":
+            if task.current_module_id:
+                await builder_execution_engine.retry_module(task_id, task.current_module_id)
+                return {"success": True, "message": "Module retry initiated"}
+        elif action == "cancel":
+            task.status = BuilderStatus.CANCELLED
+            await builder_execution_engine._persist_task(task)
+            return {"success": True, "message": "Task cancelled"}
+            
+        raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
+
 @router.post("/builder/preview/{preview_id}/decide")
 async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser = Depends(get_current_user)):
     with set_chip_context("ai-host", current_user.id):

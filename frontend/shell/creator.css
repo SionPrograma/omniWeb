@@ -1147,6 +1147,161 @@ body.creator-authenticated {
     background: radial-gradient(circle at 50% 0%, rgba(50, 255, 150, 0.05), transparent 70%), #050508;
 }
 
+/* MOBILE CREATOR WORKFLOW UPGRADE (MISSION 33) */
+.mobile-workflow-layer {
+    position: fixed;
+    top: 80px;
+    /* Below top status/header area */
+    left: 10px;
+    right: 10px;
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--creator-gold);
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 5000;
+    display: none;
+    /* Shown via JS / Media Query */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 10px var(--creator-gold-dim);
+    transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.mobile-workflow-layer.active {
+    display: block;
+    animation: mwSlideUp 0.3s ease-out;
+}
+
+@media (min-width: 769px) {
+    .mobile-workflow-layer {
+        display: none !important;
+        /* Force hide on desktop */
+    }
+}
+
+.mw-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-family: 'Outfit';
+    border-bottom: 1px solid var(--creator-border);
+    padding-bottom: 8px;
+}
+
+.mw-header h4 {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--creator-gold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.mw-status-badge {
+    font-size: 0.6rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    background: var(--creator-gold-dim);
+    color: var(--creator-gold);
+}
+
+.mw-status-badge.pending {
+    background: rgba(255, 170, 0, 0.2);
+    color: #ffaa00;
+}
+
+.mw-status-badge.active {
+    background: rgba(50, 255, 150, 0.2);
+    color: #32ff96;
+}
+
+.mw-status-badge.failed {
+    background: rgba(255, 50, 50, 0.2);
+    color: #ff3232;
+}
+
+.mw-body {
+    font-size: 0.8rem;
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+.mw-proposal-info {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.mw-patch-status {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-family: 'Inter', monospace;
+    max-height: 80px;
+    overflow-y: auto;
+    border: 1px solid var(--creator-border);
+}
+
+.mw-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.mw-btn {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--creator-gold);
+    background: transparent;
+    color: var(--creator-gold);
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    font-family: 'Outfit';
+}
+
+.mw-btn:active {
+    transform: scale(0.95);
+    background: var(--creator-gold);
+    color: #000;
+}
+
+.mw-btn.primary {
+    background: var(--creator-gold);
+    color: #000;
+}
+
+.mw-btn.danger {
+    background: rgba(255, 50, 50, 0.1);
+    border-color: #ff3232;
+    color: #ff3232;
+}
+
+@keyframes mwSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Accessibility for mobile tap targets */
+@media (max-width: 768px) {
+    .mw-btn {
+        min-height: 48px;
+    }
+}
+
 body.creator-authenticated #mission-control-view {
     border-top: 1px solid rgba(50, 255, 150, 0.2);
 }
@@ -1197,6 +1352,24 @@ body.creator-authenticated #creator-badge {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+@media screen and (max-width: 768px) {
+    .creator-floating-toolbar {
+        left: 10px;
+        right: 10px;
+        bottom: 70px;
+        /* Adjust for mobile nav */
+        width: auto;
+        transform: translateX(0);
+    }
+
+    .keyboard-open .creator-floating-toolbar {
+        bottom: 10px;
+        /* Move up when keyboard is open */
+        opacity: 0.5;
+        /* Fade out slightly when typing */
+    }
 }
 
 .plan-steps-list {
@@ -1624,6 +1797,7 @@ body.creator-authenticated #creator-badge {
 /* CREATOR FLOATING TOOLBAR (PART 2) */
 .creator-floating-toolbar {
     position: fixed;
+    /* Default position, will be overridden by JS if saved */
     bottom: 100px;
     right: 20px;
     display: none;
@@ -1632,14 +1806,75 @@ body.creator-authenticated #creator-badge {
     gap: 12px;
     z-index: 1500;
     pointer-events: none;
+    user-select: none;
+    touch-action: none;
+    /* Critical for drag performance */
 }
 
 @media screen and (max-width: 768px) {
     .creator-floating-toolbar {
-        bottom: calc(85px + env(safe-area-inset-bottom));
+        bottom: calc(100px + env(safe-area-inset-bottom));
         right: 15px;
-        gap: 8px;
+        gap: 12px;
     }
+
+    .creator-floating-toolbar button {
+        width: 44px;
+        height: 44px;
+    }
+
+    .creator-floating-toolbar button span {
+        display: none;
+        /* Hide labels on mobile to reduce clutter */
+    }
+}
+
+.toolbar-drag-handle {
+    width: 34px;
+    height: 12px;
+    background: var(--accent);
+    opacity: 0.4;
+    border-radius: 6px;
+    margin: 0 auto;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toolbar-drag-handle:hover,
+.toolbar-drag-handle:active {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.toolbar-drag-handle span {
+    width: 15px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 1px;
+}
+
+.creator-floating-toolbar.minimized {
+    transform: translateX(35px);
+    opacity: 0.6;
+}
+
+.creator-floating-toolbar.minimized:hover {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.creator-floating-toolbar.minimized button span {
+    display: none;
+}
+
+.creator-floating-toolbar.minimized button {
+    width: 40px;
+    height: 40px;
 }
 
 body.creator-authenticated .creator-floating-toolbar {

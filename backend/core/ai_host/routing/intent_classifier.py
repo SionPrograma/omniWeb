@@ -58,8 +58,11 @@ class IntentClassifier:
         if any(re.search(rf"\b{w}\b", msg) for w in ["system", "estado", "sistema"]) or "how is" in msg or "how's" in msg:
             return "show_system_status"
             
-        if any(re.search(rf"\b{w}\b", msg) for w in ["arregla", "cura", "sana", "fix system", "repara", "heal"]):
+        if any(re.search(rf"\b{w}\b", msg) for w in ["arregla", "cura", "sana", "fix", "repara", "heal", "soluciona", "solve"]):
              return "healing"
+
+        if any(re.search(rf"\b{w}\b", msg) for w in ["qué está mal", "what is wrong", "qué pasa", "what's wrong", "problemas", "anomalía", "anomaly"]):
+             return "remediation"
             
         if any(re.search(rf"\b{w}\b", msg) for w in ["open", "abrir", "abre"]) and re.search(r"\bchip\b", msg):
             return "open_chip"
