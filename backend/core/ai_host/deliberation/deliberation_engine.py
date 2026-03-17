@@ -41,27 +41,37 @@ class DeliberationEngine:
         # 3. Determine recent topic
         recent_topic = cognitive_core.get_recent_topic()
         
-        # 4. Map hypotheses
-        hypotheses = [h.dict() for h in cognitive_core.hypotheses.values() if h.status == "active"]
+        # 4. Map hypotheses (Keep objects for inner calculation, serialize later)
+        raw_hypotheses = self.get_active_hypotheses_raw()
         
         # 5. Calculate global uncertainty
-        uncertainty = self._calculate_uncertainty(evidence_bundle, hypotheses)
+        uncertainty = self._calculate_uncertainty(evidence_bundle, raw_hypotheses)
 
-        evidence_list = [i.dict() for i in evidence_bundle.items]
+        evidence_list = [i.to_dict() for i in evidence_bundle.items]
+        hypotheses_list = []
+        for h in raw_hypotheses:
+            if hasattr(h, 'dict'):
+                hypotheses_list.append(h.dict())
+            else:
+                hypotheses_list.append(h.to_dict() if hasattr(h, 'to_dict') else vars(h))
 
         return DeliberationContext(
             user_intent=intent,
             normalized_request=normalized_request,
             recent_topic=recent_topic,
-            system_world_state=ws.dict(),
+            system_world_state=ws.dict() if hasattr(ws, 'dict') else ws.to_dict(),
             relevant_evidence=evidence_list,
-            active_hypotheses=hypotheses,
+            active_hypotheses=hypotheses_list,
             recent_execution_history=history,
             learning_signals=learning_report.get("top_patterns", {}),
             relevant_chip_context=ws.active_chips,
             uncertainty_level=uncertainty,
             reasoning_mode=self._select_mode(intent, uncertainty, {"relevant_evidence": evidence_list, "request": normalized_request})
         )
+
+    def get_active_hypotheses_raw(self):
+        """Helper to get raw hypotheses for internal calculation."""
+        return [h for h in cognitive_core.hypotheses.values() if h.status == "active"]
 
     def _calculate_uncertainty(self, bundle, hypotheses) -> float:
         if not bundle.items:

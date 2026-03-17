@@ -67,15 +67,17 @@ class IntentEngine:
 
     def _decide_mode(self, group: str, msg: str, ctx: SemanticContext) -> str:
         """Translates semantic groups into Omni's execution modes."""
-        if group == "BUILD_INTENT":
-            return "swarm_orchestration"
-        if group == "ANALYSIS_INTENT":
-            return "reflective" # Default to reflective for context-aware analysis
-        if group == "REMEDIATION_INTENT":
-            return "remediation"
-        if group == "FOLLOW_UP_INTENT":
-            return "conversational"
+        words = len(msg.split())
         
-        return "conversational"
+        # IF input is command -> action_execution
+        if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT"]:
+            return "action_execution"
+            
+        # IF input is simple -> direct_response  
+        if words <= 4 and group not in ["ANALYSIS_INTENT"]:
+            return "direct_response"
+            
+        # ELSE -> reflective_analysis
+        return "reflective_analysis"
 
 intent_engine = IntentEngine()

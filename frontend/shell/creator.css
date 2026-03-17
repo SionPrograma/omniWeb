@@ -605,6 +605,8 @@
     backdrop-filter: blur(25px) saturate(180%);
     -webkit-backdrop-filter: blur(25px) saturate(180%);
     z-index: 1000;
+    pointer-events: none;
+    /* Phase 1 Repair: Do not block touch when hidden */
     transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
     box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 212, 255, 0.1);
     display: flex;
@@ -615,6 +617,8 @@
 
 #context-panel.active {
     right: 0;
+    pointer-events: auto;
+    /* Phase 1 Repair: Restore touch when active */
 }
 
 /* Launcher Overlay Polish */
@@ -1423,4 +1427,145 @@ body.creator-authenticated #creator-badge {
     padding: 2px 8px;
     border-radius: 10px;
     font-weight: bold;
+}
+
+/* CANONICAL CREATOR TOOLBAR (Phase 36 Restore) */
+.creator-floating-toolbar {
+    position: fixed;
+    bottom: 150px;
+    right: 15px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 2000;
+}
+
+body.creator-authenticated #creator-toolbar {
+    display: flex;
+}
+
+.creator-floating-toolbar button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(10, 10, 20, 0.9);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.creator-floating-toolbar button span {
+    font-size: 8px;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+/* CREATOR OVERLAY PANELS */
+.creator-overlay-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95%;
+    max-width: 700px;
+    height: 85vh;
+    background: rgba(5, 5, 8, 0.98);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 16px;
+    z-index: 11000;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 100px rgba(0, 0, 0, 1);
+}
+
+@media screen and (max-width: 768px) {
+    .creator-overlay-panel {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        top: 0;
+        left: 0;
+        transform: none;
+        border-radius: 0;
+        max-width: none;
+        border: none;
+    }
+}
+
+.creator-overlay-panel .panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.creator-overlay-panel .panel-header h3 {
+    margin: 0;
+    font-family: 'Outfit';
+    color: var(--accent);
+}
+
+.creator-overlay-panel .panel-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.creator-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    color: #fff;
+    width: 100%;
+    margin-bottom: 15px;
+    font-family: 'Inter';
+}
+
+.creator-textarea {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    color: #fff;
+    font-family: 'Inter', monospace;
+    font-size: 0.9rem;
+    resize: none;
+}
+
+.patch-diff-container {
+    display: flex;
+    gap: 15px;
+    flex: 1;
+}
+
+.diff-pre {
+    background: #000;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: #ccc;
+    white-space: pre-wrap;
+    height: 100%;
+    margin: 0;
+}
+
+.close-overlay-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
 }

@@ -20,6 +20,12 @@ class EvidenceItem:
             "confidence": self.confidence
         }
 
+    def dict(self):
+        return self.to_dict()
+    
+    def model_dump(self):
+        return self.to_dict()
+
 @dataclass
 class EvidenceBundle:
     items: List[EvidenceItem] = field(default_factory=list)
@@ -27,6 +33,21 @@ class EvidenceBundle:
     has_sufficient_evidence: bool = False
     uncertainty_reason: Optional[str] = None
     snapshot_id: Optional[str] = None
+
+    def to_dict(self):
+        return {
+            "items": [i.to_dict() for i in self.items],
+            "summary": self.summary,
+            "has_sufficient_evidence": self.has_sufficient_evidence,
+            "uncertainty_reason": self.uncertainty_reason,
+            "snapshot_id": self.snapshot_id
+        }
+
+    def dict(self):
+        return self.to_dict()
+    
+    def model_dump(self):
+        return self.to_dict()
 
 class EvidenceEngine:
     """

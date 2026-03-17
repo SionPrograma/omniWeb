@@ -45,6 +45,10 @@ class SemanticMemoryBuffer:
             return self.buffer[-1]["prompt"]
         return None
 
+    def get_recent_interactions(self, session_id: str = "default_user", limit: int = 3) -> List[Dict[str, Any]]:
+        """Returns recent interactions for context enrichment."""
+        return list(self.buffer)[-limit:] if self.buffer else []
+
     def clear(self):
         """Resets the memory buffer."""
         self.buffer.clear()

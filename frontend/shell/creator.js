@@ -2482,7 +2482,7 @@ class CreatorEnvironment {
             simBtn.onclick = () => {
                 const mockTokens = ["creator_auth_token_882", "admin_session_x99", "beta_access_k12"];
                 const randomToken = mockTokens[Math.floor(Math.random() * mockTokens.length)];
-                this.handleQRResult(`http://localhost:8000/api/v1/qr/join?token=${randomToken}`);
+                this.handleQRResult(`${window.location.origin}/api/v1/qr/join?token=${randomToken}`);
             };
         }
     }

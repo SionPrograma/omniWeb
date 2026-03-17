@@ -32,9 +32,10 @@ class CommunicationProcessor(CommandProcessor):
     ]
 
     async def can_handle(self, command: str) -> bool:
-        """Detects communication intent in the command."""
+        """Detects communication intent in the command using word boundaries."""
+        import re
         cmd = command.lower()
-        return any(kw in cmd for kw in self.TRIGGER_KEYWORDS)
+        return any(re.search(rf"\b{re.escape(kw)}\b", cmd) for kw in self.TRIGGER_KEYWORDS)
 
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         user_id = context.get("user_id", "default_user") if context else "default_user"

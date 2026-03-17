@@ -452,9 +452,10 @@ button:active {
     display: flex;
     padding: 8px 12px;
     align-items: center;
-    z-index: 150;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.1);
-    transition: all 0.3s var(--spring-easing);
+    z-index: 5000;
+    /* Priority: Above everything but modals */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 212, 255, 0.2);
+    transition: transform 0.3s var(--spring-easing), bottom 0.3s ease;
 }
 
 .launcher-active .input-bar {
@@ -777,10 +778,16 @@ button {
         max-width: none;
         left: 0;
         transform: translateX(100%);
+        pointer-events: none;
+        /* Phase 1 Final Fix */
+        visibility: hidden;
+        /* Extra safety */
     }
 
     #context-panel.active {
         transform: translateX(0);
+        pointer-events: auto;
+        visibility: visible;
     }
 }
 

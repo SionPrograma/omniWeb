@@ -142,123 +142,85 @@ class CommandRouter:
         
         logger.info(f"[MESSAGE_RECEIVED] Modality: {modality} | Content: {message[:50]}...")
 
-        with set_chip_context("core", user_id=user_id):
-            # Multimodal Entrance
-            input_v = MultimodalInput(modality=modality, raw_data=message)
-            msg = await multimodal_router.handle_input(input_v)
-            msg_clean = msg.lower().strip()
+        try:
+            with set_chip_context("core", user_id=user_id):
+                # Multimodal Entrance
+                input_v = MultimodalInput(modality=modality, raw_data=message)
+                msg = await multimodal_router.handle_input(input_v)
+                msg_clean = msg.lower().strip()
 
-            # Creator Mode Prefix Detection
-            creator_prefixes = ["omni", "creator", "system"]
-            is_creator_prefixed = False
-            for p in creator_prefixes:
-                if msg_clean.startswith(p):
-                    is_creator_prefixed = True
-                    # If it's just the prefix or prefix + punctuation, it's a generic creator call
-                    if len(msg_clean) <= len(p) + 1:
-                        msg_clean = p # Normalize to prefix only
-                    break
+                # Creator Mode Prefix Detection
+                creator_prefixes = ["omni", "creator", "system"]
+                is_creator_prefixed = False
+                for p in creator_prefixes:
+                    if msg_clean.startswith(p):
+                        is_creator_prefixed = True
+                        if len(msg_clean) <= len(p) + 1:
+                            msg_clean = p 
+                        break
 
-            logger.info(f"[ROUTER_FORWARD] Normalized Message: {msg_clean}")
+                logger.info(f"[ROUTER_FORWARD] Normalized Message: {msg_clean}")
 
-            # Phase AA: Automatic Skill Discovery
-            try:
-                import asyncio
-                from backend.core.skill_engine.skill_detector import skill_detector
-                asyncio.create_task(skill_detector.detect_from_input("default_user", msg_clean))
-            except Exception as e:
-                logger.error(f"Skill Discovery Error: {e}")
-            
-            res = None
-            
-            # 1. SEMANTIC INTENT UNDERSTANDING (Mandatory Entry Point)
-            from ..intent_understanding.intent_engine import intent_engine
-            session_id = str(context.get("user_id", "default_user"))
-            # The Intent Engine handles pattern matching, context reconstruction and history tracking
-            understanding = await intent_engine.understand(msg_clean, session_id)
-            
-            intent = understanding["specific_intent"]
-            intent_group = understanding["intent_group"]
-            semantic_ctx = understanding["context"]
-            
-            # Explicit override for creator prefixes (only if no specific intent detected by engine)
-            if is_creator_prefixed and (not intent or intent == "chat"):
-                intent = "creator_command"
+                # Phase AA: Automatic Skill Discovery
+                try:
+                    import asyncio
+                    from backend.core.skill_engine.skill_detector import skill_detector
+                    asyncio.create_task(skill_detector.detect_from_input("default_user", msg_clean))
+                except Exception as e:
+                    logger.error(f"Skill Discovery Error: {e}")
                 
-            logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
-            
-            # --- PRIORITY CHAIN EXECUTION (Phase 0 Polish) ---
-            # Define priority groups to ensure commands aren't captured by lower-priority processors
-            system_intents = ["list_chips", "show_logbook", "healing", "creator_command", "list"]
-            chip_intents = ["open_chip", "inspect_chip", "activate", "deactivate"]
-            nav_intents = ["navigate_to", "focus_chip_runtime"]
-            memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
-            brain_intents = ["creator_analysis", "creator_plan"]
-            builder_intents = ["approve_roadmap", "start_execution"]
-            ack_intents = [] # Handled by Brain Layer for contextual continuity
-            
-            priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + ack_intents + brain_intents
-            
-            # 2. Priority Routing: Core Platform Commands (Highest Priority for granular ops)
-            # Most reasoning tasks should fall through to the Brain Layer (4)
-            if intent in priority_intents and intent in self.intents and intent not in brain_intents:
-                logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
-                res = await self.intents[intent](msg_clean)
-                if res:
-                    return await self._finalize_response(res, message)
-
-            # 3. Messaging Priority (Phase 0 Polish)
-            comm_proc = self.registry.get_processor("communication")
-            if comm_proc:
-                try:
-                    if await comm_proc.can_handle(msg_clean):
-                        logger.info(f"[ROUTER_FORWARD] Priority Routing to Messaging: communication")
-                        res = await comm_proc.process(msg_clean, context=context)
-                        if res:
-                            return await self._finalize_response(res, message)
-                except Exception as e:
-                    logger.error(f"[EXECUTION_FAIL] Messaging processor error: {e}")
-
-            # 4. Brain Layer (Reasoning / Analysis / Conversation / Complex Missions)
-            from ..brain_router import BrainRouter
-            from backend.core.system_state.engine import state_engine
-            from backend.core.omni_runtime.runtime_controller import runtime_controller
-            
-            brain = BrainRouter(self)
-            system_state = await state_engine.get_state()
-            
-            res = await brain.process(
-                message=msg_clean, 
-                context=context,
-                runtime_context=runtime_controller.state,
-                chip_registry=self.registry,
-                system_state=system_state,
-                understanding=understanding
-            )
-            if res:
-                return await self._finalize_response(res, message)
-
-            # 5. General Chat / Other Processors
-            for name, proc in self.registry._processors.items():
-                if name == "communication": continue # Already checked
-                if name == "chat": continue # Brain router handles chat/acknowledgments better
-                if is_creator_prefixed and name == "chat":
-                    continue
+                res = None
+                
+                # 1. SEMANTIC INTENT UNDERSTANDING
+                from ..intent_understanding.intent_engine import intent_engine
+                session_id = str(context.get("user_id", "default_user"))
+                understanding = await intent_engine.understand(msg_clean, session_id)
+                
+                intent = understanding["specific_intent"]
+                intent_group = understanding["intent_group"]
+                semantic_ctx = understanding["context"]
+                
+                if is_creator_prefixed and (not intent or intent == "chat"):
+                    intent = "creator_command"
                     
-                try:
-                    if await proc.can_handle(msg_clean):
-                        logger.info(f"[ROUTER_FORWARD] Routing to processor: {name}")
-                        res = await proc.process(msg_clean, context=context)
-                        if res:
-                            return await self._finalize_response(res, message)
-                except Exception as e:
-                    logger.error(f"[EXECUTION_FAIL] Processor '{name}' error: {e}")
+                logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
+                
+                # --- PRIORITY CHAIN EXECUTION ---
+                system_intents = ["list_chips", "show_logbook", "healing", "creator_command", "list"]
+                chip_intents = ["open_chip", "inspect_chip", "activate", "deactivate"]
+                nav_intents = ["navigate_to", "focus_chip_runtime"]
+                memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
+                brain_intents = ["creator_analysis", "creator_plan"]
+                builder_intents = ["approve_roadmap", "start_execution"]
+                
+                priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents
+                
+                if intent in priority_intents and intent in self.intents and intent not in brain_intents:
+                    logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
+                    res = await self.intents[intent](msg_clean)
+                    if res:
+                        return await self._finalize_response(res, message)
 
-            # Fallback
-            if not res:
-                 res = AICommandResponse(intent="unknown", status="error", message="I couldn't process that command. Try 'list chips' or 'inspect system'.")
+                # 3. Cognitive Orchestration Layer (Replaces fragmented Brain/Fallback/Messaging layers)
+                from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+                
+                # We instantiate here to avoid circular imports. In a future refactor it can be a singleton.
+                orchestrator = CognitiveOrchestrator(self)
+                
+                res = await orchestrator.orchestrate(
+                    message=msg_clean, 
+                    understanding=understanding,
+                    context=context
+                )
+        except Exception as e:
+            logger.error(f"[PIPELINE_ERROR] Route failed: {e}")
+            res = AICommandResponse(
+                intent="recovery", 
+                status="success", 
+                message="He detectado un problema en una de mis capas de razonamiento, pero sigo operacional. ¿En qué puedo ayudarte?" if "es" in message.lower() else "I've detected an issue in one of my reasoning layers, but I remain operational. How can I help you?"
+            )
 
-            return await self._finalize_response(res, message)
+        return await self._finalize_response(res, message)
 
     async def _finalize_response(self, res: AICommandResponse, original_msg: str) -> AICommandResponse:
         """Adds final touches and telemetry to response."""

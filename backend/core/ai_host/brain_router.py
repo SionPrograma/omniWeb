@@ -51,9 +51,17 @@ class BrainRouter:
         intent = understanding["intent_group"]
         mode_override = understanding["mode"]
         
-        # 1. ASSEMBLE DELIBERATION CONTEXT
-        delib_context = await deliberation_engine.assemble_context(msg_clean, intent, session_id)
-        
+        # 1. ASSEMBLE DELIBERATION CONTEXT (Protected Pipeline Entry)
+        try:
+            delib_context = await deliberation_engine.assemble_context(msg_clean, intent, session_id)
+        except Exception as e:
+            logger.error(f"[PIPELINE_ERROR] Deliberation context assembly failed: {e}. Bypassing to default.")
+            # Simple fallback context
+            chat_proc = self.command_router.registry.get_processor("chat")
+            if chat_proc:
+                return await chat_proc.process(msg_clean, context=context)
+            return self._generate_natural_fallback(lang)
+            
         # Apply semantic mode if deliberation doesn't override with a higher priority (remediation/limitation)
         mode = delib_context.reasoning_mode
         if mode in ["conversational", "diagnostic"] and mode_override != "conversational":
@@ -65,35 +73,45 @@ class BrainRouter:
         if self._is_short_followup(msg_clean) and delib_context.recent_topic:
              return await self._handle_short_prompt(msg_clean, delib_context, lang)
 
-        # 3. ROUTE BY MODE
-        if mode == "reflective":
-             res = await self._handle_reflective_reasoning(msg_clean, lang)
-        elif mode == "remediation":
-             res = await self._handle_remediation(msg_clean, delib_context, lang)
-        elif mode == "swarm_orchestration":
-             res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
-        elif mode == "patch_proposal":
-             res = await self._handle_patch_proposal(msg_clean, delib_context, lang)
-        elif mode == "limitation":
-             res = await self._handle_limitation(msg_clean, delib_context, lang)
-        elif mode == "diagnostic":
-             # Check for Remediation Intelligence (Historical matching)
-             remediation = self._check_remediation_history(msg_clean, delib_context)
-             if remediation:
-                 res = self._format_remediation_response(remediation, lang)
-             else:
-                 # Standard analysis with plan
-                 plan = task_planner.create_plan(msg_clean, intent, lang)
-                 res = await self._process_analysis(msg_clean, lang, system_state, plan, evidence=delib_context.relevant_evidence)
-        elif intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
-             res = await self._handle_chip_action(msg_clean, intent, delib_context, lang)
-        else:
-             # Default Conversational
-             chat_proc = self.command_router.registry.get_processor("chat")
-             if chat_proc:
-                 res = await chat_proc.process(msg_clean, context=context)
-             else:
-                 res = self._generate_natural_fallback(lang)
+        # 3. ROUTE BY MODE (With Bypass Safety for broken layers)
+        try:
+            if mode == "reflective":
+                 res = await self._handle_reflective_reasoning(msg_clean, lang)
+            elif mode == "remediation":
+                 res = await self._handle_remediation(msg_clean, delib_context, lang)
+            elif mode == "swarm_orchestration":
+                 res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
+            elif mode == "patch_proposal":
+                 res = await self._handle_patch_proposal(msg_clean, delib_context, lang)
+            elif mode == "limitation":
+                 res = await self._handle_limitation(msg_clean, delib_context, lang)
+            elif mode == "diagnostic":
+                 # Check for Remediation Intelligence (Historical matching)
+                 remediation = self._check_remediation_history(msg_clean, delib_context)
+                 if remediation:
+                     res = self._format_remediation_response(remediation, lang)
+                 else:
+                     # Standard analysis with plan
+                     plan = task_planner.create_plan(msg_clean, intent, lang)
+                     res = await self._process_analysis(msg_clean, lang, system_state, plan, evidence=delib_context.relevant_evidence)
+            elif intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
+                 res = await self._handle_chip_action(msg_clean, intent, delib_context, lang)
+            else:
+                 # Default Conversational
+                 chat_proc = self.command_router.registry.get_processor("chat")
+                 if chat_proc and await chat_proc.can_handle(msg_clean):
+                     res = await chat_proc.process(msg_clean, context=context)
+                 else:
+                     # Elevated Conversational: Use reflective reasoning for complex natural language
+                     res = await self._handle_reflective_reasoning(msg_clean, lang)
+        except Exception as e:
+            logger.error(f"[PIPELINE_ERROR] Reasoning layer '{mode}' failed: {e}. Bypassing to stable response.")
+            # Final Bypass to ensure communication doesn't break
+            chat_proc = self.command_router.registry.get_processor("chat")
+            if chat_proc:
+                res = await chat_proc.process(msg_clean, context=context)
+            else:
+                res = self._generate_natural_fallback(lang)
 
         # 4. POST-PROCESS & MEMORY
         if res:

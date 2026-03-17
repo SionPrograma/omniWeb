@@ -1,4 +1,45 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
+    // Rule: Eliminate all cache/SW interference to ensure single-source-of-truth.
+    const CACHE_RESET_ID = "omni_v1_stable";
+    try {
+        if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
+            console.warn("[SAFE_MODE] Cache inconsistency detected. Purging SW and Caches...");
+
+            // 1. Unregister all service workers
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let registration of registrations) {
+                        registration.unregister().then(() => {
+                            console.log("[SAFE_MODE] SW Unregistered.");
+                        });
+                    }
+                });
+            }
+
+            // 2. Delete all caches
+            if (window.caches) {
+                caches.keys().then(names => {
+                    for (let name of names) {
+                        caches.delete(name).then(() => {
+                            console.log("[SAFE_MODE] Cache Purged:", name);
+                        });
+                    }
+                });
+            }
+
+            // 3. Mark as reset and reload once
+            localStorage.setItem("omni_cache_reset", CACHE_RESET_ID);
+            console.warn("[SAFE_MODE] Reset complete. Reloading for fresh state.");
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 500);
+            return; // Halt this execution
+        }
+    } catch (e) {
+        console.warn("[SAFE_MODE] Reset guard failed - likely storage restriction.");
+    }
+
     // DOM Elements
     const aiHostView = document.getElementById('ai-host-view');
     const chipView = document.getElementById('active-chip-view');
@@ -15,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const contextPanel = document.getElementById('context-panel');
 
     const shellInput = document.getElementById('shell-input');
+    const shellForm = document.getElementById('shell-input-form');
     const sendBtn = document.getElementById('send-command');
     const voiceBtn = document.getElementById('voice-command');
     const chatLog = document.getElementById('chat-log');
@@ -220,14 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: true });
 
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/shell/sw.js')
-                .then(reg => console.log('SW Registered', reg))
-                .catch(err => console.error('SW Registration Failed', err));
-        });
-    }
 
     // Handle virtual keyboard orientation/resize
     if (window.visualViewport) {
@@ -235,14 +269,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputBar = document.querySelector('.input-bar');
             if (inputBar) {
                 const layoutHeight = window.visualViewport.height;
-                // Offset the input bar if it's too high (keyboard open)
-                if (window.innerHeight - layoutHeight > 100) {
-                    inputBar.style.bottom = `${(window.innerHeight - layoutHeight) + 10}px`;
-                    // Ensure latest message is visible when keyboard opens
-                    setTimeout(scrollToBottom, 300);
+                const windowHeight = window.innerHeight;
+
+                // If the visible height is significantly less than window height, keyboard is likely open
+                if (windowHeight - layoutHeight > 150) {
+                    document.body.classList.add('keyboard-open');
+                    // Move the input bar above the keyboard
+                    inputBar.style.bottom = `${(windowHeight - layoutHeight) + 10}px`;
+                    // Scroll to bottom to keep messages visible
+                    setTimeout(scrollToBottom, 100);
                 } else {
-                    inputBar.style.bottom = ''; // Revert to CSS default
-                    setTimeout(scrollToBottom, 300);
+                    document.body.classList.remove('keyboard-open');
+                    inputBar.style.bottom = ''; // Revert to CSS
+                    setTimeout(scrollToBottom, 100);
                 }
             }
         });
@@ -272,10 +311,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.addMessage = addMessage; // Expose to creator.js
 
-    sendBtn.addEventListener('click', processCommand);
-    shellInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') processCommand();
-    });
+    // --- Phase 2: Canonical Submit Path (Reliable Touch/Click) ---
+    let lastSubmitTime = 0;
+    const submitWithGuard = () => {
+        const now = Date.now();
+        if (now - lastSubmitTime < 300) return; // Prevent double-fire
+        lastSubmitTime = now;
+        processCommand();
+    };
+
+    if (shellForm) {
+        shellForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitWithGuard();
+        });
+    }
+
+    // Reliability: Listen to pointerdown for instant touch response
+    // But let the form submit naturally as well (or intercept specifically)
+    if (sendBtn) {
+        sendBtn.addEventListener('pointerdown', (e) => {
+            // Instant feedback
+            console.log("[INPUT_FIX] PointerDown on Send button.");
+        });
+    }
 
     // --- Voice Logic Integration (Reconstructed) ---
     const voice = new VoiceInterface({
@@ -534,6 +593,102 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
+    // --- Phase 4 & 5: Creator Tools Restore ---
+    const toolbar = {
+        editor: document.getElementById('toolbar-editor'),
+        copilot: document.getElementById('toolbar-copilot'),
+        reload: document.getElementById('toolbar-reload')
+    };
+
+    const overlays = {
+        editor: document.getElementById('creator-editor-overlay'),
+        copilot: document.getElementById('creator-copilot-overlay')
+    };
+
+    if (toolbar.reload) {
+        toolbar.reload.addEventListener('click', () => {
+            window.location.reload(true);
+        });
+    }
+
+    if (toolbar.editor) {
+        toolbar.editor.addEventListener('click', () => {
+            overlays.editor.style.display = overlays.editor.style.display === 'none' ? 'flex' : 'none';
+        });
+    }
+
+    if (toolbar.copilot) {
+        toolbar.copilot.addEventListener('click', () => {
+            overlays.copilot.style.display = overlays.copilot.style.display === 'none' ? 'flex' : 'none';
+        });
+    }
+
+    // Editor Logic (Phase 5)
+    const editorOpenBtn = document.getElementById('editor-open-btn');
+    const editorSaveBtn = document.getElementById('editor-save-btn');
+    const editorPathInput = document.getElementById('editor-file-path');
+    const editorContent = document.getElementById('editor-content');
+
+    if (editorOpenBtn) {
+        editorOpenBtn.addEventListener('click', async () => {
+            const path = editorPathInput.value.trim();
+            if (!path) return;
+
+            editorOpenBtn.innerText = 'Loading...';
+            try {
+                const res = await fetch(`/api/v1/creator/fs/read?path=${encodeURIComponent(path)}`, {
+                    headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+                });
+                const data = await res.json();
+                if (data.status === 'success' && data.content !== undefined) {
+                    editorContent.value = data.content;
+                    editorOpenBtn.innerText = 'File Opened';
+                } else {
+                    alert("Error reading file: " + (data.detail || data.error || "Unknown error"));
+                    editorOpenBtn.innerText = 'Open File';
+                }
+            } catch (err) {
+                console.error("Editor Read Error:", err);
+                alert("Could not connect to editor API.");
+                editorOpenBtn.innerText = 'Open File';
+            }
+            setTimeout(() => editorOpenBtn.innerText = 'Open File', 2000);
+        });
+    }
+
+    if (editorSaveBtn) {
+        editorSaveBtn.addEventListener('click', async () => {
+            const path = editorPathInput.value.trim();
+            const content = editorContent.value;
+            if (!path) return;
+
+            editorSaveBtn.innerText = 'Saving...';
+            try {
+                const res = await fetch('/api/v1/creator/fs/write', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer omniweb-dev-secret-token'
+                    },
+                    body: JSON.stringify({ path, content })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    editorSaveBtn.innerText = 'Saved ✓';
+                    addMessage(`File updated: **${path}**`, 'ai');
+                } else {
+                    alert("Error saving file: " + (data.detail || data.error || "Unknown error"));
+                    editorSaveBtn.innerText = 'Save Changes';
+                }
+            } catch (err) {
+                console.error("Editor Save Error:", err);
+                alert("Could not connect to editor API.");
+                editorSaveBtn.innerText = 'Save Changes';
+            }
+            setTimeout(() => editorSaveBtn.innerText = 'Save Changes', 2000);
+        });
+    }
+
     // --- Particles Background (Animated) ---
     function createParticles() {
         const container = document.getElementById('particles');
@@ -569,13 +724,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add particle animation to stylesheet
     const style = document.createElement('style');
+    const animId = "anim_" + Math.random().toString(36).substr(2, 9);
     style.innerHTML = `
-        @keyframes floatParticle {
+        @keyframes ${animId} {
             0% { transform: translate(0, 0); }
             33% { transform: translate(${Math.random() * 50}px, ${Math.random() * 50}px); }
             66% { transform: translate(${Math.random() * -50}px, ${Math.random() * 20}px); }
             100% { transform: translate(0, 0); }
         }
+        .particle { animation-name: ${animId} !important; }
     `;
     document.head.appendChild(style);
 });

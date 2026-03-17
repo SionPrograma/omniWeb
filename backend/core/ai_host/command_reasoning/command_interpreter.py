@@ -65,6 +65,21 @@ class CommandInterpreter:
             elif " without " in msg:
                 constraints.append(f"Do not affect {msg.split(' without ', 1)[1].strip()}")
             
+        # 3. DETECT TARGET MODULES
+        targets = []
+        for mod, keywords in self.module_keywords.items():
+            if any(k in msg for k in keywords):
+                targets.append(mod)
+        if not targets:
+            targets = ["core"] # Default target
+            
+        # 4. DETERMINE MISSION SCALE
+        scale = "component"
+        if any(w in msg for w in ["sistema", "system", "plataforma", "platform", "ecosistema", "ecosystem"]):
+            scale = "system"
+        if any(w in msg for w in ["arquitectura", "architecture", "estilo", "infraestructura", "infrastructure"]):
+            scale = "architecture"
+
         interpreted = InterpretedCommand(
             goal=goal.strip(),
             constraints=constraints,
