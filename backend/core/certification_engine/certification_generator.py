@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from .certification_models import Certification, SkillVerification
 from backend.core.database import db_manager
 from backend.core.permissions import set_chip_context

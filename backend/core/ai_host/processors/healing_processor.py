@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from .base import CommandProcessor, AICommandResponse
 from backend.core.system_auditor.auditor import auditor
 from backend.core.system_auditor.fix_engine import fix_engine
@@ -17,10 +17,11 @@ class HealingProcessor(CommandProcessor):
         keywords = ["audit", "salud", "problema", "fix", "healing", "arregla", "cura", "sana"]
         return any(k in message.lower() for k in keywords)
 
-    async def process(self, message: str, context: str = "default_user") -> AICommandResponse:
+    async def process(self, message: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         msg = message.lower()
         from ..sessions import session_state
-        lang = session_state.language
+        session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+        lang = session_state.get_language(session_id)
         
         # 1. Trigger Audit
         if any(k in msg for k in ["audita", "revisa", "check health", "run audit"]):

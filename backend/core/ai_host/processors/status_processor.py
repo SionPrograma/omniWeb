@@ -21,7 +21,8 @@ class StatusProcessor(CommandProcessor):
     async def process(self, command: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         cmd = command.lower()
         from ..sessions import session_state
-        lang = session_state.language
+        session_id = str(context.get("user_id", "default")) if context else "default"
+        lang = session_state.get_language(session_id)
         
         state = await state_engine.get_state()
         

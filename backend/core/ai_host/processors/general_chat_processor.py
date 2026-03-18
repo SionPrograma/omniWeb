@@ -41,12 +41,13 @@ class GeneralChatProcessor(CommandProcessor):
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         cmd = msg.lower().strip()
         from ..sessions import session_state
+        session_id = str(context.get("user_id", "default_user")) if context else "default_user"
         
         # Detect language change
         if any(k in cmd for k in ["responde en", "habla en", "idioma", "language", "speak in", "respond in"]):
-            session_state.set_language(cmd)
+            session_state.set_language(session_id, cmd)
         
-        lang = session_state.language
+        lang = session_state.get_language(session_id)
         words = cmd.split()
 
         # 1. Greetings

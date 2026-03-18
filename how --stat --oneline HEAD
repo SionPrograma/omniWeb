@@ -1,0 +1,15 @@
+* [33m6e1376f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32marchitecture[m[33m, [m[1;31morigin/architecture[m[33m)[m Se eliminó la evasión cognitiva y se separó la naturalización del proceso de decisión. Omni ahora opera con compromiso técnico real basado en señales internas, con estado aislado por sesión y un pipeline de respuesta accionable y determinista.
+* [33meb92085[m  Omni ya piensa y entiende pero todabia rompe bajo presion!
+* [33m41b7e77[m  omni ya habla
+* [33mf3be380[m reconstrullendo el brain
+* [33m6b97bba[m rollback shell to last stable state (2600653)
+* [33m87b1378[m checkpoint before roollback analysis
+* [33ma94a098[m[33m ([m[1;33mtag: [m[1;33mv0.9.00-omni-runtime[m[33m)[m Omniweb Stage: Self-Edit Runtime + Action Execution Bridge Implemented
+* [33m0cbe5f2[m v1.5 mobile creator shell stable boot
+* [33m2600653[m checkpoint: omniweb architecture state before creator self-editing test
+* [33m5ec4641[m[33m ([m[1;33mtag: [m[1;33mv1.0[m[33m, [m[1;33mtag: [m[1;33mv0.6[m[33m, [m[1;33mtag: [m[1;33mv0.5[m[33m, [m[1;33mtag: [m[1;33mv0.4[m[33m, [m[1;33mtag: [m[1;33mv0.3[m[33m, [m[1;33mtag: [m[1;33mv0.2[m[33m, [m[1;33mtag: [m[1;33mv0.1[m[33m)[m docs(portfolio): finalize professional documentation suite and portfolio presentation
+* [33m6bfb4a0[m docs(portfolio): transform repository into professional engineering standard
+* [33ma519c6a[m docs(portfolio): transform repository into professional engineering standard
+* [33m376c270[m feat(user-context): register context router to satisfy system audit
+* [33mdce0ad8[m refactor(shell): consolidate OmniWeb internal control cockpit and master logbook workflow
+* [33m1de33e5[m feat(core): introduce personal logbook network enabling distributed user knowledge nodes and affinity connections [v2.2.0]

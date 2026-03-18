@@ -17,7 +17,8 @@ class DiagnosticProcessor(CommandProcessor):
 
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         from ..sessions import session_state
-        lang = session_state.language
+        session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+        lang = session_state.get_language(session_id)
         # Collect tech info
         info = {
             "os": platform.system(),

@@ -35,12 +35,14 @@ class CreatorControlProcessor(CommandProcessor):
         
         # 0. Language Persistence Check
         from ..sessions import session_state
+        session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+        
         if any(k in cmd for k in ["responde en", "habla en", "idioma", "language", "speak in", "respond in"]):
-            session_state.set_language(cmd)
-            lang_msg = "Idioma actualizado a Español." if session_state.language == "es" else "Language updated to English."
+            session_state.set_language(session_id, cmd)
+            lang_msg = "Idioma actualizado a Español." if session_state.get_language(session_id) == "es" else "Language updated to English."
             return AICommandResponse(intent="language_update", status="success", message=lang_msg)
         
-        lang = session_state.language
+        lang = session_state.get_language(session_id)
 
         # Determine Category and Action
         if any(k in cmd for k in ["analyze", "analiza", "inspect", "inspecciona", "inspeccioná", "audit", "diagnose", "diagnostica", "system state", "estado"]):

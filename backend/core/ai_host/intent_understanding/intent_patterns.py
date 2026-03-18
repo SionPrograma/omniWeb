@@ -64,6 +64,11 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "decide", "qué cambiarías", "qué arreglarías", "decisión", "choose", 
         "dirección", "no analices", "don't analyze"
     ],
+    "COGNITIVE": [
+        "elegir a o b", "choose a or b", "sin decir depende", "without saying depends", 
+        "no digas depende", "don't say it depends", "vago", "vague", "una de dos", 
+        "forced choice", "decisión binaria", "A vs B"
+    ],
 }
 
 # Mapping of legacy intents to these new semantic groups if needed

@@ -22,7 +22,8 @@ class OperationalProcessor(CommandProcessor):
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         cmd = msg.lower().strip()
         from ..sessions import session_state
-        lang = session_state.language
+        session_id = str(context.get("user_id", "default")) if context else "default"
+        lang = session_state.get_language(session_id)
         
         if "chat" in cmd or "overlap" in cmd or "readability" in cmd or "legibilidad" in cmd:
             if lang == "es":

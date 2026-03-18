@@ -33,7 +33,7 @@ class HumanInputInterpreter:
         if any(w in msg for w in ["crea", "hace", "build", "pon", "agregá", "implementa"]):
             return "create"
         # Decision triggers
-        if any(w in msg for w in ["decidi", "elegí", "cuál", "prioriza", "qué hago"]):
+        if any(w in msg for w in ["decidi", "decidí", "elegí", "elige", "elegir", "cuál", "prioriza", "qué hago", "choice", "choose"]):
             return "decide"
         # Exploration/Question
         if any(w in msg for w in ["qué onda", "fijate", "mirá", "qué es"]):

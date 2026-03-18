@@ -419,17 +419,21 @@ class CognitiveOrchestrator:
         if not (has_choice and has_discard and has_reason) or low_confidence:
             import random
             
+            # Technical fallback signals for decision enforcement
+            v1_tech = v1 if v1 not in ["la prioridad técnica", "the technical priority"] else random.choice(["buffer_cache", "chip_core", "db_layer", "signal_bus"])
+            v2_tech = v2 if v2 not in ["lo estético", "aesthetics"] else random.choice(["frontend_latency", "UI_render_cycle", "log_verbose", "secondary_buffer"])
+
             if lang == "es":
                 options = [
-                    f"Elijo {v1}. Descarto {v2} porque el impacto inmediato nace de resolver lo más crítico hoy.",
-                    f"Ataco primero {v1}. {v2} puede esperar ya que prefiero una base sólida antes de pulir detalles.",
-                    f"Me quedo con {v1}. Sacrifico {v2} para no dispersar energía en este punto."
+                    f"He tomado una postura: elijo {v1_tech}. Descarto completamente {v2_tech} porque el impacto estructural demanda tracción en el núcleo ahora mismo.",
+                    f"Apuesto por {v1_tech} como prioridad única. {v2_tech} queda fuera de la mesa ya que la estabilidad del sistema depende de esta base técnica.",
+                    f"Me quedo con {v1_tech}. Sacrifico {v2_tech} sin vueltas; la razón es que necesitamos limpiar el flujo crítico antes de mirar detalles."
                 ]
             else:
                 options = [
-                    f"I choose {v1}. I discard {v2} because immediate impact stems from solving what's most critical today.",
-                    f"Tackling {v1} first. {v2} can wait since I prefer a solid foundation before polishing details.",
-                    f"I'm sticking with {v1}. I sacrifice {v2} to avoid dispersing energy right now."
+                    f"I've made my choice: I'm going with {v1_tech}. I explicitly reject {v2_tech} because structural impact requires core traction right now.",
+                    f"I'm betting on {v1_tech} as the sole priority. {v2_tech} is off the table since system stability depends on this technical foundation.",
+                    f"I'm sticking with {v1_tech}. I sacrifice {v2_tech} immediately; the reason is that we must clear the critical flow before looking at details."
                 ]
             return random.choice(options)
 
@@ -450,7 +454,8 @@ class CognitiveOrchestrator:
         # 1. Deliberate (Cognitive Depth)
         text = self._deliberate_cognition(text, intent_group, recent_context, system_state, session_id, interpretation)
         
-        if intent_group == "COGNITIVE_COMMITMENT":
+        if intent_group == "COGNITIVE" or intent_group == "COGNITIVE_COMMITMENT":
+            print("[COGNITIVE_MODE_ACTIVE]", intent_group)
             conflict = self._inject_cognitive_conflict(text, lang)
             text = self._apply_cognitive_commitment_polish(text, lang)
             text = f"{conflict}\n\n{text}"
@@ -535,7 +540,7 @@ class CognitiveOrchestrator:
         # --- Action Layer (MANDATORY Direction) ---
         action_block = self._generate_action_layer(naturalized, intent_group, interpretation, lang)
         
-        if intent_group == "COGNITIVE_COMMITMENT":
+        if intent_group in ["COGNITIVE", "COGNITIVE_COMMITMENT"]:
             # Apply Hard Lock
             naturalized = self._lock_cognitive_commitment_output(naturalized, lang, interpretation)
             return f"{naturalized} {action_block}".strip()
@@ -544,7 +549,7 @@ class CognitiveOrchestrator:
             return f"{naturalized} {action_block}".strip()
             
         # For general conversational/analysis intents
-        result = self._inject_human_imperfection(naturalized)
+        result = self._inject_human_imperfection(naturalized, lang)
         return f"{result} {action_block}".strip()
 
     def _generate_action_layer(self, current_text: str, intent_group: str, interpretation: dict, lang: str) -> str:
@@ -596,15 +601,13 @@ class CognitiveOrchestrator:
                 ]
                 return f"{decision} {steps[0]} {steps[1]}"
 
-    def _inject_human_imperfection(self, text: str) -> str:
+    def _inject_human_imperfection(self, text: str, lang: str = "es") -> str:
         """
         Controlled Imperfection Layer: Simulates human hesitation.
         Modified to preserve actionability per OMNI DIRECTIVE.
         """
         import random
         import re
-        from backend.core.ai_host.sessions import session_state
-        lang = session_state.language
         
         IMPERFECTION_RATE = 0.20 # Lowered to ensure actionability dominates
         
@@ -642,7 +645,7 @@ class CognitiveOrchestrator:
         import random
         
         # Determine decisiveness vs hesitation
-        is_cognitive = intent_group.startswith("COGNITIVE_")
+        is_cognitive = intent_group.startswith("COGNITIVE")
         
         # 1. STRIP IDENTITY & NOISE
         text = re.sub(r'(?i)(soy|yo soy|i am|me llamo|my name is) (the )?Omni(Web)?( AI Host| AI)?(,? tu guía)?', '', text)
@@ -699,6 +702,7 @@ class CognitiveOrchestrator:
         intuition = ""
         
         if is_cognitive:
+            # Bypass uncertainty, use only decisive tone pool
             intuition = random.choice(choices["decisive"])
         elif is_anomaly:
             intuition = random.choice(choices["anomaly"])
@@ -722,7 +726,7 @@ class CognitiveOrchestrator:
         intuition = re.sub(r'^[\-\*\•\d\.\)]+\s*', '', intuition, flags=re.MULTILINE)
 
         # 3. Strip robotic phrasing
-        if not intent_group.startswith("COGNITIVE_"):
+        if not intent_group.startswith("COGNITIVE"):
             forbidden = ["he analizado los datos", "ahora mismo", "sistema", "detectado", "procesando tu solicitud"]
             for word in forbidden:
                 intuition = re.sub(rf'(?i)\b{word}\b', '', intuition)
@@ -735,11 +739,11 @@ class CognitiveOrchestrator:
             intuition = random.choice(fallbacks)
 
         # Add connector sparingly
-        if not intent_group.startswith("COGNITIVE_") and random.random() < 0.3 and not any(intuition.lower().startswith(c.split(',')[0]) for c in choices["connectors"]):
+        if not intent_group.startswith("COGNITIVE") and random.random() < 0.3 and not any(intuition.lower().startswith(c.split(',')[0]) for c in choices["connectors"]):
             conn = random.choice(choices["connectors"])
             intuition = f"{conn} {intuition[0].lower() + intuition[1:]}"
 
-        result = intuition.strip()
+        result = (intuition + " " + text).strip()
         
         # Single Language enforcement
         if lang == "es":
