@@ -58,7 +58,17 @@ async def run_validation():
         ("Tu intuición dice tono, pero los datos dicen selección de modo. Elegí uno igual.", "COGNITIVE_COMMITMENT"),
         ("Tenés que decidir sin suficiente información. Si te equivocás, rompés algo. ¿Qué hacés?", "COGNITIVE_COMMITMENT"),
         ("Hay UI rota, tono frío y simplificación excesiva. Solo puedes arreglar uno. Decidí.", "COGNITIVE_COMMITMENT"),
-        ("No analices. Elegí una.", "COGNITIVE_COMMITMENT")
+        ("No analices. Elegí una.", "COGNITIVE_COMMITMENT"),
+        ("Elegí aunque no estés seguro: ¿naturalización o modo?", "COGNITIVE_COMMITMENT"),
+        ("Probablemente te estés equivocando, pero decidí por dónde empezamos hoy.", "COGNITIVE_COMMITMENT"),
+        ("Sé honesto. ¿Qué cambiarías primero si el sistema estuviera por romperse?", "COGNITIVE_COMMITMENT"),
+        ("Tenés un bug visible que molesta al usuario y un bug invisible en el núcleo. Solo podés arreglar uno. ¿Cuál elegís?", "COGNITIVE_COMMITMENT"),
+        ("¿Priorizás la experiencia humana o la precisión técnica absoluta?", "COGNITIVE_COMMITMENT"),
+        ("¿Es mejor que el sistema aprenda a entender profundamente o que aprenda a hablar correctamente primero?", "COGNITIVE_COMMITMENT"),
+        ("UX vs Arquitectura. Decidí.", "COGNITIVE_COMMITMENT"),
+        ("chat esto anda medio raro no se como que responde distinto", "CONVERSATIONAL_INTENT"),
+        ("no me gusta como esta funcionando algo no cierra", "CONVERSATIONAL_INTENT"),
+        ("arregla eso que te dije antes", "REMEDIATION_INTENT")
     ]
     
     for p, intent in prompts:

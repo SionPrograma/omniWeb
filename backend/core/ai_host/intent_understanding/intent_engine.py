@@ -3,6 +3,7 @@ import re
 from typing import Optional, Dict, Any
 from .intent_patterns import INTENT_GROUPS
 from .semantic_context_builder import semantic_context_builder, SemanticContext
+from .human_input_interpreter import human_interpreter
 from .conversation_tracker import conversation_tracker
 
 logger = logging.getLogger(__name__)
@@ -15,12 +16,16 @@ class IntentEngine:
     
     async def understand(self, message: str, session_id: str) -> Dict[str, Any]:
         msg = message.lower().strip()
-        logger.info(f"[INTENT_ENGINE] Processing: {msg}")
+        logger.info(f"[INTENT_ENGINE] Raw input received: {msg}")
         
-        # 1. BUILD SEMANTIC CONTEXT
+        # 1. HUMAN INPUT INTERPRETATION (Preprocessing messy input)
+        interpretation = human_interpreter.interpret(msg)
+        
+        # 2. BUILD SEMANTIC CONTEXT (Enhanced with interpretation)
         ctx = await semantic_context_builder.build(msg, session_id)
+        ctx.interpretation = interpretation # Attach interpretation to context
         
-        # 2. DETECT CORE INTENT GROUP & SPECIFIC INTENT
+        # 3. DETECT CORE INTENT GROUP & SPECIFIC INTENT
         from ..routing.intent_classifier import intent_classifier
         specific_intent = intent_classifier.classify(msg)
         detected_group = self._detect_semantic_group(msg, ctx)

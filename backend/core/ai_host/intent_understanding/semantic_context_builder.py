@@ -17,6 +17,7 @@ class SemanticContext:
         self.system_state = system_state
         self.history = history
         self.active_mission = active_mission
+        self.interpretation = None
 
 class SemanticContextBuilder:
     """

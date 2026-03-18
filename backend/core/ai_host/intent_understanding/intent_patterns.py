@@ -4,6 +4,16 @@ from typing import Dict, List
 # Groups linguistic triggers into major mission-scale categories
 
 INTENT_GROUPS: Dict[str, List[str]] = {
+    "COGNITIVE_COMMITMENT": [
+        "solo puedes arreglar uno", "elige uno", "decidí", "toma una decisión", 
+        "qué cambiarías primero", "qué priorizarías", "qué ignorarías", 
+        "defiende una decisión", "si solo pudieras arreglar una cosa", 
+        "cuál eliges y cuál sacrificas", "aunque no estés seguro, elegí",
+        "no sabes si", "decidí por dónde", "aunque no sepas", 
+        "probablemente te estés equivocando", "seguís defendiendo o cambiás",
+        "no analices", "sé honesto", "elige aunque no estés seguro", "decidí ya",
+        "elegí una", "toma postura"
+    ],
     "BUILD_INTENT": [
         "crea", "desarrolla", "build", "create", "implement", "evolve", 
         "evoluciona", "inicia", "desarrollo", "constructor", "builder"
@@ -45,12 +55,6 @@ INTENT_GROUPS: Dict[str, List[str]] = {
     "COGNITIVE_SYNTHESIS": [
         "contexto de la conversación", "conversation context", "qué patrón", 
         "detecta qué", "resume lo que", "conversation history", "historial"
-    ],
-    "COGNITIVE_COMMITMENT": [
-        "solo puedes arreglar uno", "elige uno", "decidí", "toma una decisión", 
-        "qué cambiarías primero", "qué priorizarías", "qué ignorarías", 
-        "defiende una decisión", "si solo pudieras arreglar una cosa", 
-        "cuál eliges y cuál sacrificas", "aunque no estés seguro, elegí"
     ],
     "COGNITIVE_PRIORITIZATION": [
         "prioriza", "prioritize", "qué ignorarías", "ignora", "ignore", 

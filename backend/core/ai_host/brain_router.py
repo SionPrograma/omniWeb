@@ -38,8 +38,8 @@ class BrainRouter:
         Main reasoning entry point.
         """
         msg = message.lower().strip()
-        lang = session_state.language
         session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+        lang = session_state.get_language(session_id)
         
         # 0. NORMALIZE & SEMANTIC UNDERSTANDING
         msg_clean = self._normalize_request(msg)
@@ -512,23 +512,21 @@ class BrainRouter:
         import random
         if lang == "es":
             options = [
-                "Entiendo. ¿En qué más puedo ayudarte con el sistema desde aquí?",
-                "De acuerdo. ¿Quieres que analicemos algún otro componente o prefieres seguir con otra cosa?",
-                "Vale. Sigo observando el estado del sistema en tiempo real.",
-                "Perfecto. Estoy listo para tu siguiente instrucción, Creador.",
-                "Entendido. ¿Pasamos a la siguiente fase o tienes alguna duda sobre lo anterior?",
-                "Estoy a la escucha. ¿Qué quieres que evaluemos a continuación?",
-                "Bien. La sincronización es estable. ¿Cuál es el siguiente paso?"
+                "Entiendo el contexto. Seguí con la siguiente instrucción para profundizar.",
+                "De acuerdo. El sistema está estable. ¿Qué priorizamos ahora?",
+                "Vale. Sigo monitoreando los procesos en tiempo real.",
+                "Listo. Estoy a la espera de tu dirección, Creador.",
+                "Comprendido. Sigamos con la evaluación del flujo.",
+                "Bien. La sincronización es sólida. Decidí el siguiente paso."
             ]
         else:
             options = [
-                "I see. How else can I assist you with the system from here?",
-                "Understood. Would you like me to analyze another component or move on to something else?",
-                "Alright. I'm keeping an eye on the system state in real-time.",
-                "Perfect. I'm ready for your next instruction, Creator.",
-                "Got it. Shall we move to the next phase or do you have any questions about the previous steps?",
-                "I'm listening. What should we evaluate next?",
-                "Good. Synchronization is stable. What is the next step?"
+                "Understood the context. Proceed with the next instruction to go deeper.",
+                "Alright. System is stable. What do we prioritize next?",
+                "Got it. I'm monitoring the processes in real-time.",
+                "Ready. I'm waiting for your direction, Creator.",
+                "Understood. Let's continue with the flow evaluation.",
+                "Good. Synchronization is solid. Decide the next step."
             ]
         return AICommandResponse(intent="chat", status="success", message=random.choice(options))
 
