@@ -118,6 +118,20 @@ class CognitiveOrchestrator:
         from backend.core.antimodal.antimodal_controller import antimodal_controller
         brain_response.message = antimodal_controller.process_ai_response(brain_response.message)
         
+        # 7. Cognitive Audit (Observational Phase)
+        try:
+            from backend.core.ai_host.audit import cognitive_auditor
+            audit_res = cognitive_auditor.audit_response(
+                response_text=brain_response.message,
+                intent_group=understanding.get("intent_group", "CONVERSATIONAL_INTENT"),
+                metadata={"lang": session_state.get_language(session_id) if 'session_state' in locals() else "es"}
+            )
+            brain_response.audit = audit_res.to_dict()
+            if not audit_res.passed:
+                logger.warning(f"[ORCHESTRATOR] Audit Failure Detected: {audit_res.failure_types} | Severity: {audit_res.severity}")
+        except Exception as e:
+            logger.error(f"[ORCHESTRATOR] Audit layer error: {e}")
+
         # Log telemetry before returning
         try:
             from backend.core.usage.usage_tracker import usage_tracker

@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="/shell/creator_theme.css">
     <link rel="stylesheet" href="/shell/builder.css">
     <link rel="stylesheet" href="/shell/editor.css">
+    <link rel="stylesheet" href="/shell/audit_drawer.css">
     <link rel="manifest" href="/shell/manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -422,6 +423,26 @@
                 <div id="copilot-suggestion-output" style="margin-top: 15px; display: none;">
                     <pre id="suggestion-text" class="diff-pre"></pre>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COGNITIVE AUDIT DRAWER (ADDITIVE) -->
+    <div id="audit-drawer-container" class="audit-drawer-container collapsed">
+        <div class="audit-drawer-handle" id="audit-drawer-toggle" title="Toggle Cognitive Audit">
+            <div class="status-indicator" id="audit-indicator-dot"></div>
+            <svg class="handle-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6" />
+            </svg>
+        </div>
+        <div class="audit-drawer-content">
+            <header class="audit-drawer-header">
+                <h3>COGNITIVE AUDIT</h3>
+                <button class="close-drawer"
+                    onclick="document.getElementById('audit-drawer-container').classList.add('collapsed')">✕</button>
+            </header>
+            <div class="audit-drawer-body" id="audit-drawer-body">
+                <div class="no-audit-data">No audit data available for the last interaction.</div>
             </div>
         </div>
     </div>

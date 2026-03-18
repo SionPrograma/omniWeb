@@ -99,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (greetingEl) greetingEl.innerText = data.payload.title;
                 }
                 addMessage(data.payload.message, 'ai');
+                if (window.creatorEnv && data.audit) {
+                    window.creatorEnv.updateAuditResult(data.audit);
+                }
             } else {
                 // Local fallback if message is empty
                 addMessage("Sistema Omni inicializado. Listo para recibir instrucciones.", 'ai');
@@ -425,6 +428,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("[EXECUTION_SUCCESS] Response received.");
                 addMessage(data.message, 'ai');
                 console.log("[RESPONSE_RENDERED] Message displayed in UI.");
+
+                // Update Audit Drawer if in Creator Mode
+                if (window.creatorEnv && data.audit) {
+                    window.creatorEnv.updateAuditResult(data.audit);
+                }
+
                 // Voice Feedback
                 voice.speak(data.message);
             }

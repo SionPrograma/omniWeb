@@ -1,0 +1,225 @@
+/* OMNIWEB AUDIT DRAWER - PREMIUM V1 */
+
+:root {
+    --audit-pass: #32ff96;
+    --audit-fail: #ff5050;
+    --audit-warn: #ffaa00;
+    --audit-bg: rgba(5, 5, 8, 0.95);
+    --audit-border: rgba(255, 255, 255, 0.1);
+}
+
+.audit-drawer-container {
+    position: fixed;
+    top: 60px;
+    /* Below status bar */
+    right: 0;
+    height: calc(100% - 140px);
+    /* Avoid bottom nav */
+    z-index: 2000;
+    display: none;
+    /* Hidden for non-creators */
+    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    pointer-events: none;
+}
+
+body.creator-authenticated .audit-drawer-container {
+    display: flex;
+}
+
+.audit-drawer-container.collapsed {
+    transform: translateX(100%);
+}
+
+.audit-drawer-container.collapsed .audit-drawer-handle {
+    transform: translateX(-100%);
+}
+
+.audit-drawer-handle {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) translateX(-100%);
+    background: var(--audit-bg);
+    border: 1px solid var(--audit-border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    padding: 12px 6px;
+    pointer-events: auto;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+    transition: background 0.2s, transform 0.3s;
+}
+
+.audit-drawer-handle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.audit-drawer-handle .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #555;
+}
+
+.audit-drawer-handle .status-indicator.pass {
+    background: var(--audit-pass);
+    box-shadow: 0 0 8px var(--audit-pass);
+}
+
+.audit-drawer-handle .status-indicator.fail {
+    background: var(--audit-fail);
+    box-shadow: 0 0 8px var(--audit-fail);
+}
+
+.audit-drawer-handle .handle-arrow {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s;
+}
+
+.audit-drawer-container.collapsed .handle-arrow {
+    transform: rotate(180deg);
+}
+
+.audit-drawer-content {
+    width: 320px;
+    height: 100%;
+    background: var(--audit-bg);
+    border-left: 1px solid var(--audit-border);
+    backdrop-filter: blur(20px);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.audit-drawer-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--audit-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.audit-drawer-header h3 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    color: var(--audit-pass);
+}
+
+.audit-drawer-header .close-drawer {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    opacity: 0.5;
+}
+
+.audit-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+}
+
+.audit-section {
+    margin-bottom: 20px;
+}
+
+.audit-section h4 {
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    opacity: 0.5;
+    letter-spacing: 0.1em;
+}
+
+.audit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.audit-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.audit-item .label {
+    display: block;
+    font-size: 0.6rem;
+    opacity: 0.5;
+}
+
+.audit-item .value {
+    display: block;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.audit-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.65rem;
+}
+
+.audit-status-badge.pass {
+    background: rgba(50, 255, 150, 0.2);
+    color: var(--audit-pass);
+}
+
+.audit-status-badge.fail {
+    background: rgba(255, 80, 80, 0.2);
+    color: var(--audit-fail);
+}
+
+.audit-failure-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.audit-tag {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.audit-tag.fail {
+    color: var(--audit-fail);
+    border-color: var(--audit-fail);
+}
+
+.recommended-box {
+    background: rgba(50, 255, 150, 0.05);
+    border: 1px dashed var(--audit-pass);
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.audit-explanation {
+    margin-top: 10px;
+    line-height: 1.4;
+    opacity: 0.8;
+}
+
+.no-audit-data {
+    text-align: center;
+    padding: 40px 20px;
+    opacity: 0.4;
+}

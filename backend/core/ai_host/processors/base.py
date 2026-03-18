@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
 
 class AICommandResponse(BaseModel):
@@ -7,6 +7,7 @@ class AICommandResponse(BaseModel):
     status: str
     message: str
     payload: Dict[str, Any] = {}
+    audit: Optional[Dict[str, Any]] = None
 
 class CommandProcessor(ABC):
     async def can_handle(self, command: str) -> bool:

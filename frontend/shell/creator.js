@@ -19,6 +19,7 @@ class CreatorEnvironment {
         this.setupMissionControl();
         this.bindAIVisual();
         this.setupQRScanner();
+        this.setupAuditDrawer();
 
         // Auto-access for Creator Audit (Phase 30)
         setTimeout(() => {
@@ -2606,6 +2607,114 @@ class CreatorEnvironment {
     clearMedia() {
         this.sessionMedia = [];
         this.renderMediaPreviews();
+    }
+
+    // --- COGNITIVE AUDIT DRAWER (ADDITIVE) ---
+    setupAuditDrawer() {
+        const toggle = document.getElementById('audit-drawer-toggle');
+        const container = document.getElementById('audit-drawer-container');
+        if (toggle && container) {
+            toggle.onclick = () => {
+                container.classList.toggle('collapsed');
+            };
+        }
+    }
+
+    updateAuditResult(audit) {
+        const body = document.getElementById('audit-drawer-body');
+        const dot = document.getElementById('audit-indicator-dot');
+        const container = document.getElementById('audit-drawer-container');
+        if (!body) return;
+
+        // Auto-open if audit failed and severity is not low (optional, but good for awareness)
+        // if (audit && !audit.passed && audit.severity !== 'low') {
+        //     container.classList.remove('collapsed');
+        // }
+
+        if (!audit) {
+            body.innerHTML = '<div class="no-audit-data">No audit data available for the last interaction.</div>';
+            if (dot) {
+                dot.className = 'status-indicator';
+                dot.title = "No audit data";
+            }
+            return;
+        }
+
+        // Update dot status
+        if (dot) {
+            dot.className = `status-indicator ${audit.passed ? 'pass' : 'fail'}`;
+            dot.title = audit.passed ? "Audit Passed" : "Audit Failed";
+        }
+
+        const statusLabel = audit.passed ? 'PASS' : 'FAIL';
+        const statusClass = audit.passed ? 'pass' : 'fail';
+
+        body.innerHTML = `
+            <div class="audit-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4>Contract Status</h4>
+                    <span class="audit-status-badge ${statusClass}">${statusLabel}</span>
+                </div>
+            </div>
+
+            <div class="audit-section">
+                <h4>Core Metadata</h4>
+                <div class="audit-grid">
+                    <div class="audit-item">
+                        <span class="label">Intent Group</span>
+                        <span class="value">${audit.intent_group || 'N/A'}</span>
+                    </div>
+                    <div class="audit-item">
+                        <span class="label">Severity</span>
+                        <span class="value">${audit.severity || 'low'}</span>
+                    </div>
+                    <div class="audit-item">
+                        <span class="label">Confidence</span>
+                        <span class="value">${(audit.confidence * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="audit-item">
+                        <span class="label">Auditor</span>
+                        <span class="value">CognitiveAuditor V1</span>
+                    </div>
+                </div>
+            </div>
+
+            ${audit.failure_types?.length > 0 ? `
+            <div class="audit-section">
+                <h4>Failure Types Detected</h4>
+                <div class="audit-failure-list">
+                    ${audit.failure_types.map(f => `<span class="audit-tag fail">${f}</span>`).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            ${(audit.suspicious_layers?.length > 0 || audit.suspicious_modules?.length > 0) ? `
+            <div class="audit-section">
+                <h4>Detection Origin</h4>
+                <div class="audit-failure-list">
+                    ${(audit.suspicious_layers || []).map(l => `<span class="audit-tag">Layer: ${l}</span>`).join('')}
+                    ${(audit.suspicious_modules || []).map(m => `<span class="audit-tag">Module: ${m}</span>`).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="audit-section">
+                <h4>Analysis & Explanation</h4>
+                <div class="audit-explanation">
+                    ${audit.explanation || "Output follows established cognitive contract."}
+                </div>
+            </div>
+
+            <div class="audit-section">
+                <h4>Safe Next Action</h4>
+                <div class="recommended-box">
+                    <strong>Action:</strong> ${audit.recommended_action || "Continue monitoring."}<br/>
+                    <small style="opacity: 0.6; display: block; margin-top: 5px;">
+                        Tool suggest: ${audit.recommended_tool || "none"}
+                    </small>
+                </div>
+            </div>
+        `;
     }
 }
 
