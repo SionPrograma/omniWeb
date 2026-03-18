@@ -73,7 +73,7 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "auditá", "audita", "audit", "inspecciona el sistema", "system audit", 
         "qué está fallando", "qué falla", "diagnóstica", "diagnostica", 
         "revisa el sistema", "qué capa falla", "qué modulo falla", 
-        "sospechás", "prioridad de arreglo"
+        "sospechás", "prioridad de arreglo", "saludable", "warning", "evidencia real", "respondé none"
     ],
 }
 

@@ -14,8 +14,9 @@ class AuditProcessor(CommandProcessor):
         cmd = command.lower().strip()
         triggers = ["auditá", "audita", "audit", "qué está fallando", "qué falla", "diagnóstica", 
                     "diagnostica", "revisa el sistema", "qué capa falla", "qué modulo falla", 
-                    "sospechás", "prioridad de arreglo", "inspect system", "diagnose failure"]
-        return any(t in cmd for t in triggers)
+                    "sospechás", "prioridad de arreglo", "inspect system", "diagnose failure",
+                    "estás saludable", "estás en warning", "cómo está el sistema", "estado del sistema"]
+        return any(t in cmd for t in triggers) or ("saludable" in cmd and "warning" in cmd)
 
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         from backend.core.system_state.engine import state_engine
@@ -30,15 +31,15 @@ class AuditProcessor(CommandProcessor):
             # Map health to Spanish
             health_map = {
                 SystemHealth.HEALTHY: "SALUDABLE",
-                SystemHealth.WARNING: "ADVERTENCIA",
-                SystemHealth.ERROR: "ERROR"
+                SystemHealth.WARNING: "WARNING",
+                SystemHealth.ERROR: "CRÍTICO"
             }
             health_label = health_map.get(state.health, "DESCONOCIDO")
             
             # 1. Main Failure Identification
             main_failure = "NINGUNA DETECTADA"
             suspicious_layer = "N/A"
-            evidence = "TODOS LOS PROCESOS EN RANGO NOMINAL"
+            evidence = "NONE"
             priority = "BAJA"
             next_action = "CONTINUAR MONITOREO"
 
@@ -49,7 +50,8 @@ class AuditProcessor(CommandProcessor):
                     names = [c.slug.upper() for c in failed_chips]
                     main_failure = f"FALLA DETECTADA EN MÓDULO(S): {', '.join(names)}"
                     suspicious_layer = "CAPA_EJECUCIÓN_CHIPS"
-                    evidence = f"{len(failed_chips)} COMPONENTES EN ESTADO {health_map.get(failed_chips[0].health, 'FALLIDO')}"
+                    chip_states = [f"{c.slug.upper()}:{c.health.value.upper()}" for c in failed_chips]
+                    evidence = f"CHIP_SIGNALS:[{', '.join(chip_states)}]"
                     priority = "ALTA" if any(c.health == SystemHealth.ERROR for c in failed_chips) else "MEDIA"
                     next_action = "REINICIAR MÓDULOS AFECTADOS O REVISAR LOGS DE ERROR"
                 
@@ -57,22 +59,22 @@ class AuditProcessor(CommandProcessor):
                 elif not state.database.get("connected"):
                     main_failure = "DESCONEXIÓN DE BASE DE DATOS"
                     suspicious_layer = "CAPA_DATOS"
-                    evidence = "CONEXIÓN RECHAZADA / DB_OFFLINE"
-                    priority = "CRÍTICA"
+                    evidence = f"DB_STATE:CONNECTED=FALSE"
+                    priority = "ALTA"
                     next_action = "VERIFICAR SERVICIO POSTGRES/SQLITE"
 
                 # Check healing status
                 elif state.is_healing:
                     main_failure = "SISTEMA EN PROCESO DE AUTOCURACIÓN"
                     suspicious_layer = "MOTOR_ESTABILIDAD"
-                    evidence = f"{state.pending_fixes} REPARACIONES PENDIENTES"
+                    evidence = f"HEALING_SIGNAL:PENDING_FIXES={state.pending_fixes}"
                     priority = "MEDIA"
                     next_action = "ESPERAR FINALIZACIÓN DE CICLO DE ESTABILIDAD"
                 
                 else:
                     main_failure = "INESTABILIDAD GENERAL DETECTADA"
                     suspicious_layer = "SISTEMA_CORE"
-                    evidence = "ESTADO DE SALUD GLOBAL NO NOMINAL"
+                    evidence = f"GLOBAL_HEALTH_VALUE:{state.health.value}"
                     priority = "MEDIA"
             
             # --- DETERMINISTIC OUTPUT ---
@@ -90,7 +92,12 @@ class AuditProcessor(CommandProcessor):
             from backend.core.interface.visual_interface import visual_interface
             visual = visual_interface.create_visual_payload(
                 "system-audit-active",
-                {"status": priority.lower(), "failure": main_failure, "health": state.health.value},
+                {
+                    "estado": health_label,
+                    "prioridad": priority,
+                    "falla_principal": main_failure,
+                    "evidencia": evidence
+                },
                 "Real-Time Audit Mode"
             )
 
@@ -105,5 +112,5 @@ class AuditProcessor(CommandProcessor):
             return AICommandResponse(
                 intent="system_audit",
                 status="error",
-                message=f"ESTADO: ERROR\nFALLA PRINCIPAL: FALLO EN MOTOR DE AUDITORÍA\nCAPA: AUDIT_PROCESSOR\nEVIDENCIA: {str(e)}\nPRIORIDAD: CRITICAL\nSIGUIENTE ACCIÓN: REVISAR BACKEND/LOGS",
+                message=f"ESTADO: CRÍTICO\nFALLA PRINCIPAL: FALLO EN MOTOR DE AUDITORÍA\nCAPA: AUDIT_PROCESSOR\nEVIDENCIA: {str(e)}\nPRIORIDAD: ALTA\nSIGUIENTE ACCIÓN: REVISAR BACKEND/LOGS",
             )

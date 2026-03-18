@@ -62,6 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatLog = document.getElementById('chat-log');
     const closeContextBtn = document.getElementById('close-context');
 
+    if (shellInput) {
+        shellInput.addEventListener('input', () => {
+            shellInput.classList.remove('input-error');
+        });
+    }
+
     if (closeContextBtn) {
         closeContextBtn.addEventListener('click', () => {
             toggleContext(false);
@@ -109,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error("Greeting failed:", err);
             // Local fallback on error
-            addMessage("Omni Link Establecido. ¿En qué puedo ayudarte hoy, Creador?", 'ai');
+            addMessage("Enlace Omni Establecido. ¿Cómo puedo ayudarte hoy?", 'ai');
         }
     }
     initGreeting();
@@ -357,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 shellInput.placeholder = "Procesando...";
             } else {
                 voiceBtn.classList.remove('listening', 'processing');
-                shellInput.placeholder = "Command Omni...";
+                shellInput.placeholder = "Escribe un comando...";
                 if (state === 'error') {
                     shellInput.classList.add('input-error');
                     setTimeout(() => shellInput.classList.remove('input-error'), 2000);
@@ -399,6 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addMessage(cmd, 'user', true); // Force scroll for user message
         shellInput.value = '';
+        shellInput.classList.remove('input-error'); // Clear error state on submission
 
         // Typing indicator + Orb pulse
         const orb = document.querySelector('.ai-orb');
@@ -459,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // SuperCommand display data
                 handleVisualResponse({
                     type: 'task-report',
-                    title: data.display_data.task_title || 'Task Execution',
+                    title: data.display_data.task_title || 'Ejecución de Tarea',
                     data: {
                         status: data.payload.status,
                         actions: data.payload.actions,
@@ -471,8 +478,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Intent Handling
             if (data.intent === 'confirmation_required') {
                 const confirmed = await window.creatorEnv.askPermission(
-                    "System Confirmation",
-                    data.message || "Do you want to proceed with this operation?"
+                    "Confirmación del Sistema",
+                    data.message || "¿Deseas proceder con esta operación?"
                 );
                 if (confirmed) {
                     shellInput.value = `confirm ${cmd}`;
@@ -543,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('AI Host Error:', error);
             typingDiv.remove();
-            addMessage("I'm having trouble connecting to the core system. Please verify connection.", 'ai');
+            addMessage("Tengo problemas para conectar con el sistema central. Por favor, verifica la conexión.", 'ai');
         }
     }
 
@@ -565,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msgDiv.className = `message ai-visual type-${visual.type}`;
 
         let content = `<div class="visual-card">
-            <h4>${visual.title || 'System Update'}</h4>`;
+            <h4>${visual.title || 'Actualización del Sistema'}</h4>`;
 
         if (visual.type === 'task-report') {
             const actions = visual.data.actions || [];
@@ -643,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const path = editorPathInput.value.trim();
             if (!path) return;
 
-            editorOpenBtn.innerText = 'Loading...';
+            editorOpenBtn.innerText = 'Cargando...';
             try {
                 const res = await fetch(`/api/v1/creator/fs/read?path=${encodeURIComponent(path)}`, {
                     headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
@@ -651,17 +658,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 if (data.status === 'success' && data.content !== undefined) {
                     editorContent.value = data.content;
-                    editorOpenBtn.innerText = 'File Opened';
+                    editorOpenBtn.innerText = 'Archivo Abierto';
                 } else {
                     alert("Error reading file: " + (data.detail || data.error || "Unknown error"));
-                    editorOpenBtn.innerText = 'Open File';
+                    editorOpenBtn.innerText = 'Abrir Archivo';
                 }
             } catch (err) {
                 console.error("Editor Read Error:", err);
                 alert("Could not connect to editor API.");
                 editorOpenBtn.innerText = 'Open File';
             }
-            setTimeout(() => editorOpenBtn.innerText = 'Open File', 2000);
+            setTimeout(() => editorOpenBtn.innerText = 'Abrir Archivo', 2000);
         });
     }
 
@@ -671,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const content = editorContent.value;
             if (!path) return;
 
-            editorSaveBtn.innerText = 'Saving...';
+            editorSaveBtn.innerText = 'Guardando...';
             try {
                 const res = await fetch('/api/v1/creator/fs/write', {
                     method: 'POST',
@@ -687,14 +694,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     addMessage(`File updated: **${path}**`, 'ai');
                 } else {
                     alert("Error saving file: " + (data.detail || data.error || "Unknown error"));
-                    editorSaveBtn.innerText = 'Save Changes';
+                    editorSaveBtn.innerText = 'Guardar Cambios';
                 }
             } catch (err) {
                 console.error("Editor Save Error:", err);
                 alert("Could not connect to editor API.");
                 editorSaveBtn.innerText = 'Save Changes';
             }
-            setTimeout(() => editorSaveBtn.innerText = 'Save Changes', 2000);
+            setTimeout(() => editorSaveBtn.innerText = 'Guardar Cambios', 2000);
         });
     }
 

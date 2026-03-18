@@ -104,19 +104,24 @@ class CognitiveOrchestrator:
                 )
 
         # 5. Cognitive Unification: Weave context + state + mode into the response
-        brain_response.message = self._unify_response(
-            text=brain_response.message,
-            system_state=system_state,
-            mode=understanding.get("mode", "direct_response"),
-            recent_context=recent_context,
-            intent_group=understanding.get("intent_group", "CONVERSATIONAL_INTENT"),
-            session_id=session_id,
-            interpretation=understanding.get("context").interpretation if hasattr(understanding.get("context"), "interpretation") else {}
-        )
+        if brain_response.intent == "system_audit" or understanding.get("intent_group") == "SYSTEM_AUDIT_INTENT":
+            # HARD LOCK: No unification, no narrative, no extra lines
+            pass
+        else:
+            brain_response.message = self._unify_response(
+                text=brain_response.message,
+                system_state=system_state,
+                mode=understanding.get("mode", "direct_response"),
+                recent_context=recent_context,
+                intent_group=understanding.get("intent_group", "CONVERSATIONAL_INTENT"),
+                session_id=session_id,
+                interpretation=understanding.get("context").interpretation if hasattr(understanding.get("context"), "interpretation") else {}
+            )
         
         # 6. Final Adaptation (Antimodal & Telemetry Integration)
-        from backend.core.antimodal.antimodal_controller import antimodal_controller
-        brain_response.message = antimodal_controller.process_ai_response(brain_response.message)
+        if brain_response.intent != "system_audit" and understanding.get("intent_group") != "SYSTEM_AUDIT_INTENT":
+            from backend.core.antimodal.antimodal_controller import antimodal_controller
+            brain_response.message = antimodal_controller.process_ai_response(brain_response.message)
         
         # 7. Cognitive Audit (Observational Phase)
         try:

@@ -43,7 +43,7 @@
         <div class="global-announcement-bar" id="global-announcement" style="display: none;">
             <div class="announcement-content">
                 <span class="announcement-icon">!</span>
-                <span id="announcement-text">System maintenance scheduled.</span>
+                <span id="announcement-text">Mantenimiento del sistema programado.</span>
             </div>
         </div>
 
@@ -66,7 +66,7 @@
                         <rect x="14" y="7" width="3" height="3" />
                         <rect x="7" y="14" width="3" height="1" />
                     </svg>
-                    <span>SCAN ACCESS</span>
+                    <span>ESCANEAR ACCESO</span>
                 </button>
                 <div class="status-pill">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -121,7 +121,7 @@
                     </svg>
                     <span style="margin-left: 8px; font-size: 0.8rem; font-weight: 600;">BACK</span>
                 </button>
-                <span id="active-chip-title">Chip: Lingua</span>
+                <span id="active-chip-title">Chip Activo: Lingua</span>
                 <div class="chip-options">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="1" />
@@ -178,7 +178,7 @@
 
             <div class="cockpit-content">
                 <div id="cockpit-main-panel">
-                    <div class="loading-indicator">Synchronizing with system core...</div>
+                    <div class="loading-indicator">Sincronizando con el núcleo...</div>
                 </div>
             </div>
         </main>
@@ -199,18 +199,18 @@
                     <h3>Loaded Chips</h3>
                     <div class="chip-status-list" id="chip-status-container">
                         <!-- Dynamic chip status cards -->
-                        <div class="loading-indicator">Scanning modules...</div>
+                        <div class="loading-indicator">Escaneando módulos de IA...</div>
                     </div>
                 </div>
                 <div class="context-section">
-                    <h3>Host Metrics</h3>
+                    <h3>Métricas del Host</h3>
                     <div class="context-item">
-                        <span class="label">AI Logic</span>
+                        <span class="label">Lógica de IA</span>
                         <span class="value">Hybrid / Neural</span>
                     </div>
                     <div class="context-item">
-                        <span class="label">Context Loop</span>
-                        <span class="value">Active</span>
+                        <span class="label">Bucle de Contexto</span>
+                        <span class="value">Activo</span>
                     </div>
                 </div>
             </div>
@@ -355,7 +355,7 @@
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12" />
                 </svg>
             </button>
-            <input type="text" placeholder="Command Omni..." id="shell-input" autocomplete="off">
+            <input type="text" placeholder="Escribe un comando..." id="shell-input" autocomplete="off">
             <button type="button" id="voice-command">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
@@ -441,7 +441,7 @@
                 <button class="close-drawer">✕</button>
             </header>
             <div class="audit-drawer-body" id="audit-drawer-body">
-                <div class="no-audit-data">No audit data available for the last interaction.</div>
+                <div class="no-audit-data">No hay datos de auditoría disponibles para la última interacción.</div>
             </div>
         </div>
     </div>
@@ -449,18 +449,19 @@
     <!-- PERMISSION MODAL -->
     <div id="permission-modal">
         <div class="modal-content">
-            <h3 id="perm-title">Permission Required</h3>
-            <p id="perm-message">Execute development prompt?</p>
+            <h3 id="perm-title">Permiso Requerido</h3>
+            <p id="perm-message">¿Ejecutar comando de desarrollo?</p>
             <div class="modal-actions">
-                <button class="modal-btn btn-cancel" id="perm-cancel">Cancel</button>
-                <button class="modal-btn btn-confirm" id="perm-confirm">Confirm</button>
+                <button class="modal-btn btn-cancel" id="perm-cancel">Cancelar</button>
+                <button class="modal-btn btn-confirm" id="perm-confirm">Confirmar</button>
             </div>
         </div>
     </div>
 
     <!-- QR SCANNER OVERLAY (Phase 31) -->
     <div id="qr-scanner-overlay">
-        <h3 style="color: var(--creator-gold); margin-bottom: 15px; font-family: 'Outfit';">Creator Access Scan</h3>
+        <h3 style="color: var(--creator-gold); margin-bottom: 15px; font-family: 'Outfit';">Escaneo de Acceso Creador
+        </h3>
         <p style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 15px;">Alinea el código QR del creador dentro del
             marco dorado.</p>
         <div class="scanner-video-wrap">
@@ -468,8 +469,8 @@
             <div class="scanner-frame"></div>
         </div>
         <div class="scanner-controls">
-            <button class="cockpit-btn" onclick="creatorEnv.closeScanner()">CANCEL</button>
-            <button class="btn-apply" id="sim-scan-btn">SIMULATE SCAN</button>
+            <button class="cockpit-btn" onclick="creatorEnv.closeScanner()">CANCELAR</button>
+            <button class="btn-apply" id="sim-scan-btn">SIMULAR ESCANEO</button>
         </div>
     </div>
 

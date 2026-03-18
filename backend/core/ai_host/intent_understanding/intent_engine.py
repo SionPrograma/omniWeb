@@ -35,6 +35,8 @@ class IntentEngine:
             detected_group = "REMEDIATION_INTENT"
         elif specific_intent in ["creator_analysis", "creator_plan"]:
             detected_group = "ANALYSIS_INTENT" if specific_intent == "creator_analysis" else "BUILD_INTENT"
+        elif specific_intent == "system_audit":
+            detected_group = "SYSTEM_AUDIT_INTENT"
 
         # 3. RECONSTRUCT INCOMPLETE PROMPTS (Context-Awareness)
         if detected_group == "FOLLOW_UP_INTENT" and ctx.active_mission:
@@ -75,7 +77,7 @@ class IntentEngine:
         words = len(msg.split())
         
         # IF input is command -> action_execution
-        if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT"]:
+        if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "SYSTEM_AUDIT_INTENT"]:
             return "action_execution"
             
         # IF input is simple -> direct_response  

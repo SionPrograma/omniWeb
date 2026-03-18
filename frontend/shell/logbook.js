@@ -21,7 +21,7 @@ class MasterLogbook {
             <div class="panel-handle"></div>
             <header class="logbook-header">
                 <div class="header-main">
-                    <h2>Master Logbook</h2>
+                    <h2>Bitácora Maestra</h2>
                 </div>
                 <button class="close-logbook">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -33,33 +33,33 @@ class MasterLogbook {
             <div id="system-dashboard">
                 <div class="stats-grid">
                     <div class="stat-item">
-                        System Version
+                        Versión del Sistema
                         <span class="stat-value" id="log-sys-version">-</span>
                     </div>
                     <div class="stat-item">
-                        Git Branch
+                        Rama Git
                         <span class="stat-value" id="log-sys-branch">-</span>
                     </div>
                     <div class="stat-item" style="grid-column: span 2;">
-                        Active Context
+                        Contexto Activo
                         <div id="sys-modules" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;"></div>
                     </div>
                 </div>
             </div>
 
             <div class="logbook-filters">
-                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn active" data-filter="all">Todo</button>
                 <button class="filter-btn" data-filter="idea">Ideas</button>
-                <button class="filter-btn" data-filter="bug">Bugs</button>
-                <button class="filter-btn" data-filter="system_audit">Audits</button>
-                <button class="filter-btn" data-filter="auto_fix">Fixes</button>
-                <button class="filter-btn" data-filter="roadmap">Roadmap</button>
+                <button class="filter-btn" data-filter="bug">Errores</button>
+                <button class="filter-btn" data-filter="system_audit">Auditorías</button>
+                <button class="filter-btn" data-filter="auto_fix">Arreglos</button>
+                <button class="filter-btn" data-filter="roadmap">Ruta</button>
             </div>
 
             <div class="logbook-entries" id="log-entries-list">
                 <div class="loading-entries" style="padding: 40px; text-align: center;">
                     <div class="spinner" style="margin-bottom: 10px;">⚡</div>
-                    <span style="opacity: 0.5; font-size: 0.8rem;">Accessing Omni memory bank...</span>
+                    <span style="opacity: 0.5; font-size: 0.8rem;">Accediendo al banco de memoria Omni...</span>
                 </div>
             </div>
         `;
@@ -136,7 +136,7 @@ class MasterLogbook {
             this.renderEntries(data);
         } catch (error) {
             console.error('Failed to load logbook entries:', error);
-            this.entriesList.innerHTML = '<div style="padding: 20px; color: #ff5050; text-align: center;">Error: System link interrupted.</div>';
+            this.entriesList.innerHTML = '<div style="padding: 20px; color: #ff5050; text-align: center;">Error: Enlace de sistema interrumpido.</div>';
         }
     }
 
@@ -156,8 +156,8 @@ class MasterLogbook {
         if (entries.length === 0) {
             this.entriesList.innerHTML = `
                 <div style="padding: 60px 20px; text-align: center; color: rgba(255,255,255,0.2);">
-                    <p style="font-size: 0.9rem;">No entries found in this frequency.</p>
-                    <p style="font-size: 0.7rem;">Try: "Log idea: improve the shell interface"</p>
+                    <p style="font-size: 0.9rem;">No se encontraron entradas en esta frecuencia.</p>
+                    <p style="font-size: 0.7rem;">Prueba: "Registra idea: mejorar la interfaz de la terminal"</p>
                 </div>
             `;
             return;
@@ -183,7 +183,7 @@ class MasterLogbook {
                     <div style="display: flex; gap: 8px;">
                         ${entry.type === 'roadmap' && entry.status !== 'done' ? `
                             <button class="approve-build-btn" onclick="event.stopPropagation(); masterLogbook.handleApprove('${entry.id}')">
-                                APPROVE & BUILD
+                                APROBAR Y CONSTRUIR
                             </button>
                         ` : ''}
                         <div class="status-badge status-${entry.status}" onclick="event.stopPropagation(); masterLogbook.toggleStatus('${entry.id}', '${entry.status}')">
@@ -232,7 +232,7 @@ class MasterLogbook {
     }
 
     async handleApprove(entryId) {
-        if (!confirm('Start construction sequence for this roadmap?')) return;
+        if (!confirm('¿Iniciar secuencia de construcción para esta ruta?')) return;
 
         try {
             const response = await fetch(`/api/v1/ai-host/copilot/builder/approve/${entryId}`, {

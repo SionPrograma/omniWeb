@@ -55,8 +55,8 @@ class IntentClassifier:
         if any(re.search(rf"\b{w}\b", msg) for w in ["plan", "paso a paso", "mejora", "improve", "propón", "propose", "sugiere", "suggest"]):
              return "creator_plan"
 
-        if any(re.search(rf"\b{w}\b", msg) for w in ["system", "estado", "sistema"]) or "how is" in msg or "how's" in msg:
-             if any(re.search(rf"\b{w}\b", msg) for w in ["audit", "audita", "auditá", "falla", "fallando", "diagnóstico", "diagnostico", "inspect"]):
+        if any(re.search(rf"\b{w}\b", msg) for w in ["system", "estado", "sistema", "saludable", "warning", "crítico", "nominales", "nominal", "evidencia", "real", "falla", "fallando", "fallo", "error"]) or "how is" in msg or "how's" in msg:
+             if any(re.search(rf"\b{w}\b", msg) for w in ["audit", "audita", "auditá", "falla", "fallando", "diagnóstico", "diagnostico", "inspect", "revisa", "revisá", "qué pasa", "cómo está", "estás", "respondé", "responde", "qué está"]):
                  return "system_audit"
              return "show_system_status"
             
