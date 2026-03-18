@@ -15,7 +15,8 @@
     right: 0;
     height: calc(100% - 140px);
     /* Avoid bottom nav */
-    z-index: 2000;
+    z-index: 5000;
+    /* Higher than Mission Control/Nav */
     display: none;
     /* Hidden for non-creators */
     transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
@@ -52,6 +53,22 @@ body.creator-authenticated .audit-drawer-container {
     gap: 8px;
     backdrop-filter: blur(10px);
     transition: background 0.2s, transform 0.3s;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+    .audit-drawer-handle {
+        padding: 20px 10px;
+        /* Larger tap target */
+        border-radius: 12px 0 0 12px;
+    }
+
+    .audit-drawer-content {
+        width: 85vw;
+        /* Wider for easier reading on narrow screens */
+    }
 }
 
 .audit-drawer-handle:hover {

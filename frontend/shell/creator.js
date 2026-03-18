@@ -2614,9 +2614,24 @@ class CreatorEnvironment {
         const toggle = document.getElementById('audit-drawer-toggle');
         const container = document.getElementById('audit-drawer-container');
         if (toggle && container) {
-            toggle.onclick = () => {
+            // Use pointerdown for faster mobile response
+            toggle.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
                 container.classList.toggle('collapsed');
-            };
+                console.log("[AUDIT_DRAWER] Toggle state:", !container.classList.contains('collapsed'));
+            });
+
+            // Prevent clicks from bubbling through if needed
+            toggle.addEventListener('click', (e) => e.preventDefault());
+
+            // Bind close button explicitly for mobile
+            const closeBtn = container.querySelector('.close-drawer');
+            if (closeBtn) {
+                closeBtn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    container.classList.add('collapsed');
+                });
+            }
         }
     }
 
