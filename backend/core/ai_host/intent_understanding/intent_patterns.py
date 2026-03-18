@@ -69,6 +69,12 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "no digas depende", "don't say it depends", "vago", "vague", "una de dos", 
         "forced choice", "decisión binaria", "A vs B"
     ],
+    "SYSTEM_AUDIT_INTENT": [
+        "auditá", "audita", "audit", "inspecciona el sistema", "system audit", 
+        "qué está fallando", "qué falla", "diagnóstica", "diagnostica", 
+        "revisa el sistema", "qué capa falla", "qué modulo falla", 
+        "sospechás", "prioridad de arreglo"
+    ],
 }
 
 # Mapping of legacy intents to these new semantic groups if needed

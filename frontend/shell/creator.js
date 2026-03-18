@@ -81,6 +81,7 @@ class CreatorEnvironment {
         } else if (isCreator) {
             document.body.classList.remove('user-mode');
             document.body.classList.add('creator-authenticated');
+            console.log("[AUDIT_DRAWER] Creator Mode detected and authenticated.");
         }
 
         const qrBtn = document.getElementById('global-qr-scan');
@@ -2611,27 +2612,40 @@ class CreatorEnvironment {
 
     // --- COGNITIVE AUDIT DRAWER (ADDITIVE) ---
     setupAuditDrawer() {
+        console.log("[AUDIT_DRAWER] Initializing setup...");
         const toggle = document.getElementById('audit-drawer-toggle');
         const container = document.getElementById('audit-drawer-container');
+
+        if (!toggle) console.error("[AUDIT_DRAWER] Handle NOT found in DOM (id: audit-drawer-toggle)");
+        if (!container) console.error("[AUDIT_DRAWER] Container NOT found in DOM (id: audit-drawer-container)");
+
         if (toggle && container) {
-            // Use pointerdown for faster mobile response
-            toggle.addEventListener('pointerdown', (e) => {
-                e.stopPropagation();
+            console.log("[AUDIT_DRAWER] Elements found. Binding toggle...");
+
+            const performToggle = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                const isClosing = !container.classList.contains('collapsed');
                 container.classList.toggle('collapsed');
-                console.log("[AUDIT_DRAWER] Toggle state:", !container.classList.contains('collapsed'));
-            });
+                console.log("[AUDIT_DRAWER] UI Toggle triggered. New state [Expanded]:", isClosing === false);
+            };
 
-            // Prevent clicks from bubbling through if needed
-            toggle.addEventListener('click', (e) => e.preventDefault());
+            // Use both click and pointerdown for maximum compatibility
+            toggle.addEventListener('click', performToggle);
+            toggle.addEventListener('pointerdown', (e) => e.stopPropagation()); // Prevent drag conflicts
 
-            // Bind close button explicitly for mobile
+            // Bind close button
             const closeBtn = container.querySelector('.close-drawer');
             if (closeBtn) {
-                closeBtn.addEventListener('pointerdown', (e) => {
+                closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     container.classList.add('collapsed');
                 });
             }
+
+            console.log("[AUDIT_DRAWER] Toggle bound successfully.");
         }
     }
 

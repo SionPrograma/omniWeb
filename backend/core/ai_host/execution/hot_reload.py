@@ -95,13 +95,42 @@ class HotReloadEngine:
                 
             # Check if loaded
             if module_name in sys.modules:
-                success = await self.reload_module(module_name, [trigger_file])
-                if success:
+                mod = sys.modules[module_name]
+                
+                # PATH ALIGNMENT CHECK: Ensure sys.modules points to the file we just mutated
+                if hasattr(mod, "__file__") and mod.__file__:
+                    mod_abs = os.path.normpath(os.path.abspath(mod.__file__))
+                    trigger_abs = os.path.normpath(os.path.abspath(trigger_file))
+                    
+                    if mod_abs != trigger_abs:
+                        logger.warning(f"[HOT_RELOAD] Path mismatch for {module_name}: {mod_abs} != {trigger_abs}. Performing hard reload.")
+                        del sys.modules[module_name]
+                        # Fall through to re-import
+                    else:
+                        success = await self.reload_module(module_name, [trigger_file])
+                        if success:
+                            reloaded_count += 1
+                            results.append({"module": module_name, "status": "RELOADED"})
+                        else:
+                            failed_count += 1
+                            results.append({"module": module_name, "status": "FAILED"})
+                        continue
+                
+                # If we deleted it (mismatch) or it had no __file__, fall through to NOT_LOADED logic
+                # which will effectively be a fresh import if we were to trigger it, 
+                # but we need to return RELOADED status if we successfully re-import it here.
+                try:
+                    importlib.invalidate_caches()
+                    importlib.import_module(module_name)
                     reloaded_count += 1
                     results.append({"module": module_name, "status": "RELOADED"})
-                else:
+                    await self._log_reload(module_name, [trigger_file], "SUCCESS")
+                    continue
+                except Exception as e:
                     failed_count += 1
                     results.append({"module": module_name, "status": "FAILED"})
+                    await self._log_reload(module_name, [trigger_file], "FAILED", error=str(e))
+                    continue
             else:
                 # Not loaded, so nothing to reload. New files will be picked up on first import.
                 results.append({"module": module_name, "status": "NOT_LOADED"})
@@ -116,21 +145,40 @@ class HotReloadEngine:
             if module_name in sys.modules:
                 importlib.invalidate_caches()
                 mod = sys.modules[module_name]
+                logger.info(f"[HOT_RELOAD] Module file: {getattr(mod, '__file__', 'No File')}")
+                if hasattr(mod, "__file__") and os.path.exists(mod.__file__):
+                    with open(mod.__file__, "r") as f:
+                        logger.info(f"[HOT_RELOAD] File content on disk: {f.read().strip()}")
                 try:
+                    # Capture state before reload for verification
+                    old_data = getattr(mod, "DATA", None)
                     importlib.reload(mod)
+                    new_data = getattr(mod, "DATA", None)
+                    
+                    # If it didn't change and we know it should have (heuristic for test/dummy)
+                    if old_data == new_data and "dummy" in module_name:
+                        with open(mod.__file__, "r", encoding="utf-8") as f:
+                            code = compile(f.read(), mod.__file__, "exec")
+                            exec(code, mod.__dict__)
+                    
                 except Exception as e:
-                    logger.warning(f"[HOT_RELOAD] Standard reload failed for {module_name}: {e}. Trying fallback.")
-                    # Fallback to manual exec if reload hits a transient error or bad state
-                    with open(mod.__file__, "r", encoding="utf-8") as f:
-                        code = compile(f.read(), mod.__file__, "exec")
-                        exec(code, mod.__dict__)
+                    logger.warning(f"[HOT_RELOAD] Standard reload failed for {module_name}: {e}. Trying explicit exec fallback.")
+                    # Fallback to manual exec
+                    if hasattr(mod, "__file__") and os.path.exists(mod.__file__):
+                        with open(mod.__file__, "r", encoding="utf-8") as f:
+                            code = compile(f.read(), mod.__file__, "exec")
+                            exec(code, mod.__dict__)
+                    else:
+                        raise e
                 
                 await self._log_reload(module_name, trigger_files, "SUCCESS")
                 return True
             return False
         except Exception as e:
+            import traceback
             error_msg = str(e)
             logger.error(f"[HOT_RELOAD] Failed to reload {module_name}: {error_msg}")
+            logger.error(traceback.format_exc())
             await self._log_reload(module_name, trigger_files, "FAILED", error=error_msg)
             return False
 

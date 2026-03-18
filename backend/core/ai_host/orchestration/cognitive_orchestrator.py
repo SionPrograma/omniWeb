@@ -461,6 +461,9 @@ class CognitiveOrchestrator:
         from backend.core.ai_host.sessions import session_state
         lang = session_state.get_language(session_id)
         
+        if intent_group == "SYSTEM_AUDIT_INTENT":
+            return text
+            
         # 0. Context extraction
         user_state = interpretation.get("user_state", "neutral")
         context_hint = interpretation.get("context", "general_system")

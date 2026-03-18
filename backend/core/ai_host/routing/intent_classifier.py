@@ -56,7 +56,9 @@ class IntentClassifier:
              return "creator_plan"
 
         if any(re.search(rf"\b{w}\b", msg) for w in ["system", "estado", "sistema"]) or "how is" in msg or "how's" in msg:
-            return "show_system_status"
+             if any(re.search(rf"\b{w}\b", msg) for w in ["audit", "audita", "auditá", "falla", "fallando", "diagnóstico", "diagnostico", "inspect"]):
+                 return "system_audit"
+             return "show_system_status"
             
         if any(re.search(rf"\b{w}\b", msg) for w in ["arregla", "cura", "sana", "fix", "repara", "heal", "soluciona", "solve"]):
              return "healing"

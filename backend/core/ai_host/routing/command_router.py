@@ -65,6 +65,7 @@ class CommandRouter:
         from ..processors.governance_advisor_processor import GovernanceAdvisorProcessor
         from ..processors.communication_processor import CommunicationProcessor
         from ..processors.music_processor import MusicProcessor
+        from ..processors.audit_processor import AuditProcessor
 
         # Register in priority order
         self.registry.register("operational", OperationalProcessor())
@@ -89,6 +90,7 @@ class CommandRouter:
         self.registry.register("governance_advisor", GovernanceAdvisorProcessor())
         self.registry.register("communication", CommunicationProcessor())
         self.registry.register("music", MusicProcessor())
+        self.registry.register("audit", AuditProcessor())
 
         self.intents = {
             "open_chip": self._handle_open_chip,
@@ -99,6 +101,7 @@ class CommandRouter:
             "log_entry": self._handle_log_entry,
             "show_system_status": self._handle_show_system_status,
             "show_logbook": self._handle_show_logbook,
+            "system_audit": self._handle_system_audit,
             "launch_pipeline": self._handle_launch_pipeline,
             "create": self._handle_create,
             "activate": self._handle_activate,
@@ -186,7 +189,7 @@ class CommandRouter:
                 logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
                 
                 # --- PRIORITY CHAIN EXECUTION ---
-                system_intents = ["list_chips", "show_logbook", "healing", "creator_command", "list"]
+                system_intents = ["system_audit", "list_chips", "show_logbook", "healing", "creator_command", "list"]
                 chip_intents = ["open_chip", "inspect_chip", "activate", "deactivate"]
                 nav_intents = ["navigate_to", "focus_chip_runtime"]
                 memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
@@ -306,6 +309,10 @@ class CommandRouter:
     async def _handle_show_logbook(self, msg: str) -> AICommandResponse:
         processor = self.registry.get_processor("logbook")
         return await processor.process(msg, "default_user")
+
+    async def _handle_system_audit(self, msg: str) -> AICommandResponse:
+        processor = self.registry.get_processor("audit")
+        return await processor.process(msg)
 
     async def _handle_launch_pipeline(self, msg: str) -> AICommandResponse:
         # Require confirmation for pipelines

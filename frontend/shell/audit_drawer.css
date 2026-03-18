@@ -1,4 +1,4 @@
-/* OMNIWEB AUDIT DRAWER - PREMIUM V1 */
+/* OMNIWEB AUDIT DRAWER - PREMIUM V1 - LEFT SIDE ALIGNED */
 
 :root {
     --audit-pass: #32ff96;
@@ -12,7 +12,7 @@
     position: fixed;
     top: 60px;
     /* Below status bar */
-    right: 0;
+    left: 0;
     height: calc(100% - 140px);
     /* Avoid bottom nav */
     z-index: 5000;
@@ -28,22 +28,23 @@ body.creator-authenticated .audit-drawer-container {
 }
 
 .audit-drawer-container.collapsed {
-    transform: translateX(100%);
+    transform: translateX(-100%);
 }
 
 .audit-drawer-container.collapsed .audit-drawer-handle {
-    transform: translateX(-100%);
+    transform: translateX(100%);
 }
 
 .audit-drawer-handle {
     position: absolute;
-    left: 0;
+    right: 0;
     top: 50%;
-    transform: translateY(-50%) translateX(-100%);
+    transform: translateY(-50%) translateX(100%);
     background: var(--audit-bg);
     border: 1px solid var(--audit-border);
-    border-right: none;
-    border-radius: 8px 0 0 8px;
+    border-left: none;
+    /* Attachment side */
+    border-radius: 0 8px 8px 0;
     padding: 12px 6px;
     pointer-events: auto;
     cursor: pointer;
@@ -56,19 +57,6 @@ body.creator-authenticated .audit-drawer-container {
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-}
-
-@media (max-width: 768px) {
-    .audit-drawer-handle {
-        padding: 20px 10px;
-        /* Larger tap target */
-        border-radius: 12px 0 0 12px;
-    }
-
-    .audit-drawer-content {
-        width: 85vw;
-        /* Wider for easier reading on narrow screens */
-    }
 }
 
 .audit-drawer-handle:hover {
@@ -96,22 +84,42 @@ body.creator-authenticated .audit-drawer-container {
     width: 16px;
     height: 16px;
     transition: transform 0.3s;
+    transform: rotate(180deg);
+    /* Face right by default (to open) */
 }
 
 .audit-drawer-container.collapsed .handle-arrow {
+    transform: rotate(0deg);
+    /* Face right when collapsed? No, wait. */
+}
+
+/* Correct arrow logic: 
+   When collapsed, container is at left -320. Handle is at container right (x=0). Arrow should point RIGHT (>).
+   When expanded, container is at left 0. Handle is at x=320. Arrow should point LEFT (<).
+*/
+
+.audit-drawer-handle .handle-arrow {
+    transform: rotate(0deg);
+    /* Points left (<) in SVG? Let's check SVG path. */
+}
+
+/* SVG path is M15 18l-6-6 6-6 which is a LEFT arrow <. */
+
+.audit-drawer-container.collapsed .handle-arrow {
     transform: rotate(180deg);
+    /* Points right (>) when collapsed */
 }
 
 .audit-drawer-content {
     width: 320px;
     height: 100%;
     background: var(--audit-bg);
-    border-left: 1px solid var(--audit-border);
+    border-right: 1px solid var(--audit-border);
     backdrop-filter: blur(20px);
     pointer-events: auto;
     display: flex;
     flex-direction: column;
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
 }
 
 .audit-drawer-header {
@@ -239,4 +247,17 @@ body.creator-authenticated .audit-drawer-container {
     text-align: center;
     padding: 40px 20px;
     opacity: 0.4;
+}
+
+@media (max-width: 768px) {
+    .audit-drawer-handle {
+        padding: 20px 10px;
+        /* Larger tap target */
+        border-radius: 0 12px 12px 0;
+    }
+
+    .audit-drawer-content {
+        width: 85vw;
+        /* Wider for easier reading on narrow screens */
+    }
 }
