@@ -30,6 +30,36 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "hazlo", "do it", "vale", "ok", "listo", "perfecto", "claro", 
         "sí", "no", "cancela", "stop"
     ],
+    "COGNITIVE_DECOMPOSITION": [
+        "divide", "descompón", "break down", "separar", "partes independientes", 
+        "subproblemas", "sub-problems"
+    ],
+    "COGNITIVE_ABSTRACTION": [
+        "niveles", "levels", "explícame en", "explain in", "puntos de vista", 
+        "different angles", "escalas"
+    ],
+    "COGNITIVE_RECONCILIATION": [
+        "reconcilia", "contradicción", "reconcile", "contradiction", 
+        "reconciliación", "cómo explicas que", "si dices"
+    ],
+    "COGNITIVE_SYNTHESIS": [
+        "contexto de la conversación", "conversation context", "qué patrón", 
+        "detecta qué", "resume lo que", "conversation history", "historial"
+    ],
+    "COGNITIVE_COMMITMENT": [
+        "solo puedes arreglar uno", "elige uno", "decidí", "toma una decisión", 
+        "qué cambiarías primero", "qué priorizarías", "qué ignorarías", 
+        "defiende una decisión", "si solo pudieras arreglar una cosa", 
+        "cuál eliges y cuál sacrificas", "aunque no estés seguro, elegí"
+    ],
+    "COGNITIVE_PRIORITIZATION": [
+        "prioriza", "prioritize", "qué ignorarías", "ignora", "ignore", 
+        "más importante", "lo más relevante", "secondary", "secundario"
+    ],
+    "COGNITIVE_DECISION": [
+        "decide", "qué cambiarías", "qué arreglarías", "decisión", "choose", 
+        "dirección", "no analices", "don't analyze"
+    ],
 }
 
 # Mapping of legacy intents to these new semantic groups if needed

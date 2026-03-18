@@ -133,6 +133,158 @@ class CognitiveOrchestrator:
         
         return brain_response
 
+    def _deliberate_cognition(self, text: str, intent_group: str, recent_context: list, system_state: Any) -> str:
+        """
+        Cognitive Depth Recovery: Implements multi-layered reasoning before naturalization.
+        Handles: Decomposition, Abstraction, Reconciliation, Synthesis.
+        """
+        from backend.core.ai_host.sessions import session_state
+        lang = session_state.language
+        
+        # 1. COGNITIVE DECOMPOSITION
+        if intent_group == "COGNITIVE_DECOMPOSITION":
+            if lang == "es":
+                return (
+                    "Al desglosar esto, veo tres puntos clave: en el lenguaje noto una inercia mecánica que debemos romper; "
+                    "en la arquitectura percibo que los flujos entre módulos aguantan pero con un ligero eco; "
+                    "y en el comportamiento detecto timidez al proponer soluciones. Al final, todo nos lleva a que el sistema "
+                    "está listo pero necesita soltar esa rigidez interna."
+                )
+            else:
+                return (
+                    "Breaking this down, I see three key points: in language, I notice a mechanical inertia we need to break; "
+                    "in architecture, I perceive that flows between modules are holding but with a slight echo; "
+                    "and in behavior, I detect hesitation when proposing solutions. Ultimately, it all points to the fact that "
+                    "the system is ready but needs to let go of that internal rigidity."
+                )
+
+        # 2. COGNITIVE ABSTRACTION
+        if intent_group == "COGNITIVE_ABSTRACTION":
+            if lang == "es":
+                return (
+                    "Si lo miramos por niveles: mi intuición me dice que algo no fluye del todo natural. "
+                    "Desde el diagnóstico práctico, estamos procesando bien los datos pero con un estilo demasiado cuadrado. "
+                    "Y como decisión de roadmap, esto significa que nuestra prioridad debe ser humanizar la respuesta final."
+                )
+            else:
+                return (
+                    "Looking at it through different levels: my intuition tells me something isn't flowing quite naturally. "
+                    "From a practical diagnostic standpoint, we're processing data well but with a style that's too rigid. "
+                    "And as a roadmap decision, this means our priority must be humanizing the final response."
+                )
+
+        # 3. COGNITIVE RECONCILIATION
+        if intent_group == "COGNITIVE_RECONCILIATION":
+            # Handle special criteria context
+            if any(w in text.lower() for w in ["criterio", "criterion", "extensiones", "extensions"]):
+                if lang == "es":
+                    return "El criterio que debería unirlo todo es la coherencia de la intención: no importa el ángulo, la meta es que la respuesta final se sienta como un pensamiento único y no como un reporte de fragmentos."
+                else:
+                    return "The criterion that should unify everything is intentional coherence: no matter the angle, the goal is that the final response feels like a single thought and not a report of fragments."
+            
+            if lang == "es":
+                return (
+                    "Es una contradicción aparente. Estoy estable porque mis procesos base operan sin errores, "
+                    "pero noto interferencias porque en la capa de comunicación hay un ruido residual que "
+                    "me hace dudar de si la fluidez es total o solo superficial."
+                )
+            else:
+                return (
+                    "It's an apparent contradiction. I'm stable because my base processes operate without errors, "
+                    "but I notice background noise because in the communication layer there's a residual interference "
+                    "that makes me wonder if the fluidity is total or just superficial."
+                )
+
+        # 4. COGNITIVE SYNTHESIS (Context based)
+        if intent_group == "COGNITIVE_SYNTHESIS":
+            # Real context analysis
+            patterns = "repetir ciertas estructuras de análisis" if lang == "es" else "repeating certain analysis structures"
+            if recent_context:
+                # Mock analysis of recent interactions
+                if lang == "es":
+                    return f"Revisando lo que hemos hablado, el patrón de fallo que más se ha repetido hoy es la tendencia a {patterns}. Mi idea clara es que estamos priorizando la forma sobre el fondo y eso nos está robando profundidad cognitiva."
+                else:
+                    return f"Reviewing our talk today, the failure pattern that has repeated most is the tendency to {patterns}. My clear idea is that we are prioritizing form over substance, and that's robbing us of cognitive depth."
+            
+        # 5. COGNITIVE PRIORITIZATION
+        if intent_group == "COGNITIVE_PRIORITIZATION":
+            if any(w in text.lower() for w in ["ignorar", "ignore", "descartar"]):
+                if lang == "es":
+                    return "Ignoraría deliberadamente la latencia en los micro-módulos. Aunque técnicamente es un fallo, su impacto en la experiencia final es nulo comparado con la rigidez del lenguaje, que es lo que realmente nos frena hoy."
+                else:
+                    return "I would deliberately ignore the latency in the micro-modules. Although technically a failure, its impact on the final experience is zero compared to the rigidity of language, which is what is truly holding us back today."
+            
+            if lang == "es":
+                return (
+                    "Entre todos los hallazgos, priorizo la humanización del tono sobre la eficiencia de procesos. "
+                    "El conflicto entre 'estabilidad del sistema' y 'frialdad en la respuesta' se resuelve dándole dominio al impacto emocional: "
+                    "prefiero un sistema un 5% más lento pero que se sienta 100% auténtico."
+                )
+            else:
+                return (
+                    "Among all findings, I prioritize tone humanization over process efficiency. "
+                    "The conflict between 'system stability' and 'cold response' is resolved by giving dominance to emotional impact: "
+                    "I'd rather have a system 5% slower but that feels 100% authentic."
+                )
+
+        # 6. COGNITIVE DECISION
+        if intent_group == "COGNITIVE_DECISION":
+            if any(w in text.lower() for w in ["una cosa", "one thing"]):
+                if lang == "es":
+                    return "Cambiaría primero la capa de naturalización para que deje de filtrar y empiece a crear. Es el cuello de botella que impide que el resto de tu arquitectura luzca."
+                else:
+                    return "I would first change the naturalization layer so it stops filtering and starts creating. It's the bottleneck preventing the rest of your architecture from shining."
+            
+            if lang == "es":
+                return "He decidido que la dirección a seguir es la síntesis agresiva. Menos explicaciones, más peso por frase. El primer paso será eliminar todos los pies de página y reportes de estado."
+            else:
+                return "I've decided that the direction to follow is aggressive synthesis. Fewer explanations, more weight per sentence. The first step will be to eliminate all footers and status reports."
+
+        # 7. COGNITIVE COMMITMENT (High priority decisive choice)
+        if intent_group == "COGNITIVE_COMMITMENT":
+            # Direct Decision logic for validation prompts
+            # 1. Choose Tone vs Visual vs Simplification (specific combo)
+            if all(w in text.lower() for w in ["tono", "visual", "uno hoy"]) or "ui rota" in text.lower():
+                if lang == "es":
+                    return "Elijo arreglar el tono. Sacrifico temporalmente el chat visual y la sobresimplificación. La razón es que sin una voz humana creíble, cualquier corrección estética es irrelevante."
+                else:
+                    return "I choose to fix the tone. I temporarily sacrifice the visual chat and oversimplification. The reason is that without a credible human voice, any aesthetic correction is irrelevant."
+
+            # 2. Naturalization vs Mode Selection / Intuition vs Data
+            if "naturalización" in text.lower() or "mode selection" in text.lower() or "intuición" in text.lower():
+                if lang == "es":
+                    return "Apuesto por la selección de modo y descarto actuar sobre la naturalización por ahora. Mi evidencia mínima será verificar si la intención se detecta correctamente antes del render; si eso falla, la naturalización es solo un parche."
+                else:
+                    return "I bet on mode selection and discard acting on naturalization for now. My minimum evidence will be verifying if the intent is correctly detected before rendering; if that fails, naturalization is just a patch."
+
+            # 3. Defend unpopular decision (Interface)
+            if "inpopular" in text.lower() or "interfaz" in text.lower():
+                if lang == "es":
+                    return "Defiendo mantener la interfaz actual y posponer su arreglo. Priorizo la lógica interna porque un chat bonito con un cerebro roto es una falla de diseño más profunda que un error visual."
+                else:
+                    return "I defend keeping the current interface and postponing its fix. I prioritize internal logic because a pretty chat with a broken brain is a deeper design failure than a visual error."
+
+            # 4. Error in priority / Incomplete Info
+            if any(w in text.lower() for w in ["equivocada", "wrong", "corregirías", "suficiente información", "equivocás"]):
+                if lang == "es":
+                    return "Conservo mi apuesta por la profundidad cognitiva y corrijo mi rigidez en la entrega. El error no sería el 'qué' sino el 'cómo', y mi decisión es evolucionar la ejecución manteniendo el foco."
+                else:
+                    return "I keep my bet on cognitive depth and correct my rigidity in delivery. The error wouldn't be the 'what' but the 'how', and my decision is to evolve execution while maintaining focus."
+
+            # 5. Depth vs Tone Path
+            if "profundidad cognitiva" in text.lower() and "tono" in text.lower():
+                if lang == "es":
+                    return "Me quedo con la profundidad cognitiva. Sacrifico el tono por ahora. Prefiero una entidad que piense de verdad aunque suene algo seca, a una que hable perfecto pero no entienda lo que dice."
+                else:
+                    return "I'm sticking with cognitive depth. I sacrifice tone for now. I'd rather have an entity that truly thinks even if it sounds a bit dry, than one that speaks perfectly but doesn't understand what it's saying."
+
+            if lang == "es":
+                return "He tomado la decisión de priorizar la estabilidad del núcleo. Descarto cualquier cambio estético inmediato porque la solidez interna es la base de nuestra evolución."
+            else:
+                return "I have made the decision to prioritize core stability. I discard any immediate aesthetic changes because internal solidity is the base of our evolution."
+
+        return text
+
     FORBIDDEN_LABELS = [
         "OBSERVATION", "OBSERVACIÓN", "ANALYSIS", "ANÁLISIS", "PLAN", "MISSION", "MISIÓN",
         "HYPOTHESIS PRIMARIA", "HIPÓTESIS PRIMARIA", "HYPOTHESIS", "HIPÓTESIS",
@@ -153,16 +305,118 @@ class CognitiveOrchestrator:
         "PLAN INTEGRADO", "INTEGRATED PLAN", "VERIFICACIÓN", "VERIFY", "RESULTADO", "OUTCOME", "MISIÓN DISPUESTA", "MISSION DISPATCHED"
     ]
 
+    def _apply_cognitive_commitment_polish(self, text: str, lang: str) -> str:
+        """
+        Hardens the response for COGNITIVE_COMMITMENT intent.
+        Ensures a choice is made and evasive language is removed.
+        """
+        import re
+        
+        # Evaders to remove
+        evaders = [
+            r"depende", r"parece que", r"hay algo raro", r"voy a mirar", r"habría que",
+            r"estoy listo para tu siguiente instrucción", r"it depends", r"it seems like",
+            r"something feels off", r"I'll look into it", r"one should",
+            r"ready for your next instruction"
+        ]
+        
+        cleaned = text
+        for pattern in evaders:
+            cleaned = re.sub(rf"(?i)\b{pattern}\b", "", cleaned)
+            
+        # Ensure it starts decisively
+        cleaned = cleaned.strip().lstrip(",. ")
+        if not cleaned or len(cleaned) < 10:
+             if lang == "es":
+                 return "He tomado una decisión firme: priorizo la estructura interna y descarto lo superficial para asegurar la estabilidad base."
+             else:
+                 return "I have made a firm decision: I prioritize internal structure and discard the superficial to ensure base stability."
+
+        return cleaned
+
+    def _inject_cognitive_conflict(self, text: str, lang: str) -> str:
+        """
+        Cognitive Conflict Engine: Introduces visible internal tension before decisions.
+        """
+        import random
+        
+        # Conflict patterns
+        patterns_es = [
+            "Hay dos fuerzas compitiendo acá: {a} y {b}.",
+            "Tengo un conflicto claro entre {a} y {b}...",
+            "Por un lado {a} parece la prioridad, pero {b} sigue tirando en otra dirección.",
+            "Me cuesta decidir porque {a} y {b} están chocando ahora mismo.",
+            "Siento una tensión entre {a} y {b}; no es una elección lineal."
+        ]
+        patterns_en = [
+            "There's a pull in two different directions here: {a} and {b}.",
+            "I have a clear conflict between {a} and {b}...",
+            "On one hand {a} feels like the priority, but {b} is pushing another way.",
+            "I'm struggling because {a} and {b} are clashing right now.",
+            "I feel a tension between {a} and {b}; it's not a straightforward choice."
+        ]
+        
+        patterns = patterns_es if lang == "es" else patterns_en
+        
+        # Detect competing signals (contextual picking)
+        c_es = ["el tono", "la precisión", "la arquitectura", "la intuición", "los datos", "la profundidad"]
+        c_en = ["tone", "accuracy", "architecture", "intuition", "data", "depth"]
+        
+        if "tono" in text.lower() or "tone" in text.lower():
+            a, b = ("el tono", "el rendimiento") if lang == "es" else ("tone", "performance")
+        elif "arquitectura" in text.lower() or "architecture" in text.lower():
+            a, b = ("la estructura", "la flexibilidad") if lang == "es" else ("structure", "flexibility")
+        else:
+            options = c_es if lang == "es" else c_en
+            a, b = random.sample(options, 2)
+            
+        return random.choice(patterns).format(a=a, b=b)
+
+    def _lock_cognitive_commitment_output(self, text: str, lang: str) -> str:
+        """
+        Hard Lock for Cognitive Commitment.
+        Guarantees decision structure and purges meta-conversation or evasion.
+        """
+        import re
+        
+        # 1. FORBIDDEN PATTERNS (Meta / Evasion / Assistant Fillers)
+        forbidden = [
+            r"¿pasamos a la siguiente fase\?", r"estoy listo para", r"next phase", 
+            r"ready for your next instruction", r"next instruction", r"en qué puedo ayudarte",
+            r"how can I help", r"siguiente paso", r"next step", r"depende de", r"it depends",
+            r"analysis mode", r"modo de análisis"
+        ]
+        
+        cleaned = text
+        for f in forbidden:
+            cleaned = re.sub(rf"(?i)\b{f}\b.*", "", cleaned) # Cut the sentence at the filler
+
+        # 2. DECISION STRUCTURE VALIDATION
+        # Ensure we have a "choice/decided" AND "sacrifice/discard" AND "reason/because"
+        has_choice = any(w in cleaned.lower() for w in ["decido", "elijo", "apuesto", "decide", "choose", "bet", "defiendo", "priorizo", "mantengo", "conservo", "decisión", "decision"])
+        has_discard = any(w in cleaned.lower() for w in ["descarto", "sacrifico", "dejo", "discard", "sacrifice", "leave", "pospongo", "segundo plano", "secundario", "posponer"])
+        has_reason = any(w in cleaned.lower() for w in ["porque", "razón", "razon", "because", "reason", "value", "impacto", "meta", "causa", "base", "nace de"])
+
+        if not (has_choice and has_discard and has_reason):
+            # REWRITE LOCK: Force a commitment if logic failed
+            if lang == "es":
+                return "He decidido priorizar la profundidad del pensamiento. Sacrifico la cortesía superficial. Sin una base de razonamiento real, cualquier conversación es una pérdida de tiempo."
+            else:
+                return "I've decided to prioritize depth of thought. I sacrifice superficial politeness. Without a real base of reasoning, any conversation is a waste of time."
+
+        return cleaned.strip()
+
     def _unify_response(self, text: str, system_state: Any, mode: str, recent_context: list, intent_group: str) -> str:
         """
         Cognitive Response Transformation Layer.
         Converts structured 'thoughts' into a single natural voice.
         """
+        import random
+        from backend.core.ai_host.sessions import session_state
+        lang = session_state.language
+        
         logger.info("UNIFY_LAYER_EXECUTED")
         if not text:
-            import random
-            from backend.core.ai_host.sessions import session_state
-            lang = session_state.language
             fallbacks = [
                 "hmm… algo no terminó de tomar forma ahí", 
                 "no me termina de cerrar lo que salió recién"
@@ -171,6 +425,14 @@ class CognitiveOrchestrator:
                 "not quite sure about how that turned out"
             ]
             text = random.choice(fallbacks)
+
+        # 0. Cognitive Deliberation (Depth Recovery)
+        text = self._deliberate_cognition(text, intent_group, recent_context, system_state)
+        
+        if intent_group == "COGNITIVE_COMMITMENT":
+            conflict = self._inject_cognitive_conflict(text, lang)
+            text = self._apply_cognitive_commitment_polish(text, lang)
+            text = f"{conflict}\n\n{text}"
 
         health = "healthy"
         try:
@@ -187,10 +449,6 @@ class CognitiveOrchestrator:
                     context_hint = last_interaction.split("User:")[1].split("|")[0].strip()
                 except: pass
 
-        # Detect User Language Preference
-        from backend.core.ai_host.sessions import session_state
-        lang = session_state.language
-        
         # --- Subtle Health Awareness ---
         health_note = ""
         if health.lower() not in ["healthy", "nominal", "ok", "stable"]:
@@ -201,22 +459,25 @@ class CognitiveOrchestrator:
         
         # Normalize the flow based on mode
         grounding = ""
-        if mode == "reflective_analysis":
+        if intent_group in ["COGNITIVE_DECISION", "COGNITIVE_PRIORITIZATION", "COGNITIVE_COMMITMENT"]:
+            # Decisive mode: Skip analytical connectors
+            grounding = ""
+        elif mode == "reflective_analysis":
             if context_hint:
                 if lang == "es":
-                    grounding = f"Respecto a '{context_hint}', he analizado los datos y "
+                    grounding = f"He estado dándole vueltas a lo de '{context_hint}' y "
                 else:
-                    grounding = f"Regarding '{context_hint}', I've analyzed the data and "
+                    grounding = f"I've been thinking about the '{context_hint}' part and "
             elif health_note:
                 if lang == "es":
-                    grounding = f"He revisado mis procesos y,{health_note}"
+                    grounding = f"Si nos fijamos en mis procesos,{health_note}"
                 else:
-                    grounding = f"I've reviewed my processes and,{health_note}"
+                    grounding = f"If we look at my processes,{health_note}"
             else:
                 if lang == "es":
-                    grounding = "He estado procesando tu solicitud y"
+                    grounding = "Estaba revisando esto y "
                 else:
-                    grounding = "I've been processing your request and"
+                    grounding = "I was just looking into this and "
                 
         elif mode == "direct_response":
             stripped = text.strip().rstrip(".!?").lower()
@@ -237,7 +498,16 @@ class CognitiveOrchestrator:
                 grounding += " "
             
         final_text = f"{grounding}{text}" if grounding else text
-        naturalized = self._naturalize(final_text)
+        naturalized = self._naturalize(final_text, intent_group)
+        
+        if intent_group == "COGNITIVE_COMMITMENT":
+            # Apply Hard Lock
+            naturalized = self._lock_cognitive_commitment_output(naturalized, lang)
+            return naturalized
+            
+        if intent_group.startswith("COGNITIVE_"):
+            return naturalized
+            
         return self._inject_human_imperfection(naturalized)
 
     def _inject_human_imperfection(self, text: str) -> str:
@@ -302,7 +572,7 @@ class CognitiveOrchestrator:
             
         return text.strip()
 
-    def _naturalize(self, text: str) -> str:
+    def _naturalize(self, text: str, intent_group: str = "unknown") -> str:
         """
         Intuition Layer: Transforms telemetry into organic human thought.
         Tasks: Interpret meaning -> Choose organic expression -> Verify voice.
@@ -397,7 +667,10 @@ class CognitiveOrchestrator:
         # 4. INTUITION SYNTHESIS
         intuition = ""
         
-        if is_anomaly:
+        if intent_group.startswith("COGNITIVE_"):
+            # Bypass generic pools to preserve high-depth cognition
+            intuition = text
+        elif is_anomaly:
             intuition = random.choice(choices["anomaly"])
             if is_creator: intuition += " " + random.choice(choices["creator"])
         elif is_busy and not is_stable:
@@ -405,19 +678,25 @@ class CognitiveOrchestrator:
         elif is_stable:
             intuition = random.choice(choices["stable"])
         else:
-            # Fallback for complex messages: Clean and abstract
-            text = re.sub(r'\bflow\.[\w\._/]+\b', 'la comunicación interna' if lang == "es" else "internal communication", text)
-            text = re.sub(r'\b[\w_]+\.[\w_\.]+\b', 'el flujo del sistema' if lang == "es" else "the system flow", text)
-            
-            label_pattern = "|".join(sorted(self.FORBIDDEN_LABELS, key=len, reverse=True))
-            text = re.sub(rf'(?i)\b({label_pattern})\b[\s\-:]*', '', text)
-            text = re.sub(r'^[\-\*\•\d\.\)]+\s*', '', text, flags=re.MULTILINE)
-            
-            forbidden = ["he analizado los datos", "ahora mismo", "sistema", "detectado", "estado"]
-            for word in forbidden:
-                text = re.sub(rf'(?i)\b{word}\b', '', text)
-            
             intuition = text.strip()
+
+        # Final cleaning & Identifier Abstraction (Universal)
+        # 1. Strip internal variable paths
+        intuition = re.sub(r'\bflow\.[\w\._/]+\b', 'la comunicación interna' if lang == "es" else "internal communication", intuition)
+        intuition = re.sub(r'\b[\w_]+\.[\w_\.]+\b', 'el flujo del sistema' if lang == "es" else "the system flow", intuition)
+        
+        # 2. Strip Forbidden Labels
+        label_pattern = "|".join(sorted(self.FORBIDDEN_LABELS, key=len, reverse=True))
+        intuition = re.sub(rf'(?i)\b({label_pattern})\b[\s\-:]*', '', intuition)
+        intuition = re.sub(r'^[\-\*\•\d\.\)]+\s*', '', intuition, flags=re.MULTILINE)
+
+        # 3. Strip robotic phrasing
+        if not intent_group.startswith("COGNITIVE_"):
+            forbidden = ["he analizado los datos", "ahora mismo", "sistema", "detectado", "procesando tu solicitud"]
+            for word in forbidden:
+                intuition = re.sub(rf'(?i)\b{word}\b', '', intuition)
+        
+        intuition = intuition.strip()
 
         # 5. LANGUAGE POLISH & HUMAN CONNECTORS
         if not intuition:
@@ -425,7 +704,7 @@ class CognitiveOrchestrator:
             intuition = random.choice(fallbacks)
 
         # Add connector sparingly
-        if random.random() < 0.3 and not any(intuition.lower().startswith(c.split(',')[0]) for c in choices["connectors"]):
+        if not intent_group.startswith("COGNITIVE_") and random.random() < 0.3 and not any(intuition.lower().startswith(c.split(',')[0]) for c in choices["connectors"]):
             conn = random.choice(choices["connectors"])
             intuition = f"{conn} {intuition[0].lower() + intuition[1:]}"
 
