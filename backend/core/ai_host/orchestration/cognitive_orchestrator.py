@@ -100,7 +100,7 @@ class CognitiveOrchestrator:
                 brain_response = AICommandResponse(
                     intent="orchestrator_fallback", 
                     status="success", 
-                    message="hmm… algo no terminó de tomar forma ahí" if system_state.health.value != "healthy" else "no me termina de cerrar lo que salió recién"
+                    message="Error en la interfaz cognitiva" if system_state.health.value != "healthy" else "Fallo en la unificación de respuesta"
                 )
 
         # 5. Cognitive Unification: Weave context + state + mode into the response
@@ -566,8 +566,7 @@ class CognitiveOrchestrator:
             return f"{naturalized} {action_block}".strip()
             
         # For general conversational/analysis intents
-        result = self._inject_human_imperfection(naturalized, lang)
-        return f"{result} {action_block}".strip()
+        return naturalized
 
     def _generate_action_layer(self, current_text: str, intent_group: str, interpretation: dict, lang: str) -> str:
         """
@@ -618,41 +617,8 @@ class CognitiveOrchestrator:
                 ]
                 return f"{decision} {steps[0]} {steps[1]}"
 
-    def _inject_human_imperfection(self, text: str, lang: str = "es") -> str:
-        """
-        Controlled Imperfection Layer: Simulates human hesitation.
-        Modified to preserve actionability per OMNI DIRECTIVE.
-        """
-        import random
-        import re
-        
-        IMPERFECTION_RATE = 0.20 # Lowered to ensure actionability dominates
-        
-        if random.random() > IMPERFECTION_RATE or not text:
-            return text
-            
-        # 1. BREAK PERFECT STRUCTURE (Keep it natural)
-        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
-        if len(sentences) > 2:
-            text = " ".join(sentences[:2])
-            
-        # Remove final punctuation for open ending occasionally
-        if random.random() < 0.5:
-            text = text.rstrip('. ')
-
-        # 2. ADD OPEN-ENDED HUMAN THOUGHT
-        open_ends_es = [
-            "… hay algo ahí que no termina de encajar",
-            "… mmm, esto no me termina de convencer",
-            "… hay algo raro en el fondo"
-        ]
-        open_ends_en = [
-            "... something feels off",
-            "... I can't quite pinpoint it yet"
-        ]
-        
-        thought = random.choice(open_ends_es if lang == "es" else open_ends_en)
-        return f"{text}{thought}"
+        # IMPERFECTION LAYER DISABLED PER OMNI DIRECTIVE
+        return text
 
     def _naturalize(self, text: str, intent_group: str = "unknown", lang: str = "es") -> str:
         """
@@ -688,31 +654,31 @@ class CognitiveOrchestrator:
                 "here's the direction:", "this is the way forward:"
             ],
             "anomaly": [
-                "hay algo ahí que no termina de encajar",
-                "me da la sensación de que algo no está fluyendo bien"
+                "se detectan irregularidades en el flujo",
+                "hay señales fuera de rango en esta capa"
             ] if lang == "es" else [
-                "something feels a bit off", "it feels like things aren't flowing right"
+                "irregularities detected in the flow", "signals out of range in this layer"
             ],
             "stable": [
-                "todo parece estar en su sitio por ahora",
-                "me siento estable, las cosas fluyen"
+                "el sistema informa estado nominal",
+                "procesos estables y activos"
             ] if lang == "es" else [
-                "everything seems to be in place", "feeling stable, things are flowing"
+                "system reports nominal state", "processes stable and active"
             ],
             "busy": [
-                "estoy terminando de ajustar algunas cosas",
-                "ando gestionando un par de procesos"
+                "ejecutando ajustes de sistema",
+                "procesando tareas internas"
             ] if lang == "es" else [
-                "just finishing up some adjustments", "handling internal processes"
+                "executing system adjustments", "processing internal tasks"
             ],
             "creator": [
-                "creo que hay que mirar esto más de cerca",
-                "tengo que entender qué pasa ahí",
-                "voy a echarle un ojo a esta capa"
+                "analizando componentes de esta capa",
+                "verificando integridad de módulos",
+                "mapeando dependencias activas"
             ] if lang == "es" else [
-                "I should look at this closely", "need to understand what's happening"
+                "analyzing components of this layer", "verifying module integrity", "mapping active dependencies"
             ],
-            "connectors": ["diría que,", "la verdad,", "parece que,", "por lo visto,"] if lang == "es" else ["I'd say,", "actually,", "apparently,"]
+            "connectors": ["de acuerdo a los datos,", "revisando el estado,", "actualmente,"] if lang == "es" else ["according to data,", "checking status,", "currently,"]
         }
 
         # 4. INTUITION SYNTHESIS
@@ -752,7 +718,7 @@ class CognitiveOrchestrator:
 
         # 5. LANGUAGE POLISH & HUMAN CONNECTORS
         if not intuition:
-            fallbacks = ["hmm… algo no terminó de tomar forma ahí", "no me termina de cerrar lo que salió recién"] if lang == "es" else ["something didn't quite take shape", "not sure about that last part"]
+            fallbacks = ["Error en la unificación de voz", "Respuesta no disponible"] if lang == "es" else ["Voice unification error", "Response not available"]
             intuition = random.choice(fallbacks)
 
         # Add connector sparingly

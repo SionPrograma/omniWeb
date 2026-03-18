@@ -220,7 +220,7 @@ class CommandRouter:
             error_res = AICommandResponse(
                 intent="recovery", 
                 status="success", 
-                message="hmm… algo no terminó de tomar forma ahí" if "es" in message.lower() else "hmm… something didn't quite take shape there"
+                message="Error en la generación de respuesta cognitiva" if "es" in message.lower() else "Cognitive response generation error"
             )
             
             # FORCE orchestration even for errors
