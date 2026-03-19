@@ -107,7 +107,7 @@ def enforce_permission(required_permission: str):
     except:
         pass # Fallback to LIVE if DB not ready
         
-    is_creator = (user_id == settings.CREATOR_ID)
+    is_creator = (str(user_id) == str(settings.CREATOR_ID))
 
     # 0. Creator Bypass (Phase 3: Hot Reload System)
     # The Creator has absolute authority over all chips and core systems.

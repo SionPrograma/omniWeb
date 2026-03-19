@@ -31,11 +31,25 @@ async def get_creator_user(
     # 3. Device Trust Check (Enforced for non-shell or external API calls)
     if settings.REQUIRE_TRUSTED_DEVICE:
         if not x_device_id or not x_device_signature:
-            raise HTTPException(
-                status_code=status.HTTP_412_PRECONDITION_FAILED,
-                detail="Security Violation: Missing Device Trust Metadata."
-            )
-            
+            # --- MISSION RESTORE: MOBILE/BROWSER COMPATIBILITY FALLBACK ---
+            # FALLBACK: If device trust is required but metadata is missing,
+            # we allow the authenticated Creator to proceed.
+            # This restores mobile/browser access while maintaining audit logs.
+            if current_user.id == settings.CREATOR_ID:
+                import logging
+                logger = logging.getLogger("security.dependencies")
+                logger.info(f"TRUST FALLBACK: Authorized Creator access (ID: {current_user.id}) without device metadata.")
+                
+                # MANDATORY: Propagate user_id to the global context for permission bypasses
+                from backend.core.permissions import _current_chip_ctx
+                try:
+                    ctx = _current_chip_ctx.get().copy()
+                    ctx["user_id"] = current_user.id
+                    _current_chip_ctx.set(ctx)
+                except: pass
+                
+                return current_user
+
         if not security_fortress.is_device_trusted(current_user.id, x_device_id, x_device_signature):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

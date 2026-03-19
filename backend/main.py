@@ -114,6 +114,10 @@ app.include_router(admin_router, prefix=f"{settings.API_V1_STR}/system/admin", t
 app.include_router(creator_control_router, prefix=f"{settings.API_V1_STR}/creator/control", tags=["creator-control"])
 app.include_router(creator_fs_router, prefix=f"{settings.API_V1_STR}/creator/fs", tags=["creator-fs"])
 app.include_router(creator_copilot_router, prefix=f"{settings.API_V1_STR}/creator/copilot", tags=["creator-copilot"])
+
+# MISSION RESTORE: Explicitly bind the Core Editor Router (Used by editor.js)
+from backend.core.ai_host.execution.editor_router import router as core_editor_router
+app.include_router(core_editor_router, prefix=f"{settings.API_V1_STR}/editor", tags=["editor"])
 app.include_router(cluster_router, prefix=f"{settings.API_V1_STR}/system/cluster", tags=["cluster"])
 app.include_router(governance_router, prefix=f"{settings.API_V1_STR}/governance", tags=["governance"])
 app.include_router(communication_router, prefix=f"{settings.API_V1_STR}/communication", tags=["communication"])

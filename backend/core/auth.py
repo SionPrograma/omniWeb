@@ -101,36 +101,51 @@ def get_current_user(token: Optional[str] = Security(oauth2_scheme)) -> OmniUser
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    user = None
     # 1. Check legacy/static admin token
     if token == settings.ADMIN_TOKEN:
-        return OmniUser(id="1", username="admin", role="admin")
+        user = OmniUser(id="1", username="admin", role="admin")
 
     # 2. Check dynamic sessions
-    with set_chip_context("core"):
-        with db_manager.get_connection() as conn:
-            row = conn.execute(
-                """
-                SELECT u.id, u.username, u.role, u.is_active 
-                FROM users u 
-                JOIN sessions s ON u.id = s.user_id 
-                WHERE s.token = ? AND s.expires_at > ?
-                """,
-                (token, datetime.utcnow().isoformat())
-            ).fetchone()
-            
-            if row:
-                return OmniUser(
-                    id=row["id"],
-                    username=row["username"],
-                    role=row["role"],
-                    is_active=bool(row["is_active"])
-                )
+    if not user:
+        with set_chip_context("core"):
+            with db_manager.get_connection() as conn:
+                row = conn.execute(
+                    """
+                    SELECT u.id, u.username, u.role, u.is_active 
+                    FROM users u 
+                    JOIN sessions s ON u.id = s.user_id 
+                    WHERE s.token = ? AND s.expires_at > ?
+                    """,
+                    (token, datetime.utcnow().isoformat())
+                ).fetchone()
+                
+                if row:
+                    user = OmniUser(
+                        id=row["id"],
+                        username=row["username"],
+                        role=row["role"],
+                        is_active=bool(row["is_active"])
+                    )
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired token",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # SECURE CONTEXT PROPAGATION
+    # Inject user_id into the global context for permission enforcement
+    from backend.core.permissions import _current_chip_ctx
+    try:
+        ctx = _current_chip_ctx.get().copy()
+        ctx["user_id"] = user.id
+        _current_chip_ctx.set(ctx)
+    except Exception:
+        pass # Failsafe for cases where context is not initialized
+
+    return user
 
 def require_role(required_role: str):
     """

@@ -80,9 +80,23 @@ async def read_file(path: str, creator: OmniUser = Depends(get_creator_user)):
             payload={"content": content}
         )
         unified = await orchestrator.orchestrate(f"read file {path}", {"mode": "direct_response", "intent_group": "FILESYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
-        return {"status": "success", "payload": unified.model_dump()}
+        
+        # MISSION RESTORE: Flatten for main.js compatibility
+        res_data = unified.model_dump()
+        return {
+            "status": "success",
+            "content": content,
+            "path": path,
+            "payload": res_data # Maintain unified data for newer clients
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[ERROR] FS_READ FAILURE: {path}\n{error_trace}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error reading file: {str(e)}"
+        )
 
 @router.post("/diff")
 async def preview_diff(payload: FileOperation, creator: OmniUser = Depends(get_creator_user)):
@@ -173,7 +187,14 @@ async def write_file(payload: FileOperation, creator: OmniUser = Depends(get_cre
             payload={"backup": backup_path}
         )
         unified = await orchestrator.orchestrate(f"write to {payload.path}", {"mode": "direct_response", "intent_group": "FILESYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
-        return {"status": "success", "payload": unified.model_dump()}
+        
+        # MISSION RESTORE: Flatten for main.js compatibility
+        res_data = unified.model_dump()
+        return {
+            "status": "success",
+            "message": raw_res.message,
+            "payload": res_data
+        }
     except Exception as e:
         # Failsafe: Restore backup if write failed midway
         if backup_path and os.path.exists(backup_path):
