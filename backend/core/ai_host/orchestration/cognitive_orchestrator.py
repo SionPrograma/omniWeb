@@ -115,8 +115,14 @@ class CognitiveOrchestrator:
             if understanding.get("mode") == "constrained_output":
                 msg_low = message.lower()
                 if "solo" in msg_low or "only" in msg_low:
+                    import unicodedata
+                    import re
+                    # Normalización canónica del prompt: quitar acentos y convertir espacios/guiones a underscores
+                    norm_prompt = "".join(c for c in unicodedata.normalize('NFD', msg_low) if unicodedata.category(c) != 'Mn')
+                    norm_prompt = re.sub(r'[\s\-]+', '_', norm_prompt)
+                    
                     fields = ["archivo_leido", "primera_linea", "resumen_real", "microfix_propuesto", "impacto_relacionado"]
-                    requested = [f.upper() for f in fields if f in msg_low]
+                    requested = [f.upper() for f in fields if f in norm_prompt]
                     if requested:
                         lines = brain_response.message.splitlines()
                         relevant = [l for l in lines if any(l.upper().startswith(f) for f in requested)]

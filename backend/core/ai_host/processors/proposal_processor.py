@@ -136,50 +136,47 @@ IMPACTO_RELACIONADO: {impact}
 
     def _generate_intelligent_proposal(self, path: str, content: str, request: str) -> Dict[str, Any]:
         """
-        Heuristic-based minimal proposal.
+        Heuristic-based minimal proposal (Phase 10 Specificity).
+        Inspects content for real patterns to generate situation-aware suggestions.
         """
-        filename = os.path.basename(path)
+        filename = os.path.basename(path).lower()
         new_content = content
         msg = request.lower()
         
-        # Defaults
-        problem = "Análisis solicitado."
-        hypothesis = "Revisión general requerida."
-        change = "Inyección de comentarios de auditoría para mejorar legibilidad."
-        risk = "Mínimo (Solo comentarios)."
-        verification = "Inspección visual."
+        # 1. SCAN CONTENT FOR REAL ISSUES (Deeper Audit)
+        found_issue = self._scan_content_for_real_issues(path, content)
         
-        # Audio/Librosa Optimización
+        # 2. POPULATE DEFAULTS FROM SCAN
+        problem = found_issue["problem"]
+        hypothesis = "Propuesta basada en auditoría de patrones recurrentes."
+        change = found_issue["change"]
+        risk = found_issue["risk"]
+        verification = "Inspección visual y validación en runtime."
+        
+        # 3. SPECIAL MISSION OVERRIDES (Librosa / Logging / etc.)
         if any(kw in msg for kw in ["audio", "transcription", "transcribir"]):
             problem = "Riesgo de uso de modelos pesados para transcripción."
             hypothesis = "Para este entorno, librosa ofrece un balance superior entre performance y precisión."
             change = "Implementar flujo de carga liviana con librosa.load()."
             new_content = content + "\n# Propuesta: Integración librosa (Surgical Assistant)\nimport librosa\n"
             risk = "Controlado (Aumento leve de dependencias)."
-            verification = "Run audio-pipeline check."
             
-        # Logging Inactivity
-        elif "log" in msg or "mejorá" in msg:
-            if ".py" in filename:
-                if "import logging" not in content:
-                    new_content = "import logging\n" + content
-                    problem = "Falta de instrumentación de auditoría."
-                    hypothesis = "Logs básicos son necesarios para el Runtime TRUTH Policy."
-                    change = "Inyección de logging import."
-                    risk = "Mínimo."
-                    verification = "Reproduction of log lines in shell console."
-                else:
-                    problem = "Logs insuficientes para trazabilidad."
-                    hypothesis = "Adding entry point logging improves audit fidelity."
-                    lines = content.splitlines()
-                    for i, line in enumerate(lines):
-                        if "def " in line and ":" in line:
-                            lines.insert(i+1, "    logging.info(\"[AUDIT] Operation started.\")")
-                            break
-                    new_content = "\n".join(lines)
-                    change = "Minimal log injection in first function body."
-                    risk = "Bajo."
-                    verification = "Check backend logs after call."
+        elif ("log" in msg or "mejorá" in msg) and ".py" in filename:
+            if "import logging" not in content:
+                new_content = "import logging\n" + content
+                problem = "Falta de instrumentación de auditoría."
+                change = "Inyección de logging import."
+                risk = "Mínimo."
+            else:
+                problem = "Logs insuficientes para trazabilidad."
+                lines = content.splitlines()
+                for i, line in enumerate(lines):
+                    if "def " in line and ":" in line:
+                        lines.insert(i+1, "    logging.info(\"[AUDIT] Operation started.\")")
+                        break
+                new_content = "\n".join(lines)
+                change = "Minimal log injection in first function body."
+                risk = "Bajo."
         
         return {
             "file": path,
@@ -200,3 +197,63 @@ IMPACTO_RELACIONADO: {impact}
             n=3
         )
         return "".join(list(diff))
+
+    def _scan_content_for_real_issues(self, path: str, content: str) -> Dict[str, str]:
+        """Scans code content for real architectural issues/smells."""
+        issues = []
+        path_lower = path.lower()
+        
+        # 1. Detect JS/TS specific smells
+        if path_lower.endswith((".js", ".ts")):
+            if ' onclick="' in content or ' onchange="' in content or ' oninput="' in content:
+                issues.append({
+                    "problem": "Event handlers inlined (onclick/oninput) detectados.",
+                    "change": "Refactorizar a event listeners desacoplados (addEventListener) para mejorar CPS y mantenibilidad.",
+                    "risk": "MEDIO (Mantenibilidad)"
+                })
+            elif "console.log" in content or "console.warn" in content:
+                issues.append({
+                    "problem": "Uso de console logs detectado.",
+                    "change": "Migrar logs a la infraestructura de logbook/telemetry centralizada.",
+                    "risk": "BAJO (Limpieza)"
+                })
+            elif "var " in content:
+                issues.append({
+                    "problem": "Uso de 'var' detectado (Legacy JS).",
+                    "change": "Refactorizar a let/const para garantizar scope de bloque.",
+                    "risk": "BAJO (Estabilidad)"
+                })
+        
+        # 2. Detect Python smells
+        elif path_lower.endswith(".py"):
+            if "print(" in content:
+                issues.append({
+                    "problem": "Uso de print() para debugging detectado.",
+                    "change": "Reemplazar prints con logging.info/error para telemetría persistente.",
+                    "risk": "BAJO"
+                })
+            elif "except:" in content or "except Exception:" in content:
+                issues.append({
+                    "problem": "Cláusulas try/except genéricas.",
+                    "change": "Especificar excepciones puntuales para evitar silenciar errores críticos.",
+                    "risk": "MEDIO (Visibilidad de fallos)"
+                })
+
+        # 3. Global smells: Long Blocks
+        lines = content.splitlines()
+        if len(lines) > 150:
+             issues.append({
+                "problem": "Archivo con alta densidad de líneas (>150).",
+                "change": "Descomponer el módulo en componentes más pequeños y especializados.",
+                "risk": "MEDIO (Mantenibilidad)"
+             })
+
+        if not issues:
+            return {
+                "problem": "No se detectaron debilidades críticas inmediatas.",
+                "change": "Auditoría nominal: Mantener estado actual y vigilar evolutivos.",
+                "risk": "NULO"
+            }
+            
+        # Return the most relevant (first) issue found
+        return issues[0]
