@@ -70,10 +70,10 @@ class ProposalProcessor(CommandProcessor):
         compatibility_warning = safety_policy.check_mobile_compatibility(diff_str, target_files=[target_path])
         if compatibility_warning:
             previous_risk = proposal.get("risk", "")
-            proposal["risk"] = f"CRÍTICO: {compatibility_warning} (Riesgo de regresión móvil). {previous_risk}"
+            # Merge contextually without redundant labels at this stage
+            proposal["risk"] = f"ALTO: {compatibility_warning}. {previous_risk}"
 
         # 8. REPORT (Structured Form - Omni Directive)
-
         first_line = "None"
         if original_content:
             lines = original_content.splitlines()
@@ -88,16 +88,31 @@ class ProposalProcessor(CommandProcessor):
         # Microfix proposal
         microfix = proposal.get("change", "No se requiere cambio estructural inmediato.")
         
-        # Systemic Impact (Surgical Specificity)
+        # Systemic Impact Processing (Compact/Surgical)
         raw_risk = str(proposal.get("risk", "BAJO (Aislado)"))
-        impact = raw_risk # Default to the full specific risk string
         
-        # Maintain severity prefix but keep the context
-        if "regresión" in raw_risk.lower():
-            if "MEDIO" not in raw_risk:
-                impact = f"MEDIO (Posible regresión: {raw_risk})"
-        elif "CRÍTICO" in raw_risk:
-            impact = raw_risk
+        # A. Determine Single Severity
+        severity = "BAJO"
+        risk_lower = raw_risk.lower()
+        if "crítico" in risk_lower or "alto" in risk_lower or "advertencia" in risk_lower:
+            severity = "ALTO"
+        elif "medio" in risk_lower or "regresión" in risk_lower:
+            severity = "MEDIO"
+            
+        # B. Extract Most Specific Concrete Impact
+        # Remove redundant technical labels and formatting noise
+        clean_impact = raw_risk
+        noise = ["CRÍTICO:", "MEDIO:", "BAJO:", "ADVERTENCIA:", "(Aislado)", "Posible regresión:", "(Riesgo de regresión móvil)"]
+        for label in noise:
+            clean_impact = clean_impact.replace(label, "")
+            
+        # Pick the last (most specific) phrase if concatenated
+        phrases = [p.strip() for p in clean_impact.split(".") if p.strip()]
+        msg_brief = phrases[-1] if phrases else "cambio local sin impactos sistémicos"
+        
+        # C. Format Strictly: <SEVERIDAD> - <impacto>
+        impact = f"{severity} - {msg_brief.strip('. ')}"
+
 
 
         formatted_message = f"""ARCHIVO_LEIDO: {target_path}
