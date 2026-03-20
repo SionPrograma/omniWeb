@@ -122,19 +122,45 @@ class CognitiveOrchestrator:
                     norm_prompt = re.sub(r'[\s\-]+', '_', norm_prompt)
                     
                     fields = ["archivo_leido", "primera_linea", "resumen_real", "microfix_propuesto", "impacto_relacionado"]
-                    requested = [f.upper() for f in fields if f in norm_prompt]
-                    if requested:
+                    
+                    # Nueva lógica: Detectar posiciones para preservar el orden del usuario
+                    requested_with_pos = []
+                    for f in fields:
+                        pos = norm_prompt.find(f)
+                        if pos != -1:
+                            requested_with_pos.append((pos, f.upper()))
+                    
+                    # Ordenar campos por su aparición en el prompt
+                    requested_with_pos.sort()
+                    requested_ordered = [item[1] for item in requested_with_pos]
+                    
+                    if requested_ordered:
                         lines = brain_response.message.splitlines()
-                        relevant = [l for l in lines if any(l.upper().startswith(f) for f in requested)]
-                        # If only one line is requested and user asked for "exacta", strip the label
-                        if len(requested) == 1 and ("exacta" in msg_low or "exacto" in msg_low):
-                            for l in relevant:
-                                if ":" in l:
-                                    brain_response.message = l.split(":", 1)[1].strip()
+                        output_lines = []
+                        
+                        for req_f in requested_ordered:
+                            line_content = None
+                            for l in lines:
+                                if l.upper().strip().startswith(req_f):
+                                    line_content = l
                                     break
-                        else:
-                            brain_response.message = "\n".join(relevant)
+                            
+                            if line_content:
+                                # Handle "exacto" for single-field requests
+                                if len(requested_ordered) == 1 and ("exacta" in msg_low or "exacto" in msg_low):
+                                    if ":" in line_content:
+                                        output_lines.append(line_content.split(":", 1)[1].strip())
+                                    else:
+                                        output_lines.append(line_content)
+                                else:
+                                    output_lines.append(line_content)
+                            else:
+                                # Requirement 5: Return NONE if missing
+                                output_lines.append(f"{req_f}: NONE")
+                        
+                        brain_response.message = "\n".join(output_lines)
             pass
+
         else:
             brain_response.message = self._unify_response(
                 text=brain_response.message,
