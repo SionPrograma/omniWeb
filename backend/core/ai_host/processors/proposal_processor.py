@@ -69,9 +69,11 @@ class ProposalProcessor(CommandProcessor):
         # 7. COMPATIBILITY SCRUTINY (Mobile/Legacy check)
         compatibility_warning = safety_policy.check_mobile_compatibility(diff_str, target_files=[target_path])
         if compatibility_warning:
-            proposal["risk"] = f"CRÍTICO: {compatibility_warning} (Riesgo de regresión móvil)"
+            previous_risk = proposal.get("risk", "")
+            proposal["risk"] = f"CRÍTICO: {compatibility_warning} (Riesgo de regresión móvil). {previous_risk}"
 
         # 8. REPORT (Structured Form - Omni Directive)
+
         first_line = "None"
         if original_content:
             lines = original_content.splitlines()
@@ -86,10 +88,17 @@ class ProposalProcessor(CommandProcessor):
         # Microfix proposal
         microfix = proposal.get("change", "No se requiere cambio estructural inmediato.")
         
-        # Systemic Impact
-        impact = "CRÍTICO" if "CRÍTICO" in str(proposal.get("risk")) else "BAJO (Aislado)"
-        if "regresión" in str(proposal.get("risk")).lower():
-            impact = "MEDIO (Posible regresión en mobile)"
+        # Systemic Impact (Surgical Specificity)
+        raw_risk = str(proposal.get("risk", "BAJO (Aislado)"))
+        impact = raw_risk # Default to the full specific risk string
+        
+        # Maintain severity prefix but keep the context
+        if "regresión" in raw_risk.lower():
+            if "MEDIO" not in raw_risk:
+                impact = f"MEDIO (Posible regresión: {raw_risk})"
+        elif "CRÍTICO" in raw_risk:
+            impact = raw_risk
+
 
         formatted_message = f"""ARCHIVO_LEIDO: {target_path}
 PRIMERA_LINEA: {first_line}
@@ -199,61 +208,101 @@ IMPACTO_RELACIONADO: {impact}
         return "".join(list(diff))
 
     def _scan_content_for_real_issues(self, path: str, content: str) -> Dict[str, str]:
-        """Scans code content for real architectural issues/smells."""
+        """Scans code content for real architectural issues/smells with surgical specificity."""
         issues = []
         path_lower = path.lower()
+        filename = os.path.basename(path)
         
-        # 1. Detect JS/TS specific smells
+        # 1. Detect JS/TS specific smells (Focus on Architecture & UX)
         if path_lower.endswith((".js", ".ts")):
-            if ' onclick="' in content or ' onchange="' in content or ' oninput="' in content:
+            # A. Detect Long Render Methods (Specific to functions like renderLayout)
+            # Strategy: Find innerHTML assignments with long templates or assignments
+            inner_html_matches = list(re.finditer(r"(?:\.|)innerHTML\s*=\s*(`[\s\S]*?`|['\"][\s\S]*?['\"]|content)", content))
+            for ih_match in inner_html_matches:
+                ih_pos = ih_match.start()
+                ih_val = ih_match.group(1)
+                
+                # Check if the assigned value is large
+                val_lines = ih_val.count("\n")
+                
+                # Search backward for the method name
+                prefix = content[max(0, ih_pos - 1500) : ih_pos]
+                method_heads = list(re.finditer(r"(?:^|[ \t]+)(?:async\s+|)(\w+)\s*\([^)]*\)\s*\{", prefix, re.MULTILINE))
+                
+                if method_heads:
+                    last_head = method_heads[-1]
+                    method_name = last_head.group(1)
+                    if method_name in ["if", "while", "for", "switch", "catch", "constructor"]:
+                        continue
+                    
+                    is_render = method_name.lower().startswith("render")
+                    # If it's a render method or the template is large (> 5 lines)
+                    if is_render or val_lines > 5:
+                        issues.append({
+                            "problem": f"El método {method_name}() en {filename} mezcla lógica con templates HTML extensos.",
+                            "change": f"extraer {method_name}() en helper separado para reducir mezcla entre render y estado",
+                            "risk": "puede afectar inicialización visual del panel si se altera el orden de render"
+                        })
+
+
+
+
+
+            # B. Check for high density (over 500 lines) - prioritize this as well
+            lines_count = len(content.splitlines())
+            if lines_count > 500:
+                 issues.append({
+                    "problem": f"El módulo {filename} excede las 500 líneas (alta carga cognitiva).",
+                    "change": "fragmentar el módulo en submódulos especializados por responsabilidad",
+                    "risk": "incrementa la probabilidad de efectos secundarios al modificar funciones compartidas"
+                 })
+
+            if 'document.getElementById' in content:
                 issues.append({
-                    "problem": "Event handlers inlined (onclick/oninput) detectados.",
-                    "change": "Refactorizar a event listeners desacoplados (addEventListener) para mejorar CPS y mantenibilidad.",
-                    "risk": "MEDIO (Mantenibilidad)"
+                    "problem": f"{filename} tiene un acoplamiento directo con IDs globales del DOM.",
+                    "change": "centralizar selectores en un config de elementos o inyectar el root",
+                    "risk": "puede romper la interactividad si cambia la estructura de index.html"
                 })
-            elif "console.log" in content or "console.warn" in content:
+            
+            if 'var ' in content:
                 issues.append({
-                    "problem": "Uso de console logs detectado.",
-                    "change": "Migrar logs a la infraestructura de logbook/telemetry centralizada.",
-                    "risk": "BAJO (Limpieza)"
-                })
-            elif "var " in content:
-                issues.append({
-                    "problem": "Uso de 'var' detectado (Legacy JS).",
-                    "change": "Refactorizar a let/const para garantizar scope de bloque.",
-                    "risk": "BAJO (Estabilidad)"
+                    "problem": f"Uso de 'var' detectado en {filename} (Legacy scope).",
+                    "change": "migrar a const/let para prevenir fugas de scope",
+                    "risk": "posibles colisiones de variables en closures asincrónicos"
                 })
         
-        # 2. Detect Python smells
+        # 2. Detect Python smells (Focus on Router/Logic separation)
         elif path_lower.endswith(".py"):
-            if "print(" in content:
+
+            if "router.py" in path_lower and ("db." in content or "calculate_" in content or "Process" in content):
                 issues.append({
-                    "problem": "Uso de print() para debugging detectado.",
-                    "change": "Reemplazar prints con logging.info/error para telemetría persistente.",
-                    "risk": "BAJO"
+                    "problem": f"Violación de capas en {filename}: lógica de negocio detectada en el Router.",
+                    "change": "extraer lógica pesada a un Service Layer o Processor dedicado",
+                    "risk": "dificulta el testeo unitario y la reutilización de la lógica central"
                 })
             elif "except:" in content or "except Exception:" in content:
                 issues.append({
-                    "problem": "Cláusulas try/except genéricas.",
-                    "change": "Especificar excepciones puntuales para evitar silenciar errores críticos.",
-                    "risk": "MEDIO (Visibilidad de fallos)"
+                    "problem": f"Manejo de errores genérico en {filename}.",
+                    "change": "reemplazar try-except genéricos por capturas de excepciones granulares",
+                    "risk": "puede ocultar fallos de infraestructura críticos en producción"
                 })
 
-        # 3. Global smells: Long Blocks
-        lines = content.splitlines()
-        if len(lines) > 150:
+        # 3. Global Smells: Extreme Density
+        lines_count = len(content.splitlines())
+        if lines_count > 500:
              issues.append({
-                "problem": "Archivo con alta densidad de líneas (>150).",
-                "change": "Descomponer el módulo en componentes más pequeños y especializados.",
-                "risk": "MEDIO (Mantenibilidad)"
+                "problem": f"El módulo {filename} excede las 500 líneas (alta carga cognitiva).",
+                "change": "fragmentar el módulo en submódulos especializados por responsabilidad",
+                "risk": "incrementa la probabilidad de efectos secundarios al modificar funciones compartidas"
              })
 
         if not issues:
             return {
-                "problem": "No se detectaron debilidades críticas inmediatas.",
-                "change": "Auditoría nominal: Mantener estado actual y vigilar evolutivos.",
-                "risk": "NULO"
+                "problem": f"Análisis de {filename} concluido sin bloqueos críticos.",
+                "change": "estabilizar y documentar puntos de extensión actuales",
+                "risk": "BAJO (Aislado)"
             }
             
-        # Return the most relevant (first) issue found
+        # Prioritize according to specificity
         return issues[0]
+
