@@ -37,6 +37,8 @@ class IntentEngine:
             detected_group = "ANALYSIS_INTENT" if specific_intent == "creator_analysis" else "BUILD_INTENT"
         elif specific_intent == "system_audit":
             detected_group = "SYSTEM_AUDIT_INTENT"
+        elif specific_intent == "copilot_proposal":
+            detected_group = "COPILOT_PROPOSAL_INTENT"
 
         # 3. RECONSTRUCT INCOMPLETE PROMPTS (Context-Awareness)
         if detected_group == "FOLLOW_UP_INTENT" and ctx.active_mission:

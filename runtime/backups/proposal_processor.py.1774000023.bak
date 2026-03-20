@@ -95,7 +95,7 @@ class ProposalProcessor(CommandProcessor):
 PRIMERA_LINEA: {first_line}
 RESUMEN_REAL: {purpose}
 MICROFIX_PROPUESTO: {microfix}
-IMPACTO_RELACIONADO: {impact}
+IMPACTO_SISTEMICO: {impact}
 
 ---
 {diff_str or "# ARCHIVO BAJO AUDITORÍA (Sin cambios generados)"}"""

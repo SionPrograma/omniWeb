@@ -110,7 +110,8 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
         "analizá este archivo", "proponé un fix", "detectá el error", "mostrame un diff", 
         "proponé una mejora", "analiza el código", "qué le falta", "cómo lo ves", 
         "propuesta de fix", "fix mínimo", "detecta el problema", "analizame este",
-        "mejorá este archivo", "mejora este código", "mejorar el archivo", "mejorá los logs"
+        "mejorá este archivo", "mejora este código", "mejorar el archivo", "mejorá los logs",
+        "analizá el archivo abierto", "analiza el archivo abierto", "open file", "archivo en el editor"
     ]
 }
 
