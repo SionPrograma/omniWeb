@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const CACHE_RESET_ID = "omni_v1_stable";
     try {
         if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
-// Fixed by Jetski Subagent
+            // Fixed by Jetski Subagent
             console.warn("[SAFE_MODE] Cache inconsistency detected. Purging SW and Caches...");
 
             // 1. Unregister all service workers
@@ -313,12 +313,66 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(text, sender = 'ai', forceScroll = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
-        // Support simple markdown-like cleanup (bold)
-        const cleanText = typeof text === 'string' ? text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : text;
-        msgDiv.innerHTML = `<div class="msg-bubble">${cleanText}</div>`;
+
+        // --- VISUAL DIFF ENHANCEMENT ---
+        const content = renderDiff(text);
+        msgDiv.innerHTML = `<div class="msg-bubble">${content}</div>`;
+
         chatLog.appendChild(msgDiv);
         scrollToBottom(forceScroll || sender === 'user');
     }
+
+    // --- DIFF RENDERER HELPERS ---
+    function renderDiff(text) {
+        if (!text || typeof text !== 'string') return text;
+
+        const diffMarker = "\n---";
+        const parts = text.split(diffMarker);
+
+        let mainText = parts[0];
+        let diffPart = parts.length > 1 ? parts.slice(1).join(diffMarker).trim() : "";
+
+        // Manual fallback if no marker but contains diff patterns
+        if (!diffPart && (text.includes('\n-') || text.includes('\n+')) && text.includes('@@')) {
+            diffPart = text;
+            mainText = "";
+        }
+
+        let html = mainText
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br/>');
+
+        if (diffPart) {
+            html += `<div class="diff-container">`;
+            const lines = diffPart.split('\n');
+            lines.forEach(line => {
+                let cls = "";
+                if (line.startsWith('---') || line.startsWith('+++')) cls = "header";
+                else if (line.startsWith('@@')) cls = "info";
+                else if (line.startsWith('-')) cls = "removed";
+                else if (line.startsWith('+')) cls = "added";
+
+                if (cls) {
+                    html += `<div class="diff-line ${cls}">${escapeHtml(line)}</div>`;
+                } else if (line.trim()) {
+                    html += `<div class="diff-line">${escapeHtml(line)}</div>`;
+                }
+            });
+            html += `</div>`;
+        }
+
+        return html;
+    }
+
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     window.addMessage = addMessage; // Expose to creator.js
 
     // --- Phase 2: Canonical Submit Path (Reliable Touch/Click) ---

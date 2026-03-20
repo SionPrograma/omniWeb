@@ -227,23 +227,50 @@ class BuilderUI {
     renderPreview(preview) {
         const panel = document.getElementById('builder-preview-panel');
         const content = document.getElementById('patch-diff-content');
-        panel.style.display = 'block';
 
-        content.innerHTML = preview.diffs.map(d => {
+        // --- NEW: Sync with Workspace Side Panel ---
+        const wsFile = document.getElementById('ws-change-file');
+        const wsPath = document.getElementById('ws-change-path');
+        const wsContent = document.getElementById('ws-diff-preview-content');
+
+        if (panel) panel.style.display = 'block';
+
+        const diffHtml = preview.diffs.map(d => {
+            const escape = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
             const lines = d.diff_text.split('\n');
-            const highlighted = lines.map(l => {
-                if (l.startsWith('+')) return `<span class="text-pass" style="background: rgba(50,255,150,0.1); width: 100%; display: block;">${l}</span>`;
-                if (l.startsWith('-')) return `<span class="text-fail" style="background: rgba(255,77,77,0.1); width: 100%; display: block;">${l}</span>`;
-                return `<span>${l}</span>`;
-            }).join('\n');
+            const highlighted = lines.map(line => {
+                let cls = "";
+                if (line.startsWith('---') || line.startsWith('+++')) cls = "header";
+                else if (line.startsWith('@@')) cls = "info";
+                else if (line.startsWith('-')) cls = "removed";
+                else if (line.startsWith('+')) cls = "added";
+
+                if (cls) return `<div class="diff-line ${cls}">${escape(line)}</div>`;
+                else if (line.trim()) return `<div class="diff-line">${escape(line)}</div>`;
+                return `<div class="diff-line"></div>`;
+            }).join('');
+
+            // Update side panel info if this is the first diff
+            if (wsFile && preview.diffs[0] === d) {
+                wsFile.innerText = `FILE: ${d.path.split(/[/\\]/).pop()}`;
+                wsPath.innerText = `PATH: ${d.path}`;
+            }
 
             return `
-                <div style="margin-bottom: 20px;">
-                    <div style="color: var(--creator-gold); margin-bottom: 5px; font-weight: bold;">File: ${d.path} (${d.op_type})</div>
-                    <pre style="margin: 0;">${highlighted}</pre>
+                <div class="diff-container" style="margin-bottom: 20px;">
+                    <div class="diff-line header" style="border-bottom: 1px solid rgba(212, 175, 55, 0.15); display: flex; align-items: center; justify-content: space-between;">
+                        <span>File: ${escape(d.path)}</span>
+                        <span style="opacity: 0.6; font-size: 0.6rem;">${escape(d.op_type || 'MODIFY')}</span>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.2);">
+                        ${highlighted}
+                    </div>
                 </div>
             `;
         }).join('');
+
+        if (content) content.innerHTML = diffHtml;
+        if (wsContent) wsContent.innerHTML = diffHtml;
     }
 
     async decidePreview(approved) {

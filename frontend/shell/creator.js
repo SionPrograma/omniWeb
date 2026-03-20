@@ -418,9 +418,48 @@ class CreatorEnvironment {
 
     addCopilotMsg(text, type) {
         const log = document.getElementById('ws-copilot-log');
+        if (!log) return;
+
         const msg = document.createElement('div');
         msg.className = `copilot-msg ${type}`;
-        msg.innerText = text;
+
+        // --- VISUAL DIFF RENDERER (CREATOR MODE) ---
+        const renderDiff = (raw) => {
+            if (!raw || typeof raw !== 'string') return raw;
+            const diffMarker = "\n---";
+            const parts = raw.split(diffMarker);
+            let mainText = parts[0];
+            let diffPart = parts.length > 1 ? parts.slice(1).join(diffMarker).trim() : "";
+
+            // Fallback for raw diffs without headers
+            if (!diffPart && (raw.includes('\n-') || raw.includes('\n+')) && raw.includes('@@')) {
+                diffPart = raw;
+                mainText = "";
+            }
+
+            let html = mainText
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br/>');
+
+            if (diffPart) {
+                html += `<div class="diff-container">`;
+                const escape = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                diffPart.split('\n').forEach(line => {
+                    let cls = "";
+                    if (line.startsWith('---') || line.startsWith('+++')) cls = "header";
+                    else if (line.startsWith('@@')) cls = "info";
+                    else if (line.startsWith('-')) cls = "removed";
+                    else if (line.startsWith('+')) cls = "added";
+
+                    if (cls) html += `<div class="diff-line ${cls}">${escape(line)}</div>`;
+                    else if (line.trim()) html += `<div class="diff-line">${escape(line)}</div>`;
+                });
+                html += `</div>`;
+            }
+            return html;
+        };
+
+        msg.innerHTML = renderDiff(text);
         log.appendChild(msg);
         log.scrollTop = log.scrollHeight;
     }

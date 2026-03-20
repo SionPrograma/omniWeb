@@ -274,20 +274,22 @@
                     </div>
                 </section>
 
-                <!-- Panel 4: MONITOR (Bottom Right) -->
+                <!-- Panel 4: CHANGE PREVIEW (Bottom Right) -->
                 <section class="ws-panel active" id="ws-panel-monitor" data-panel="monitor">
-                    <div class="panel-label">BACKEND MONITOR</div>
+                    <div class="panel-label">CHANGE PREVIEW</div>
                     <div class="ws-panel-content monitor-inner">
-                        <div class="monitor-stats">
-                            <div class="stat-item"><span class="stat-dot online"></span> CPU: <span
-                                    id="ws-stat-cpu">0%</span></div>
-                            <div class="stat-item"><span class="stat-dot online"></span> RAM: <span
-                                    id="ws-stat-ram">0MB</span></div>
-                            <div class="stat-item"><span class="stat-dot online"></span> DISK: <span
-                                    id="ws-stat-disk">OK</span></div>
+                        <div id="ws-change-header"
+                            style="margin-bottom: 10px; padding: 5px 10px; background: rgba(212, 175, 55, 0.05); border-radius: 4px; border: 1px solid rgba(212, 175, 55, 0.1); font-size: 0.7rem; color: var(--creator-gold);">
+                            <div id="ws-change-file">FILE: No changes pending</div>
+                            <div id="ws-change-path" style="opacity: 0.6; font-size: 0.65rem; margin-top: 2px;">PATH: -
+                            </div>
                         </div>
-                        <div class="monitor-logs" id="ws-monitor-logs">
-                            <div class="log-entry system">System initialized. Listening for runtime events...</div>
+                        <div class="monitor-logs" id="ws-monitor-logs"
+                            style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
+                            <div id="ws-diff-preview-content">
+                                <p style="opacity: 0.3; text-align: center; margin-top: 20px;">Propose a change to see
+                                    the visual diff here.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
