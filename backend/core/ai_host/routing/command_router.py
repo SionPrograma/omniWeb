@@ -66,6 +66,7 @@ class CommandRouter:
         from ..processors.communication_processor import CommunicationProcessor
         from ..processors.music_processor import MusicProcessor
         from ..processors.audit_processor import AuditProcessor
+        from ..processors.proposal_processor import ProposalProcessor
 
         # Register in priority order
         self.registry.register("operational", OperationalProcessor())
@@ -91,6 +92,7 @@ class CommandRouter:
         self.registry.register("communication", CommunicationProcessor())
         self.registry.register("music", MusicProcessor())
         self.registry.register("audit", AuditProcessor())
+        self.registry.register("proposal", ProposalProcessor())
 
         self.intents = {
             "open_chip": self._handle_open_chip,
@@ -136,7 +138,8 @@ class CommandRouter:
             "start_execution": self._handle_builder_task,
             "acknowledgment": self._handle_acknowledgment,
             "creator_analysis": self._handle_brain_task,
-            "creator_plan": self._handle_brain_task
+            "creator_plan": self._handle_brain_task,
+            "copilot_proposal": self._handle_proposal
         }
 
     async def route(self, message: str, modality: str = "text", context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
@@ -163,6 +166,7 @@ class CommandRouter:
                         break
 
                 logger.info(f"[ROUTER_FORWARD] Normalized Message: {msg_clean}")
+                print(f"\n[DEBUG] ROUTER RECEIVED: {msg_clean}\n")
 
                 # Phase AA: Automatic Skill Discovery
                 try:
@@ -195,12 +199,19 @@ class CommandRouter:
                 memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
                 brain_intents = ["creator_analysis", "creator_plan"]
                 builder_intents = ["approve_roadmap", "start_execution"]
+                proposal_intents = ["copilot_proposal"]
                 
-                priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents
+                priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents
                 
                 if intent in priority_intents and intent in self.intents and intent not in brain_intents:
                     logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
-                    res = await self.intents[intent](msg_clean)
+                    # Allow handlers to optionally receive context
+                    import inspect
+                    handler = self.intents[intent]
+                    if 'context' in inspect.signature(handler).parameters:
+                        res = await handler(msg_clean, context=context)
+                    else:
+                        res = await handler(msg_clean)
 
                 # 3. UNIFIED COGNITIVE PIPELINE
                 from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
@@ -673,5 +684,9 @@ class CommandRouter:
             chip_registry=self.registry,
             system_state=system_state
         )
+
+    async def _handle_proposal(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        processor = self.registry.get_processor("proposal")
+        return await processor.process(msg, context=context)
 
 ai_command_router = CommandRouter()

@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const CACHE_RESET_ID = "omni_v1_stable";
     try {
         if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
-// Fixed by Jetski Subagent
             console.warn("[SAFE_MODE] Cache inconsistency detected. Purging SW and Caches...");
 
             // 1. Unregister all service workers
@@ -757,6 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     createParticles();
+    // Nico estuvo aquí 
 
     // Add particle animation to stylesheet
     const style = document.createElement('style');

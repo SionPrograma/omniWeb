@@ -104,8 +104,13 @@ class CognitiveOrchestrator:
                 )
 
         # 5. Cognitive Unification: Weave context + state + mode into the response
-        if brain_response.intent == "system_audit" or understanding.get("intent_group") == "SYSTEM_AUDIT_INTENT":
-            # HARD LOCK: No unification, no narrative, no extra lines
+        is_technical = (
+            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write"] or 
+            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM"]
+        )
+        
+        if is_technical:
+            # HARD LOCK: No unification, no narrative, no extra lines for structured technical outputs
             pass
         else:
             brain_response.message = self._unify_response(
@@ -119,7 +124,7 @@ class CognitiveOrchestrator:
             )
         
         # 6. Final Adaptation (Antimodal & Telemetry Integration)
-        if brain_response.intent != "system_audit" and understanding.get("intent_group") != "SYSTEM_AUDIT_INTENT":
+        if not is_technical:
             from backend.core.antimodal.antimodal_controller import antimodal_controller
             brain_response.message = antimodal_controller.process_ai_response(brain_response.message)
         

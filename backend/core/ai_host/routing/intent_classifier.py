@@ -17,7 +17,8 @@ class IntentClassifier:
         # Order matters here: more specific patterns should be checked first
         
         # Memory / Creator Mode Intents (Highest Priority)
-        memory_intents = [
+        priority_intents = [
+            "copilot_proposal",
             "idea_captured", "list_ideas", "search_knowledge", "list_clusters", 
             "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft",
             "initialize_project", "show_cluster_lineage", "show_project_evolution",
@@ -25,7 +26,7 @@ class IntentClassifier:
             "get_project_timeline"
         ]
         
-        for intent in memory_intents:
+        for intent in priority_intents:
             if any_pattern_matches(msg, self.rules.get(intent, [])):
                 return intent
                 

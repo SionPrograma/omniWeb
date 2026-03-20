@@ -70,17 +70,19 @@ async def read_file(path: str, creator: OmniUser = Depends(get_creator_user)):
     """Reads the content of a file."""
     # Validation
     abs_path = os.path.abspath(path)
-    if not any(abs_path.startswith(os.path.abspath(root)) for root in ALLOWED_ROOTS.values()):
-        raise HTTPException(status_code=403, detail="Path outside allowed root scope")
+    allowed_abs_roots = [os.path.abspath(root).lower() for root in ALLOWED_ROOTS.values()]
+    
+    if not any(abs_path.lower().startswith(root) for root in allowed_abs_roots):
+        raise HTTPException(status_code=403, detail=f"Access denied: {path} is outside allowed roots")
         
-    if any(p in abs_path for p in PROTECTED_FILES):
+    if any(p.lower() in abs_path.lower() for p in PROTECTED_FILES):
         raise HTTPException(status_code=403, detail="File is protected")
 
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="File not found")
+    if not os.path.exists(abs_path):
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
         
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(abs_path, "r", encoding="utf-8") as f:
             content = f.read()
         return {"content": content, "path": path}
     except Exception as e:

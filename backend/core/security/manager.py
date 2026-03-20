@@ -19,7 +19,7 @@ class SecurityFortressManager:
         Verifies if a device is registered and the signature matches.
         """
         with set_chip_context("core"):
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 row = conn.execute(
                     "SELECT signature_key FROM trusted_devices WHERE user_id = ? AND device_id = ? AND is_active = 1",
                     (user_id, device_id)
@@ -48,7 +48,7 @@ class SecurityFortressManager:
         signature_key = hashlib.sha256(f"{user_id}:{device_id}:{datetime.utcnow()}".encode()).hexdigest()
         
         with set_chip_context("core"):
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 conn.execute(
                     """
                     INSERT INTO trusted_devices (id, user_id, device_id, device_name, signature_key)
@@ -72,7 +72,7 @@ class SecurityFortressManager:
         hash_signature = hashlib.sha256(sig_base.encode()).hexdigest()
         
         with set_chip_context("core"):
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 conn.execute(
                     """
                     INSERT INTO security_audit_logs (creator_id, action_type, target_resource, payload_snapshot, hash_signature, device_id)

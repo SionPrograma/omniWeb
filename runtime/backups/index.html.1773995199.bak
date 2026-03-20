@@ -604,8 +604,8 @@
     <script src="/shell/voice.js"></script>
     <script src="/shell/builder.js"></script>
     <script src="/shell/galaxy.js"></script>
-    <script src="/shell/creator.js?v=fixed_v1"></script>
-    <script src="/shell/editor.js?v=fixed_v1"></script>
+    <script src="/shell/creator.js"></script>
+    <script src="/shell/editor.js"></script>
     <script src="/shell/logbook.js"></script>
     <script src="/shell/main.js"></script>
 

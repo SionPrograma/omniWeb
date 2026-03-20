@@ -74,7 +74,7 @@ class ChipContextMiddleware(BaseHTTPMiddleware):
         chip_slug = "core"
         if path.startswith(prefix):
             parts = path[len(prefix):].split("/")
-            if parts and parts[0] not in ["system", "health", "auth", "onboarding"]:
+            if parts and parts[0] not in ["system", "health", "auth", "onboarding", "creator", "editor"]:
                 chip_slug = parts[0]
         token = _current_chip_ctx.set({"chip_slug": chip_slug, "user_id": None})
         try:

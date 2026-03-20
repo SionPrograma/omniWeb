@@ -75,6 +75,11 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "revisa el sistema", "qué capa falla", "qué modulo falla", 
         "sospechás", "prioridad de arreglo", "saludable", "warning", "evidencia real", "respondé none"
     ],
+    "COPILOT_PROPOSAL_INTENT": [
+        "analizá este archivo", "proponé un fix", "detectá el error", "mostrame un diff", 
+        "proponé una mejora", "analiza el código", "qué le falta", "cómo lo ves", 
+        "propuesta de fix", "fix mínimo", "detecta el problema"
+    ],
 }
 
 # Mapping of legacy intents to these new semantic groups if needed

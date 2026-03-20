@@ -16,7 +16,7 @@ async def get_creator_user(
     Allows authenticated shell sessions to bypass device metadata.
     """
     # 1. Identity Check
-    if current_user.id != settings.CREATOR_ID:
+    if str(current_user.id) != str(settings.CREATOR_ID):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access Denied: High Security Creator Authorization Required."

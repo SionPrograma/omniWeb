@@ -757,6 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     createParticles();
+    // Nico estuvo aquí 
 
     // Add particle animation to stylesheet
     const style = document.createElement('style');

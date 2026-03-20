@@ -217,8 +217,6 @@ class CreatorEnvironment {
 
     // 3. CREATOR WORKSPACE
     setupWorkspace() {
-        if (this.workspaceInitialized) return;
-        this.workspaceInitialized = true;
         // Toggle Logic
         document.querySelectorAll('.ws-toggle').forEach(btn => {
             btn.onclick = () => {
@@ -254,23 +252,18 @@ class CreatorEnvironment {
 
                 if (window.creatorEditor) {
                     this.addWorkspaceLog(`Requesting: ${path}...`, 'system');
-                    try {
-                        const result = await window.creatorEditor.openFile(path);
-                        if (result !== null && typeof result === 'string') {
-                            const wsTextarea = document.getElementById('ws-editor-content');
-                            if (wsTextarea) {
-                                wsTextarea.value = result;
-                                wsTextarea.dispatchEvent(new Event('input'));
-                            }
-                            this.addWorkspaceLog(`SUCCESS: ${path} loaded.`, 'system');
-                        } else {
-                            const error = (result && result.error) ? result.error : "Failed to read file content";
-                            this.addWorkspaceLog(`FAILED: ${path} (${error})`, 'error');
-                            const wsTextarea = document.getElementById('ws-editor-content');
-                            if (wsTextarea) wsTextarea.value = "";
+                    const result = await window.creatorEditor.openFile(path);
+
+                    if (result && typeof result === 'string') {
+                        const textarea = document.getElementById('ws-editor-content');
+                        if (textarea) {
+                            textarea.value = result;
+                            textarea.dispatchEvent(new Event('input')); // Trigger any listeners
                         }
-                    } catch (err) {
-                        this.addWorkspaceLog(`CRITICAL ERROR: ${err.message}`, 'error');
+                        this.addWorkspaceLog(`SUCCESS: ${path} loaded.`, 'system');
+                    } else {
+                        const error = (result && result.error) ? result.error : "Unknown connection failure";
+                        this.addWorkspaceLog(`FAILED: ${path} (${error})`, 'error');
                     }
                 } else {
                     this.addWorkspaceLog("ERROR: CreatorEditor system not initialized.", 'error');

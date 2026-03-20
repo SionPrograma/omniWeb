@@ -1,0 +1,345 @@
+#creator-workspace-view {
+    position: fixed;
+    inset: 0;
+    background: var(--creator-bg, #0A0A0F);
+    z-index: 8000;
+    display: none;
+    flex-direction: column;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+}
+
+#creator-workspace-view.active {
+    display: flex;
+}
+
+/* Fix B: Surface Cleanup — Hide legacy overlays when workspace is active */
+body.workspace-active .input-bar,
+body.workspace-active .ai-orb,
+body.workspace-active .greeting-text,
+body.workspace-active .status-subtitle {
+    display: none !important;
+}
+
+body.workspace-active #shell-container {
+    padding-bottom: 0;
+    /* No space needed for input bar */
+}
+
+.workspace-header {
+    height: 50px;
+    background: rgba(10, 10, 15, 0.95);
+    border-bottom: 2px solid var(--creator-gold, #D4AF37);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    backdrop-filter: blur(10px);
+}
+
+.workspace-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workspace-title h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    color: var(--creator-gold, #D4AF37);
+    margin: 0;
+}
+
+.workspace-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ws-toggle {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--creator-border, rgba(212, 175, 55, 0.25));
+    color: rgba(255, 255, 255, 0.5);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.ws-toggle.active {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: var(--creator-gold, #D4AF37);
+    color: var(--creator-gold, #D4AF37);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.ws-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--creator-border, rgba(212, 175, 55, 0.2));
+    margin: 0 5px;
+}
+
+.ws-close-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: 0.3s;
+}
+
+.ws-close-btn:hover {
+    opacity: 1;
+    color: #ff4444;
+}
+
+/* GRID SYSTEM */
+.workspace-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    background: var(--creator-border);
+    overflow: hidden;
+}
+
+/* Logical Grid Adjustment */
+.workspace-grid.solo-editor {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+
+.workspace-grid.solo-editor #ws-panel-copilot,
+.workspace-grid.solo-editor #ws-panel-preview,
+.workspace-grid.solo-editor #ws-panel-monitor {
+    display: none;
+}
+
+.ws-panel {
+    background: var(--creator-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ws-panel:not(.active) {
+    display: none;
+}
+
+.panel-label {
+    background: rgba(212, 175, 55, 0.08);
+    padding: 5px 12px;
+    font-size: 0.6rem;
+    font-weight: bold;
+    color: var(--creator-gold);
+    border-bottom: 1px solid var(--creator-border);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.ws-panel-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+/* EDITOR */
+.editor-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.ws-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--creator-border);
+    color: #fff;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    font-family: 'Inter', sans-serif;
+}
+
+.ws-btn {
+    background: transparent;
+    border: 1px solid var(--creator-gold);
+    color: var(--creator-gold);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ws-btn-save {
+    background: var(--creator-gold) !important;
+    color: #000 !important;
+}
+
+.ws-textarea {
+    flex: 1;
+    background: #050508;
+    border: 1px solid var(--creator-border);
+    color: #32ff96;
+    font-family: 'Inter', monospace;
+    font-size: 0.8rem;
+    resize: none;
+    padding: 12px;
+    border-radius: 4px;
+    line-height: 1.5;
+}
+
+/* PREVIEW */
+.preview-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border: 1px solid var(--creator-border);
+}
+
+#preview-url {
+    font-size: 0.65rem;
+    opacity: 0.5;
+    font-family: monospace;
+}
+
+#ws-preview-frame {
+    flex: 1;
+    background: #fff;
+    border-radius: 4px;
+    border: none;
+}
+
+/* COPILOT */
+.copilot-inner {
+    display: flex;
+    flex-direction: column;
+}
+
+.copilot-output {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--creator-border);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    overflow-y: auto;
+    padding: 12px;
+    font-size: 0.75rem;
+}
+
+.copilot-msg {
+    margin-bottom: 10px;
+}
+
+.copilot-msg.system {
+    color: var(--creator-gold);
+    opacity: 0.7;
+    font-size: 0.7rem;
+    border-bottom: 1px solid var(--creator-border);
+    padding-bottom: 5px;
+}
+
+.copilot-msg.ai {
+    color: #32ff96;
+    background: rgba(50, 255, 150, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.copilot-msg.user {
+    color: #fff;
+    padding-left: 8px;
+    border-left: 2px solid var(--creator-gold);
+}
+
+.copilot-input-area {
+    display: flex;
+    gap: 8px;
+}
+
+#ws-copilot-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--creator-border);
+    color: #fff;
+    padding: 8px;
+    border-radius: 4px;
+    resize: none;
+    font-size: 0.8rem;
+}
+
+.ws-btn-primary {
+    background: var(--creator-gold);
+    color: #000;
+    border: none;
+    padding: 0 15px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+/* MONITOR */
+.stat-item {
+    font-size: 0.6rem;
+    color: var(--creator-gold);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.monitor-logs {
+    flex: 1;
+    background: #050508;
+    border: 1px solid var(--creator-border);
+    padding: 10px;
+    font-family: 'Inter', monospace;
+    font-size: 0.65rem;
+    overflow-y: auto;
+    color: #888;
+}
+
+.log-entry.system {
+    color: var(--creator-gold);
+}
+
+.log-entry.error {
+    color: #ff5555;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 800px) {
+    .workspace-grid {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto !important;
+        overflow-y: auto;
+    }
+
+    .ws-panel {
+        height: 400px;
+        border-bottom: 1px solid var(--creator-border);
+    }
+
+    .workspace-header {
+        padding: 0 10px;
+    }
+
+    .workspace-title h2 {
+        display: none;
+    }
+}

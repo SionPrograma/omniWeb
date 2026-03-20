@@ -117,16 +117,9 @@ class CreatorEditor {
         const textarea = document.getElementById('code-textarea');
         const pathDisplay = document.getElementById('editor-file-path');
         const proposeBtn = document.getElementById('editor-btn-propose');
-        
-        // Helper to update path display (handles DIV or INPUT)
-        const updatePathDisplay = (text) => {
-            if (!pathDisplay) return;
-            if (pathDisplay.nodeName === 'INPUT') pathDisplay.value = text;
-            else pathDisplay.innerText = text;
-        };
 
         try {
-            updatePathDisplay("Loading...");
+            if (pathDisplay) pathDisplay.innerText = "Loading...";
             const res = await fetch(`/api/v1/editor/file/read?path=${encodeURIComponent(path)}`, {
                 headers: {
                     'Authorization': 'Bearer omniweb-dev-secret-token',
@@ -137,7 +130,7 @@ class CreatorEditor {
 
             if (!res.ok) {
                 const errMsg = data.detail || data.error || `HTTP ${res.status}`;
-                updatePathDisplay(`Error: ${errMsg}`);
+                if (pathDisplay) pathDisplay.innerText = `Error: ${errMsg}`;
                 console.error("Editor Load Error:", errMsg);
                 return { error: errMsg };
             }
@@ -147,7 +140,7 @@ class CreatorEditor {
 
             // Sync legacy UI if it exists
             if (textarea) textarea.value = data.content;
-            updatePathDisplay(data.path);
+            if (pathDisplay) pathDisplay.innerText = data.path;
             if (proposeBtn) proposeBtn.disabled = true;
 
             // Highlight active node in tree
