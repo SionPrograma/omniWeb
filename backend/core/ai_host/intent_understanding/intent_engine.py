@@ -77,16 +77,27 @@ class IntentEngine:
     def _decide_mode(self, group: str, msg: str, ctx: SemanticContext) -> str:
         """Translates semantic groups into Omni's execution modes."""
         words = len(msg.split())
+        msg_lower = msg.lower()
         
-        # IF input is command -> action_execution
+        # 0. DETECT CONSTRAINED OUTPUT SIGNAL (SOLO, ONLY, FORMATO, EXACTO)
+        # These override default length-based modes for disciplined output.
+        constrained_signals = [
+            r"\bsolo\b", r"\bonly\b", r"\bformato\b", r"\bexacto\b", r"\bexacta\b", 
+            r"\bdecime\b", r"\brespond\b", r"archivo_leido", r"primera_linea", 
+            r"microfix_propuesto", r"impacto_relacionado"
+        ]
+        if any(re.search(s, msg_lower) for s in constrained_signals):
+            return "constrained_output"
+        
+        # 1. IF input is command -> action_execution
         if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "SYSTEM_AUDIT_INTENT"]:
             return "action_execution"
             
-        # IF input is simple -> direct_response  
+        # 2. IF input is simple -> direct_response  
         if words <= 4 and group not in ["ANALYSIS_INTENT"]:
             return "direct_response"
             
-        # ELSE -> reflective_analysis
+        # 3. ELSE -> reflective_analysis
         return "reflective_analysis"
 
 intent_engine = IntentEngine()

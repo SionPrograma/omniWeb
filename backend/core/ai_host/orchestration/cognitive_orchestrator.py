@@ -106,11 +106,28 @@ class CognitiveOrchestrator:
         # 5. Cognitive Unification: Weave context + state + mode into the response
         is_technical = (
             brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write"] or 
-            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM"]
+            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM"] or
+            understanding.get("mode") == "constrained_output"
         )
         
         if is_technical:
-            # HARD LOCK: No unification, no narrative, no extra lines for structured technical outputs
+            # HARD LOCK: No unification, but handle filtering for SOLO requests
+            if understanding.get("mode") == "constrained_output":
+                msg_low = message.lower()
+                if "solo" in msg_low or "only" in msg_low:
+                    fields = ["archivo_leido", "primera_linea", "resumen_real", "microfix_propuesto", "impacto_relacionado"]
+                    requested = [f.upper() for f in fields if f in msg_low]
+                    if requested:
+                        lines = brain_response.message.splitlines()
+                        relevant = [l for l in lines if any(l.upper().startswith(f) for f in requested)]
+                        # If only one line is requested and user asked for "exacta", strip the label
+                        if len(requested) == 1 and ("exacta" in msg_low or "exacto" in msg_low):
+                            for l in relevant:
+                                if ":" in l:
+                                    brain_response.message = l.split(":", 1)[1].strip()
+                                    break
+                        else:
+                            brain_response.message = "\n".join(relevant)
             pass
         else:
             brain_response.message = self._unify_response(
@@ -471,7 +488,8 @@ class CognitiveOrchestrator:
         from backend.core.ai_host.sessions import session_state
         lang = session_state.get_language(session_id)
         
-        if intent_group == "SYSTEM_AUDIT_INTENT":
+        # 0. CONSTRAINED OUTPUT BYPASS (Phase 10 Polish)
+        if mode == "constrained_output" or intent_group == "SYSTEM_AUDIT_INTENT":
             return text
             
         # 0. Context extraction

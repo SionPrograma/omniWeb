@@ -75,7 +75,18 @@ class BrainRouter:
 
         # 3. ROUTE BY MODE (With Bypass Safety for broken layers)
         try:
-            if mode == "reflective" or mode == "reflective_analysis":
+            if mode == "constrained_output":
+                 # Bypasses reflective templates and generic naturalization.
+                 # Uses direct processors but preserves clean output.
+                 if intent == "copilot_proposal":
+                     res = await self.command_router._handle_proposal(msg_clean, context=context)
+                 else:
+                     chat_proc = self.command_router.registry.get_processor("chat")
+                     if chat_proc:
+                         res = await chat_proc.process(msg_clean, context=context)
+                     else:
+                         res = self._generate_natural_fallback(lang)
+            elif mode == "reflective" or mode == "reflective_analysis":
                  res = await self._handle_reflective_reasoning(msg_clean, lang)
             elif mode == "direct_response":
                  # Simple conversational response via chat processor

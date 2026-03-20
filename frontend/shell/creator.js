@@ -390,7 +390,8 @@ class CreatorEnvironment {
         this.addCopilotMsg(prompt, 'user');
         input.value = '';
 
-        const path = document.getElementById('ws-editor-path').value;
+        // Omni Fix: Use currentPath from verified editor state instead of volatile input
+        const path = (window.creatorEditor && window.creatorEditor.currentPath) ? window.creatorEditor.currentPath : "";
         const evidence = path ? [{ type: 'current_file', path: path }] : [];
 
         try {
