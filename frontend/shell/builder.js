@@ -232,8 +232,10 @@ class BuilderUI {
         const wsFile = document.getElementById('ws-change-file');
         const wsPath = document.getElementById('ws-change-path');
         const wsContent = document.getElementById('ws-diff-preview-content');
+        const wsActions = document.getElementById('ws-change-actions');
 
         if (panel) panel.style.display = 'block';
+        if (wsActions) wsActions.style.display = 'flex';
 
         const diffHtml = preview.diffs.map(d => {
             const escape = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -276,12 +278,31 @@ class BuilderUI {
     async decidePreview(approved) {
         if (!this.currentPreviewId) return;
         try {
-            await fetch(`/api/v1/ai-host/execution/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
+            const res = await fetch(`/api/v1/ai-host/execution/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
+            await res.json();
+
             this.currentPreviewId = null;
-            document.getElementById('builder-preview-panel').style.display = 'none';
+
+            // Clean UI
+            const panel = document.getElementById('builder-preview-panel');
+            if (panel) panel.style.display = 'none';
+
+            const wsActions = document.getElementById('ws-change-actions');
+            if (wsActions) wsActions.style.display = 'none';
+
+            const wsContent = document.getElementById('ws-diff-preview-content');
+            if (wsContent) {
+                wsContent.innerHTML = `<p style="opacity: 0.3; text-align: center; margin-top: 20px;">${approved ? 'Change applied.' : 'Change rejected.'}</p>`;
+            }
+
+            // --- REFRESH EDITOR ---
+            if (approved && window.creatorEditor && window.creatorEditor.currentPath) {
+                window.creatorEditor.loadFile(window.creatorEditor.currentPath);
+            }
+
             this.updateStatus();
         } catch (e) { console.error("Decision failed", e); }
     }

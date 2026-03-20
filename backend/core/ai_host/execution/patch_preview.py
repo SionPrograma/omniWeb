@@ -80,7 +80,7 @@ class PatchPreviewEngine:
 
     def _save_preview(self, preview: PatchPreview):
         try:
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 conn.execute("""
                     INSERT INTO builder_patch_previews (id, task_id, module_id, batch_data, diff_data, status, timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -96,7 +96,7 @@ class PatchPreviewEngine:
 
     async def get_preview(self, preview_id: str) -> Optional[PatchPreview]:
         try:
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 row = conn.execute("SELECT * FROM builder_patch_previews WHERE id = ?", (preview_id,)).fetchone()
                 if not row: return None
                 
@@ -119,7 +119,7 @@ class PatchPreviewEngine:
     async def decide(self, preview_id: str, approved: bool, author: str = "creator") -> bool:
         status = "APPROVED" if approved else "REJECTED"
         try:
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 conn.execute("""
                     UPDATE builder_patch_previews 
                     SET status = ?, decision_by = ? 

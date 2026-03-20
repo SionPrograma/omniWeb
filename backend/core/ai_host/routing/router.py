@@ -36,6 +36,7 @@ async def process_message(request: ProcessRequest, current_user: OmniUser = Depe
 from ..execution.router import router as copilot_router
 from ..execution.editor_router import router as editor_router
 ai_host_router.include_router(copilot_router, prefix="/copilot", tags=["copilot"])
+ai_host_router.include_router(copilot_router, prefix="/execution", tags=["execution"])
 ai_host_router.include_router(editor_router, prefix="/editor", tags=["editor"])
 
 @ai_host_router.get("/status")

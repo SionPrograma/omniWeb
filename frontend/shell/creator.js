@@ -408,6 +408,12 @@ class CreatorEnvironment {
             if (data.message) {
                 this.addCopilotMsg(data.message, 'ai');
             }
+
+            // --- AUTO TRIGGER PATCH PREVIEW ---
+            if (data.payload && data.payload.preview_id && window.builderUI) {
+                console.log("[CREATOR] Proposal with preview detected. Launching preview UI:", data.payload.preview_id);
+                window.builderUI.showPreview(data.payload.preview_id);
+            }
             if (data.audit && this.updateAuditResult) {
                 this.updateAuditResult(data.audit);
             }

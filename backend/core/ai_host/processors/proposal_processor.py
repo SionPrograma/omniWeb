@@ -5,6 +5,10 @@ import re
 from typing import Dict, Any, Optional, List
 from .base import CommandProcessor, AICommandResponse
 from ..execution.safety_policy import safety_policy
+from ..execution.patch_preview import patch_preview_engine
+from ..execution.mutation_engine import MutationBatch, FileOperation, MutationType
+from ..execution.builder_models import BuilderTask, BuilderModule, BuilderStatus, BuilderModuleType
+from ..execution.builder_engine import builder_execution_engine
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +69,50 @@ class ProposalProcessor(CommandProcessor):
 
         # 6. SHOW DIFF (Visual Evidence)
         diff_str = self._generate_diff(original_content, proposal["new_content"], target_path)
+        
+        # 6.5 GENERATE FORMAL PREVIEW (For "Approve & Apply" flow)
+        preview_id = None
+        if diff_str and diff_str.strip():
+            try:
+                # Create a lightweight task context for this proposal
+                task = BuilderTask(
+                    roadmap_id="copilot_proposal",
+                    title=f"Propuesta: {proposal.get('change', 'Mejora de código')}",
+                    status=BuilderStatus.AWAITING_APPROVAL
+                )
+                module = BuilderModule(
+                    task_id=task.id,
+                    title=f"Aplicación: {os.path.basename(target_path)}",
+                    sequence_order=0,
+                    status=BuilderStatus.AWAITING_APPROVAL,
+                    module_type=BuilderModuleType.IMPLEMENTATION
+                )
+                task.modules.append(module)
+                
+                # Persist to DB for reuse by Builder UI
+                await builder_execution_engine._persist_task(task)
+                await builder_execution_engine._persist_module(module)
+
+                batch = MutationBatch(
+                    task_id=task.id,
+                    module_id=module.id,
+                    operations=[FileOperation(
+                        path=target_path,
+                        op_type=MutationType.MODIFY_FILE,
+                        content=proposal["new_content"]
+                    )],
+                    origin="Copilot"
+                )
+                
+                preview = patch_preview_engine.generate_preview(task.id, module.id, batch)
+                preview_id = preview.id
+                
+                # Update module result to point to preview (required for decide_preview logic)
+                module.result = {"preview_id": preview_id, "type": "patch_preview"}
+                await builder_execution_engine._persist_module(module)
+                
+            except Exception as e:
+                logger.error(f"[PROPOSAL_PREVIEW_ERROR] Failed to generate formal preview: {e}")
         
         # 7. COMPATIBILITY SCRUTINY (Mobile/Legacy check)
         compatibility_warning = safety_policy.check_mobile_compatibility(diff_str, target_files=[target_path])
@@ -134,6 +182,7 @@ IMPACTO_RELACIONADO: {impact}
                 "forbidden_files": safety_policy.FORBIDDEN_FILES,
                 "proposal": proposal,
                 "diff": diff_str,
+                "preview_id": preview_id,
                 "mode": "proposal_only",
                 "safety_audit": validation
             }

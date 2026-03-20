@@ -166,6 +166,16 @@ async def control_builder_task(task_id: str, action: str, current_user: OmniUser
         )
         return {"status": "success", "payload": unified.model_dump()}
 
+@router.get("/builder/preview/{preview_id}")
+async def get_preview(preview_id: str, current_user: OmniUser = Depends(get_current_user)):
+    with set_chip_context("ai-host", current_user.id):
+        enforce_permission("creator_access")
+        from .patch_preview import patch_preview_engine
+        preview = await patch_preview_engine.get_preview(preview_id)
+        if not preview:
+            raise HTTPException(status_code=404, detail="Preview not found")
+        return preview
+
 @router.post("/builder/preview/{preview_id}/decide")
 async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser = Depends(get_current_user)):
     with set_chip_context("ai-host", current_user.id):

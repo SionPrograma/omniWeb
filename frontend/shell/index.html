@@ -279,9 +279,17 @@
                     <div class="panel-label">CHANGE PREVIEW</div>
                     <div class="ws-panel-content monitor-inner">
                         <div id="ws-change-header"
-                            style="margin-bottom: 10px; padding: 5px 10px; background: rgba(212, 175, 55, 0.05); border-radius: 4px; border: 1px solid rgba(212, 175, 55, 0.1); font-size: 0.7rem; color: var(--creator-gold);">
-                            <div id="ws-change-file">FILE: No changes pending</div>
-                            <div id="ws-change-path" style="opacity: 0.6; font-size: 0.65rem; margin-top: 2px;">PATH: -
+                            style="margin-bottom: 10px; padding: 5px 10px; background: rgba(212, 175, 55, 0.05); border-radius: 4px; border: 1px solid rgba(212, 175, 55, 0.1); font-size: 0.7rem; color: var(--creator-gold); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div id="ws-change-file">FILE: No changes pending</div>
+                                <div id="ws-change-path" style="opacity: 0.6; font-size: 0.65rem; margin-top: 2px;">
+                                    PATH: -</div>
+                            </div>
+                            <div id="ws-change-actions" style="display: none; gap: 8px;">
+                                <button class="ws-btn" onclick="window.builderUI.decidePreview(false)"
+                                    style="border-color: #ff5555; color: #ff5555; padding: 2px 8px; font-size: 0.6rem;">REJECT</button>
+                                <button class="ws-btn ws-btn-save" onclick="window.builderUI.decidePreview(true)"
+                                    style="padding: 2px 8px; font-size: 0.6rem;">APPLY</button>
                             </div>
                         </div>
                         <div class="monitor-logs" id="ws-monitor-logs"

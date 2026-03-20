@@ -301,7 +301,7 @@ class BuilderExecutionEngine:
 
     async def _persist_task(self, task: BuilderTask):
         try:
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 conn.execute("""
                     INSERT OR REPLACE INTO builder_tasks (id, roadmap_id, title, status, progress, current_module_id, current_submodule, last_update, metadata)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -316,7 +316,7 @@ class BuilderExecutionEngine:
 
     async def _persist_module(self, module: BuilderModule):
         try:
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 conn.execute("""
                     INSERT OR REPLACE INTO builder_modules (id, task_id, title, description, status, progress, sequence_order, module_type, payload, result, error, current_submodule, last_update)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -334,7 +334,7 @@ class BuilderExecutionEngine:
     async def _load_task(self, task_id: str) -> Optional[BuilderTask]:
         """Loads a task and its modules from the database."""
         try:
-            with db_manager.get_connection() as conn:
+            with db_manager.get_connection(internal=True) as conn:
                 task_row = conn.execute("SELECT * FROM builder_tasks WHERE id = ?", (task_id,)).fetchone()
                 if not task_row:
                     return None
