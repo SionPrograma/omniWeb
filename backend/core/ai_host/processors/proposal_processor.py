@@ -21,182 +21,213 @@ class ProposalProcessor(CommandProcessor):
     
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         # 1. AUDIT & ISOLATE (Resolve Target)
-        target_path = self._resolve_target(msg, context)
-        if not target_path:
-            # Requisito Omni: ARCHIVO_LEIDO: NONE if searching for open file fails
-            return AICommandResponse(
-                intent="proposal_error",
-                status="success", # Using success status so it's not treated as a technical failure
-                message="ARCHIVO_LEIDO: NONE"
-            )
+        raw_target = self._resolve_target(msg, context)
+        if not raw_target:
+            return AICommandResponse(intent="proposal_error", status="success", message="ARCHIVO_LEIDO: NONE")
 
-        # 2. FILE-SCOPE LOCK (Path Safety)
-        if not self._is_safe_path(target_path):
-            return AICommandResponse(
-                intent="proposal_error",
-                status="error",
-                message=f"BLOQUEO DE SEGURIDAD: El archivo '{target_path}' está en la lista FORBIDDEN FILES."
-            )
-
-        # 3. READ (Audit Content)
-        try:
-            with open(target_path, "r", encoding="utf-8") as f:
-                original_content = f.read()
-        except Exception as e:
-            # Requisito Omni: ARCHIVO_LEIDO: NONE if file is not found or cannot be read
-            return AICommandResponse(
-                intent="proposal_error",
-                status="success",
-                message="ARCHIVO_LEIDO: NONE"
-            )
-
-        # 4. PROPOSE (Minimal Patch Only)
-        proposal = self._generate_intelligent_proposal(target_path, original_content, msg)
+        # Absolutize path if not absolute
+        abs_target = os.path.abspath(raw_target)
+        is_dir_scope = os.path.isdir(abs_target)
         
-        # 5. VALIDATE PROPOSAL (Internal Safety Layer)
+        target_files = []
+        scope_warning = ""
+
+        # 2. DETERMINE FILE BATCH & SCOPE
+        if is_dir_scope:
+            valid_exts = ('.js', '.py', '.ts', '.css', '.html', '.md')
+            for root, dirs, files in os.walk(abs_target):
+                if any(ignored in root for ignored in ['node_modules', '.git', '__pycache__', 'venv', 'dist', 'build']):
+                    continue
+                for f in files:
+                    if f.endswith(valid_exts):
+                        target_files.append(os.path.join(root, f))
+            
+            # Rule 2: Small scope restriction
+            if len(target_files) > 5:
+                scope_warning = f"\n⚠️ WARNING: El módulo contiene {len(target_files)} archivos. Restringiendo scope de seguridad a los 5 principales para prevenir un apply masivo.\n"
+                target_files = target_files[:5]
+        else:
+            target_files = [abs_target]
+
+        if not target_files:
+            return AICommandResponse(intent="proposal_error", status="success", message=f"No se encontraron archivos editables en el scope: {raw_target}")
+
+        operations = []
+        aggregate_diff = ""
+        highest_risk = "BAJO"
+        all_proposals = []
+        
+        # 3. PROPOSE BATCH
+        for t_file in target_files:
+            if not self._is_safe_path(t_file):
+                continue
+                
+            try:
+                with open(t_file, "r", encoding="utf-8") as f:
+                    original_content = f.read()
+            except Exception:
+                continue
+
+            # In multi-file, we do NOT force microfixes into every component, only apply if requested heuristically
+            proposal = self._generate_intelligent_proposal(t_file, original_content, msg, force_microfix=not is_dir_scope)
+            
+            if proposal["new_content"] != original_content:
+                diff_str = self._generate_diff(original_content, proposal["new_content"], t_file)
+                if diff_str.strip():
+                    aggregate_diff += diff_str + "\n"
+                    operations.append(FileOperation(
+                        path=t_file,
+                        op_type=MutationType.MODIFY_FILE,
+                        content=proposal["new_content"]
+                    ))
+                    all_proposals.append(proposal)
+                    
+                    prisk = proposal.get("risk", "").lower()
+                    if "crítico" in prisk or "alto" in prisk:
+                        highest_risk = "ALTO"
+                    elif "medio" in prisk and highest_risk != "ALTO":
+                        highest_risk = "MEDIO"
+
+        # If it was a directory query but no changes were proposed, we simulate an audit response.
+        if is_dir_scope and not operations:
+            filtered_names = [os.path.basename(f) for f in target_files]
+            formatted_message = f"""ARCHIVOS_EN_SCOPE: {raw_target} ({len(target_files)} archivos analizados)
+ARCHIVOS_RELEVANTES: {', '.join(filtered_names) if filtered_names else 'Ninguno'}
+CAMBIO_PROPUESTO_POR_ARCHIVO: Ninguno. Se auditaron los archivos dentro del scope pero no se detectó necesidad técnica directa que matchee la petición.
+IMPACTO_RELACIONADO: NULO
+CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
+            return AICommandResponse(
+                intent="copilot_proposal",
+                status="success",
+                message=formatted_message.strip(),
+                payload={
+                    "target_files": target_files,
+                    "allowed_files": target_files,
+                    "mode": "proposal_only",
+                    "diff": ""
+                }
+            )
+
+        # 4. VALIDATE & POLICY GATE
+        if not operations and not is_dir_scope:
+            return AICommandResponse(intent="copilot_proposal", status="success", message="ARCHIVO_LEIDO: NONE", payload={"target_files": target_files})
+            
         validation = safety_policy.validate_proposal({
-            "files": [target_path],
-            "diff": proposal.get("diff", ""),
-            "risk": proposal.get("risk", "Bajo")
+            "files": [op.path for op in operations],
+            "diff": aggregate_diff,
+            "risk": highest_risk
         })
         
         if not validation["is_safe"]:
             return AICommandResponse(
                 intent="safety_violation",
                 status="alert",
-                message=f"VIOLACIÓN DE POLÍTICA: {', '.join(validation['issues'])}"
+                message=f"VIOLACIÓN DE POLÍTICA MULTI-ARCHIVO: {', '.join(validation['issues'])}"
             )
-
-        # 6. SHOW DIFF (Visual Evidence)
-        diff_str = self._generate_diff(original_content, proposal["new_content"], target_path)
-        
-        # 6.5 GENERATE FORMAL PREVIEW (For "Approve & Apply" flow)
+            
+        # 5. GENERATE PREVIEW
         preview_id = None
-        if diff_str and diff_str.strip():
+        if operations:
             try:
-                # Create a lightweight task context for this proposal
                 task = BuilderTask(
-                    roadmap_id="copilot_proposal",
-                    title=f"Propuesta: {proposal.get('change', 'Mejora de código')}",
+                    roadmap_id="copilot_proposal" + ("_multi" if is_dir_scope else ""),
+                    title=f"Propuesta: {len(operations)} archivo(s)",
                     status=BuilderStatus.AWAITING_APPROVAL
                 )
                 module = BuilderModule(
                     task_id=task.id,
-                    title=f"Aplicación: {os.path.basename(target_path)}",
+                    title=f"Aplicación Scope: {os.path.basename(raw_target)}",
                     sequence_order=0,
                     status=BuilderStatus.AWAITING_APPROVAL,
                     module_type=BuilderModuleType.IMPLEMENTATION
                 )
                 task.modules.append(module)
                 
-                # Persist to DB for reuse by Builder UI
                 await builder_execution_engine._persist_task(task)
                 await builder_execution_engine._persist_module(module)
-
+                
                 batch = MutationBatch(
                     task_id=task.id,
                     module_id=module.id,
-                    operations=[FileOperation(
-                        path=target_path,
-                        op_type=MutationType.MODIFY_FILE,
-                        content=proposal["new_content"]
-                    )],
+                    operations=operations,
                     origin="Copilot"
                 )
                 
                 preview = patch_preview_engine.generate_preview(task.id, module.id, batch)
                 preview_id = preview.id
                 
-                # Update module result to point to preview (required for decide_preview logic)
                 module.result = {"preview_id": preview_id, "type": "patch_preview"}
                 await builder_execution_engine._persist_module(module)
-                
             except Exception as e:
-                logger.error(f"[PROPOSAL_PREVIEW_ERROR] Failed to generate formal preview: {e}")
-        
-        # 7. COMPATIBILITY SCRUTINY (Mobile/Legacy check)
-        compatibility_warning = safety_policy.check_mobile_compatibility(diff_str, target_files=[target_path])
+                logger.error(f"[PROPOSAL_PREVIEW_ERROR] Failed multi preview: {e}")
+
+        # 6. COMPATIBILITY
+        compatibility_warning = safety_policy.check_mobile_compatibility(aggregate_diff, target_files=[op.path for op in operations])
         if compatibility_warning:
-            previous_risk = proposal.get("risk", "")
-            # Merge contextually without redundant labels at this stage
-            proposal["risk"] = f"ALTO: {compatibility_warning}. {previous_risk}"
+            highest_risk = f"ALTO: {compatibility_warning}. {highest_risk}"
 
-        # 8. REPORT (Structured Form - Omni Directive)
-        first_line = "None"
-        if original_content:
-            lines = original_content.splitlines()
-            if lines:
-                first_line = lines[0].strip()
-
-        # Generate purposeful summary
-        purpose = proposal.get("problem", "Propósito general del módulo.")
-        if "audio" in target_path.lower() or "librosa" in target_path.lower() or "audio" in msg:
-            purpose = "Gestión de procesamiento de audio y señales para transcripción liviana."
-        
-        # Microfix proposal
-        microfix = proposal.get("change", "No se requiere cambio estructural inmediato.")
-        
-        # Systemic Impact Processing (Compact/Surgical)
-        raw_risk = str(proposal.get("risk", "BAJO (Aislado)"))
-        
-        # A. Determine Single Severity
-        severity = "BAJO"
-        risk_lower = raw_risk.lower()
-        if "crítico" in risk_lower or "alto" in risk_lower or "advertencia" in risk_lower:
-            severity = "ALTO"
-        elif "medio" in risk_lower or "regresión" in risk_lower:
-            severity = "MEDIO"
+        # 7. FORMAT FINAL MESSAGE
+        if is_dir_scope:
+            changed_names = [os.path.basename(op.path) for op in operations]
+            all_names = [os.path.basename(f) for f in target_files]
+            changes_desc = "\n".join([f"- {os.path.basename(p['file'])}: {p.get('change', 'fix')}" for p in all_proposals])
             
-        # B. Extract Most Specific Concrete Impact
-        # Remove redundant technical labels and formatting noise
-        clean_impact = raw_risk
-        noise = ["CRÍTICO:", "MEDIO:", "BAJO:", "ADVERTENCIA:", "(Aislado)", "Posible regresión:", "(Riesgo de regresión móvil)"]
-        for label in noise:
-            clean_impact = clean_impact.replace(label, "")
-            
-        # Pick the last (most specific) phrase if concatenated
-        phrases = [p.strip() for p in clean_impact.split(".") if p.strip()]
-        msg_brief = phrases[-1] if phrases else "cambio local sin impactos sistémicos"
-        
-        # C. Format Strictly: <SEVERIDAD> - <impacto>
-        impact = f"{severity} - {msg_brief.strip('. ')}"
-
-
-
-        formatted_message = f"""ARCHIVO_LEIDO: {target_path}
-PRIMERA_LINEA: {first_line}
-RESUMEN_REAL: {purpose}
-MICROFIX_PROPUESTO: {microfix}
-IMPACTO_RELACIONADO: {impact}
-CRITERIO_DE_SEGURIDAD: {proposal.get('safety', 'CAMBIO_SEGURO')}
+            formatted_message = f"""ARCHIVOS_EN_SCOPE: {raw_target} ({len(target_files)} enumerados)
+ARCHIVOS_RELEVANTES: {', '.join(changed_names)}
+CAMBIOS_PROPUESTOS:
+{changes_desc}
+IMPACTO_RELACIONADO: {highest_risk}
+CRITERIO_DE_SEGURIDAD: MULTI_FILE_SAFE{scope_warning}
 
 ---
-{diff_str or "# ARCHIVO BAJO AUDITORÍA (Sin cambios generados)"}"""
+{aggregate_diff}"""
+
+        else:
+            t_file = target_files[0]
+            prop = all_proposals[0] if all_proposals else {}
+            first_line = "None"
+            try:
+                with open(t_file, "r", encoding="utf-8") as f:
+                    first_line = f.readline().strip()
+            except:
+                pass
+                
+            purpose = prop.get("problem", "Propósito general del módulo.")
+            if "audio" in t_file.lower() or "librosa" in t_file.lower() or "audio" in msg:
+                purpose = "Gestión de procesamiento de audio y señales para transcripción liviana."
+                
+            formatted_message = f"""ARCHIVO_LEIDO: {t_file}
+PRIMERA_LINEA: {first_line}
+RESUMEN_REAL: {purpose}
+MICROFIX_PROPUESTO: {prop.get('change', 'No se requiere.')}
+IMPACTO_RELACIONADO: {highest_risk} - Cambio local
+CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
+
+---
+{aggregate_diff or '# ARCHIVO BAJO AUDITORÍA (Sin cambios generados)'}"""
 
         return AICommandResponse(
             intent="copilot_proposal",
             status="success",
             message=formatted_message.strip(),
             payload={
-                "target_files": [target_path],
-                "allowed_files": [target_path],
+                "target_files": [op.path for op in operations] if operations else target_files,
+                "allowed_files": [op.path for op in operations] if operations else target_files,
                 "forbidden_files": safety_policy.FORBIDDEN_FILES,
-                "proposal": proposal,
-                "diff": diff_str,
+                "proposal": all_proposals[0] if all_proposals else {},
+                "diff": aggregate_diff,
                 "preview_id": preview_id,
-                "mode": "proposal_only",
-                "safety_audit": validation
+                "mode": "proposal_only"
             }
         )
 
     def _resolve_target(self, msg: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
-        # Priority 1: Current Editor Path from context
-        if context and "multimodal_evidence" in context:
-            for item in context["multimodal_evidence"]:
-                if item.get("type") == "current_file":
-                    return item.get("path")
-        
-        # Priority 2: Mentioned in message
+        # Priority 1: Explicit Folder/Module Mention
+        match = re.search(r"(?:carpeta|m[oó]dulo|directorio)\s+([\w/\.-]+)", msg)
+        if match:
+            return match.group(1)
+
+        # Priority 2: Current Editor Path from context
         match = re.search(r"en ([\w/\.-]+)", msg)
         if match:
             return match.group(1)
@@ -208,7 +239,7 @@ CRITERIO_DE_SEGURIDAD: {proposal.get('safety', 'CAMBIO_SEGURO')}
         # Delegate to safety policy
         return not any(p in abs_path for p in safety_policy.FORBIDDEN_FILES)
 
-    def _generate_intelligent_proposal(self, path: str, content: str, request: str) -> Dict[str, Any]:
+    def _generate_intelligent_proposal(self, path: str, content: str, request: str, force_microfix: bool = True) -> Dict[str, Any]:
         """
         Heuristic-based minimal proposal (Phase 10 Specificity).
         Inspects content for real patterns to generate situation-aware suggestions.
@@ -253,7 +284,7 @@ CRITERIO_DE_SEGURIDAD: {proposal.get('safety', 'CAMBIO_SEGURO')}
                 risk = "BAJO - Cambio contenido dentro del scope solicitado."
                 safety = "CAMBIO_SEGURO"
                 
-            if new_content == content and "def " in content:
+            if force_microfix and new_content == content and "def " in content:
                 new_content = content.replace("def ", "# [MICROFIX] Validación mínima local aplicada.\ndef ", 1)
 
         # 3. SPECIAL MISSION OVERRIDES (Legacy compatibility)
@@ -282,7 +313,7 @@ CRITERIO_DE_SEGURIDAD: {proposal.get('safety', 'CAMBIO_SEGURO')}
                 risk = "BAJO."
                 
         # Ensure ambiguous requests without clear paths inject a guard warning instead of a massive rewrite
-        if safety == "CAMBIO_INSEGURO_O_AMBIGUO" and new_content == content:
+        if force_microfix and safety == "CAMBIO_INSEGURO_O_AMBIGUO" and new_content == content:
              new_content = "# [WARNING] Scope ambiguo detectado. Refactor masivo prevenido.\n" + content
 
         return {
