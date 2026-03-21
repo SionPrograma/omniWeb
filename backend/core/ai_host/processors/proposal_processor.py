@@ -282,6 +282,28 @@ IMPACTO_RELACIONADO: {impact}
         path_lower = path.lower()
         filename = os.path.basename(path)
         
+        # --- NEW: OMNI SEMANTIC AWARENESS LAYER ---
+        # Detect relevant dependencies to calculate systemic risk.
+        detected_deps = []
+        if path_lower.endswith(".py"):
+            imports = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_\.]+)', content, re.MULTILINE)
+            for imp in imports:
+                if "backend" in imp or "core" in imp or "chips" in imp or "router" in imp:
+                    parts = imp.split('.')
+                    comp = parts[-1] if len(parts) > 1 else imp
+                    detected_deps.append(comp)
+        elif path_lower.endswith((".js", ".ts")):
+            imports = re.findall(r'(?:import|require)[^"\'\n]+["\']([^"\'\n]+)["\']', content)
+            for imp in imports:
+                if imp.startswith('.') or "core" in imp or "shared" in imp:
+                    detected_deps.append(os.path.basename(imp).split('.')[0])
+                    
+        # Filter duplicates and limit
+        detected_deps = list(dict.fromkeys(detected_deps))
+        top_deps_str = ", ".join(detected_deps[:3])
+        dependency_impact = f" (Impacto cruzado: altera contratos con [{top_deps_str}])" if top_deps_str else ""
+        # ------------------------------------------
+
         # 1. Detect JS/TS specific smells (Focus on Architecture & UX)
         if path_lower.endswith((".js", ".ts")):
             # A. Detect Long Render Methods (Specific to functions like renderLayout)
@@ -310,12 +332,8 @@ IMPACTO_RELACIONADO: {impact}
                         issues.append({
                             "problem": f"El método {method_name}() en {filename} mezcla lógica con templates HTML extensos.",
                             "change": f"extraer {method_name}() en helper separado para reducir mezcla entre render y estado",
-                            "risk": "puede afectar inicialización visual del panel si se altera el orden de render"
+                            "risk": f"puede afectar inicialización visual del panel si se altera el orden de render{dependency_impact}"
                         })
-
-
-
-
 
             # B. Check for high density (over 500 lines) - prioritize this as well
             lines_count = len(content.splitlines())
@@ -323,21 +341,21 @@ IMPACTO_RELACIONADO: {impact}
                  issues.append({
                     "problem": f"El módulo {filename} excede las 500 líneas (alta carga cognitiva).",
                     "change": "fragmentar el módulo en submódulos especializados por responsabilidad",
-                    "risk": "incrementa la probabilidad de efectos secundarios al modificar funciones compartidas"
+                    "risk": f"incrementa la probabilidad de efectos secundarios al modificar funciones compartidas{dependency_impact}"
                  })
 
             if 'document.getElementById' in content:
-                issues.append({
+                 issues.append({
                     "problem": f"{filename} tiene un acoplamiento directo con IDs globales del DOM.",
                     "change": "centralizar selectores en un config de elementos o inyectar el root",
-                    "risk": "puede romper la interactividad si cambia la estructura de index.html"
+                    "risk": f"puede romper la interactividad si cambia la estructura de index.html{dependency_impact}"
                 })
             
             if 'var ' in content:
                 issues.append({
                     "problem": f"Uso de 'var' detectado en {filename} (Legacy scope).",
                     "change": "migrar a const/let para prevenir fugas de scope",
-                    "risk": "posibles colisiones de variables en closures asincrónicos"
+                    "risk": f"posibles colisiones de variables en closures asincrónicos{dependency_impact}"
                 })
         
         # 2. Detect Python smells (Focus on Router/Logic separation)
@@ -347,13 +365,13 @@ IMPACTO_RELACIONADO: {impact}
                 issues.append({
                     "problem": f"Violación de capas en {filename}: lógica de negocio detectada en el Router.",
                     "change": "extraer lógica pesada a un Service Layer o Processor dedicado",
-                    "risk": "dificulta el testeo unitario y la reutilización de la lógica central"
+                    "risk": f"dificulta el testeo unitario y la reutilización de la lógica central{dependency_impact}"
                 })
             elif "except:" in content or "except Exception:" in content:
                 issues.append({
                     "problem": f"Manejo de errores genérico en {filename}.",
                     "change": "reemplazar try-except genéricos por capturas de excepciones granulares",
-                    "risk": "puede ocultar fallos de infraestructura críticos en producción"
+                    "risk": f"puede ocultar fallos de infraestructura críticos en producción{dependency_impact}"
                 })
 
         # 3. Global Smells: Extreme Density
@@ -362,14 +380,18 @@ IMPACTO_RELACIONADO: {impact}
              issues.append({
                 "problem": f"El módulo {filename} excede las 500 líneas (alta carga cognitiva).",
                 "change": "fragmentar el módulo en submódulos especializados por responsabilidad",
-                "risk": "incrementa la probabilidad de efectos secundarios al modificar funciones compartidas"
+                "risk": f"incrementa la probabilidad de efectos secundarios al modificar funciones compartidas{dependency_impact}"
              })
 
         if not issues:
+            risk_msg = "BAJO (Aislado)"
+            if dependency_impact:
+                risk_msg = f"MEDIO - Modificación local pero con enlaces sistémicos. {dependency_impact}"
+            
             return {
                 "problem": f"Análisis de {filename} concluido sin bloqueos críticos.",
                 "change": "estabilizar y documentar puntos de extensión actuales",
-                "risk": "BAJO (Aislado)"
+                "risk": risk_msg
             }
             
         # Prioritize according to specificity

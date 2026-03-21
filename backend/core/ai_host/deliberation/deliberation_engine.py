@@ -109,7 +109,7 @@ class DeliberationEngine:
 
         if intent == "planning":
             return "planning"
-        if uncertainty > 0.8:
+        if uncertainty > 0.8 and intent not in ["CONVERSATIONAL_INTENT", "FOLLOW_UP_INTENT"]:
             return "limitation"
             
         return "conversational"
