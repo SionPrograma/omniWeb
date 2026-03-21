@@ -22,7 +22,34 @@ class ProposalProcessor(CommandProcessor):
     """
     
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        # 1. MEMORY AUDIT (OS-like check)
+        # 1. EXTERNAL NODE AUDIT (Block 7/Prompt 1)
+        url_match = re.search(r"(https?://\S+)", msg)
+        if url_match or any(kw in msg.lower() for kw in ["este enlace", "esta url", "esta página"]):
+            url = url_match.group(1) if url_match else "SUPERFICIE_DECLARADA"
+            node_type = self._classify_external_node(url)
+            
+            # Integrated Orchestration for External Nodes
+            mission_orchestrator.plan_mission(msg, intent="external_node_audit")
+            orch_report = mission_orchestrator.format_orchestration_report()
+            
+            return AICommandResponse(
+                intent="external_node_discovery",
+                status="success",
+                message=f"""### OMNI_EXTERNAL_NODE_MODELING
+NODO_EXTERNO: {url}
+TIPO_DE_SUPERFICIE: {node_type}
+RELACIÓN_CON_EL_SCOPE_ACTUAL: CONTEXTO_AUXILIAR_DE_TRABAJO
+NIVEL_DE_RIESGO: BAJO (READ_ONLY_MODE)
+ACCIÓN_PERMITIDA: LECTURA_ESTRUCTURAL / MODELADO_CONCEPTUAL
+LÍMITE_DE_INTERACCIÓN: SIN_CONTROL_ACTIVO_DIRECTO
+
+{orch_report}
+---
+# BLOQUE 7 / PROMPT 1: La superficie externa ha sido integrada como nodo del ecosistema.""",
+                payload={"url": url, "node_type": node_type}
+            )
+
+        # 2. MEMORY AUDIT (OS-like check)
         if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope", "decisión", "decisiones", "fixes validados", "pospuesto", "pospudo"]):
              return AICommandResponse(
                 intent="system_memory_report",
@@ -306,6 +333,15 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
     def _is_global_project_request(self, msg: str) -> bool:
         keywords = ["omniweb completo", "proyecto entero", "todo el sistema", "arquitectura del sistema", "proyecto completo", "analizá omniweb", "entendé omniweb", "visión sistémica", "cómo se conectan"]
         return any(kw in msg.lower() for kw in keywords)
+
+    def _classify_external_node(self, url: str) -> str:
+        url_l = url.lower()
+        if "docs" in url_l or "documentation" in url_l: return "DOCUMENTACIÓN_TÉCNICA_EXPANDIDA"
+        if "chat" in url_l or "conversation" in url_l: return "CONVERSACIÓN_O_SUPERFICIE_DE_DIÁLOGO"
+        if "github" in url_l or "gitlab" in url_l or "bitbucket" in url_l: return "REPOSITORIO_Y_ESTRUCTURA_DE_CÓDIGO_EXTERNA"
+        if "youtube" in url_l or "video" in url_l: return "CONTENIDO_MULTIMEDIA_DINÁMICO"
+        if "google" in url_l or "search" in url_l: return "MOTOR_DE_BÚSQUEDA_Y_RELEVANCIA"
+        return "NODO_CONTENEDOR_EXTERNO_GENÉRICO"
 
     def _build_project_map(self) -> Dict[str, Any]:
         """
