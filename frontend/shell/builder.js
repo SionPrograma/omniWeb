@@ -233,9 +233,14 @@ class BuilderUI {
         const wsPath = document.getElementById('ws-change-path');
         const wsContent = document.getElementById('ws-diff-preview-content');
         const wsActions = document.getElementById('ws-change-actions');
+        const wsStatus = document.getElementById('ws-change-status');
 
         if (panel) panel.style.display = 'none';
         if (wsActions) wsActions.style.display = 'flex';
+
+        if (wsStatus) {
+            wsStatus.innerHTML = `STATUS: <span style="background: rgba(212, 175, 55, 0.2); color: var(--creator-gold); padding: 2px 6px; border-radius: 3px;">PROPUESTA LISTA</span>`;
+        }
 
         const diffHtml = preview.diffs.map(d => {
             const escape = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -277,12 +282,35 @@ class BuilderUI {
 
     async decidePreview(approved) {
         if (!this.currentPreviewId) return;
+
+        const wsStatus = document.getElementById('ws-change-status');
+        if (wsStatus && approved) {
+            wsStatus.innerHTML = `STATUS: <span style="background: rgba(255, 255, 255, 0.2); color: #fff; padding: 2px 6px; border-radius: 3px;">APLICANDO...</span>`;
+        } else if (wsStatus && !approved) {
+            wsStatus.innerHTML = `STATUS: <span style="background: rgba(255, 85, 85, 0.2); color: #ff5555; padding: 2px 6px; border-radius: 3px;">RECHAZANDO...</span>`;
+        }
+
         try {
             const res = await fetch(`/api/v1/ai-host/execution/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
-            await res.json();
+
+            let data;
+            let success = false;
+            let errorMessage = "Apply failed via AI Host.";
+
+            try {
+                data = await res.json();
+                success = !!(data && data.status === 'success' || res.ok);
+                if (data && data.detail) errorMessage = data.detail;
+            } catch (e) {
+                success = res.ok;
+            }
+
+            if (!success) {
+                throw new Error(errorMessage);
+            }
 
             this.currentPreviewId = null;
 
@@ -293,25 +321,48 @@ class BuilderUI {
             const wsActions = document.getElementById('ws-change-actions');
             if (wsActions) wsActions.style.display = 'none';
 
+            if (wsStatus) {
+                if (approved) {
+                    wsStatus.innerHTML = `STATUS: <span style="background: rgba(50, 255, 150, 0.2); color: #32ff96; padding: 2px 6px; border-radius: 3px;">APLICADO</span>`;
+                } else {
+                    wsStatus.innerHTML = `STATUS: <span style="opacity:0.5">STANDBY / DESCARTADO</span>`;
+                }
+            }
+
             const wsContent = document.getElementById('ws-diff-preview-content');
             if (wsContent) {
-                wsContent.innerHTML = `<p style="opacity: 0.3; text-align: center; margin-top: 20px;">${approved ? 'Change applied.' : 'Change rejected.'}</p>`;
+                if (approved) {
+                    wsContent.innerHTML = `<p style="opacity: 0.3; text-align: center; margin-top: 20px;">Change applied.</p>`;
+                } else {
+                    wsContent.innerHTML = `<p style="opacity: 0.3; text-align: center; margin-top: 20px;">Propuesta descartada y limpiada.</p>`;
+                    const wsFile = document.getElementById('ws-change-file');
+                    const wsPath = document.getElementById('ws-change-path');
+                    if (wsFile) wsFile.innerText = 'FILE: No changes pending';
+                    if (wsPath) wsPath.innerText = 'PATH: -';
+                }
             }
 
             // --- REFRESH EDITOR ---
             if (approved && window.creatorEditor && window.creatorEditor.currentPath) {
                 window.creatorEditor.loadFile(window.creatorEditor.currentPath).then(content => {
-                    const wsContent = document.getElementById('ws-editor-content');
-                    if (wsContent && typeof content === "string") {
-                        wsContent.value = content;
+                    const wsContentTextarea = document.getElementById('ws-editor-content');
+                    if (wsContentTextarea && typeof content === "string") {
+                        wsContentTextarea.value = content;
                         // Dispatch input event to refresh buttons state
-                        wsContent.dispatchEvent(new Event('input'));
+                        wsContentTextarea.dispatchEvent(new Event('input'));
                     }
                 });
             }
 
             this.updateStatus();
-        } catch (e) { console.error("Decision failed", e); }
+        } catch (e) {
+            console.error("Decision failed", e);
+            if (wsStatus) {
+                wsStatus.innerHTML = `STATUS: <span style="background: rgba(255, 85, 85, 0.2); color: #ff5555; padding: 2px 6px; border-radius: 3px;">FALLÓ: ${e.message}</span>`;
+            }
+            const wsActions = document.getElementById('ws-change-actions');
+            if (wsActions) wsActions.style.display = 'none';
+        }
     }
 
     async cancelExecution() {
