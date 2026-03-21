@@ -33,19 +33,29 @@ class ProposalProcessor(CommandProcessor):
         scope_warning = ""
 
         # 2. DETERMINE FILE BATCH & SCOPE
+        subniveles = set()
+        total_files_in_tree = 0
+
         if is_dir_scope:
             valid_exts = ('.js', '.py', '.ts', '.css', '.html', '.md')
             for root, dirs, files in os.walk(abs_target):
                 if any(ignored in root for ignored in ['node_modules', '.git', '__pycache__', 'venv', 'dist', 'build']):
                     continue
+                
+                # Relacionar la subcarpeta
+                rel_dir = os.path.relpath(root, abs_target)
+                if rel_dir != '.' and not rel_dir.startswith('..'):
+                    subniveles.add(rel_dir)
+
                 for f in files:
                     if f.endswith(valid_exts):
-                        target_files.append(os.path.join(root, f))
+                        total_files_in_tree += 1
+                        if len(target_files) < 8:
+                            target_files.append(os.path.join(root, f))
             
-            # Rule 2: Small scope restriction
-            if len(target_files) > 5:
-                scope_warning = f"\n⚠️ WARNING: El módulo contiene {len(target_files)} archivos. Restringiendo scope de seguridad a los 5 principales para prevenir un apply masivo.\n"
-                target_files = target_files[:5]
+            # Rule 2: Expansion control
+            if total_files_in_tree > 8:
+                scope_warning = f"\n⚠️ WARNING: La jerarquía excede el límite razonable ({total_files_in_tree} archivos encontrados). Truncando árbol a 8 nodos para evitar reescrituras opacas.\n"
         else:
             target_files = [abs_target]
 
@@ -91,9 +101,10 @@ class ProposalProcessor(CommandProcessor):
         # If it was a directory query but no changes were proposed, we simulate an audit response.
         if is_dir_scope and not operations:
             filtered_names = [os.path.basename(f) for f in target_files]
-            formatted_message = f"""ARCHIVOS_EN_SCOPE: {raw_target} ({len(target_files)} archivos analizados)
+            formatted_message = f"""SCOPE_RAÍZ: {raw_target} ({total_files_in_tree} nodos totales detectados)
+SUBNIVELES_RELEVANTES: {', '.join(subniveles) if subniveles else 'Ninguno (Plano)'}
 ARCHIVOS_RELEVANTES: {', '.join(filtered_names) if filtered_names else 'Ninguno'}
-CAMBIO_PROPUESTO_POR_ARCHIVO: Ninguno. Se auditaron los archivos dentro del scope pero no se detectó necesidad técnica directa que matchee la petición.
+CAMBIO_PROPUESTO_POR_ARCHIVO: Ninguno. Se auditaron los archivos del árbol pero no se justifican mutaciones estructurales.
 IMPACTO_RELACIONADO: NULO
 CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
             return AICommandResponse(
@@ -172,11 +183,12 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
             all_names = [os.path.basename(f) for f in target_files]
             changes_desc = "\n".join([f"- {os.path.basename(p['file'])}: {p.get('change', 'fix')}" for p in all_proposals])
             
-            formatted_message = f"""ARCHIVOS_EN_SCOPE: {raw_target} ({len(target_files)} enumerados)
+            formatted_message = f"""SCOPE_RAÍZ: {raw_target} ({total_files_in_tree} nodos totales detectados)
+SUBNIVELES_RELEVANTES: {', '.join(subniveles) if subniveles else 'Ninguno (Plano)'}
 ARCHIVOS_RELEVANTES: {', '.join(changed_names)}
-CAMBIOS_PROPUESTOS:
+CAMBIO_PROPUESTO_POR_ARCHIVO:
 {changes_desc}
-IMPACTO_RELACIONADO: {highest_risk}
+IMPACTO_RELACIONADO: {highest_risk} - Alteración contenida a la jerarquía declarada.
 CRITERIO_DE_SEGURIDAD: MULTI_FILE_SAFE{scope_warning}
 
 ---
@@ -222,8 +234,8 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         )
 
     def _resolve_target(self, msg: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
-        # Priority 1: Explicit Folder/Module Mention
-        match = re.search(r"(?:carpeta|m[oó]dulo|directorio)\s+([\w/\.-]+)", msg)
+        # Priority 1: Explicit Folder/Module/Hierarchy Mention
+        match = re.search(r"(?:carpeta|m[oó]dulo|directorio|estructura|jerarqu[íi]a|[aá]rbol)\s+([\w/\.-]+)", msg)
         if match:
             return match.group(1)
 
