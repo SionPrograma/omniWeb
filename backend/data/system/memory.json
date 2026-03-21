@@ -1,13 +1,26 @@
 {
     "working": {
         "active_scope": null,
-        "last_proposal_id": null,
-        "session_focus": "System Audit",
-        "workspace_state": "idle"
+        "last_important_file": null,
+        "last_operation_summary": null,
+        "workspace_state": "idle",
+        "last_update": "2026-03-21T21:29:14.694443"
     },
     "project": {
         "roadmap_block": "Bloque 5",
-        "decisions": [],
+        "decisions": [
+            "Implementaci\u00f3n de arquitectura OS-like para la memoria de sistema.",
+            "Cierre y validaci\u00f3n de los Bloques 0, 1, 2, 3 y 4."
+        ],
+        "validated_fixes": [
+            "Redirecci\u00f3n de intenci\u00f3n 'fix' a flujo de Proposal.",
+            "Retorno limpio de Preview a Shell principal.",
+            "Apply-loop verificado con refresco de editor."
+        ],
+        "deferred_items": [
+            "Memoria total de larga duraci\u00f3n (Infraestructura externa).",
+            "Conexiones vivas a YouTube/ChatGPT via API din\u00e1mica."
+        ],
         "hard_rules": [
             "Priorizar cambios m\u00ednimos y no destructivos.",
             "Mantener trazabilidad absoluta por archivo.",

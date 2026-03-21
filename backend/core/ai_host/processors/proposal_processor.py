@@ -22,7 +22,7 @@ class ProposalProcessor(CommandProcessor):
     
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         # 1. MEMORY AUDIT (OS-like check)
-        if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope"]):
+        if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope", "decisión", "decisiones", "fixes validados", "pospuesto", "pospudo"]):
              return AICommandResponse(
                 intent="system_memory_report",
                 status="success",
@@ -243,6 +243,7 @@ CRITERIO_DE_SEGURIDAD: MULTI_FILE_SAFE{scope_warning}
 PRIMERA_LINEA: {first_line}
 RESUMEN_REAL: {purpose}
 MICROFIX_PROPUESTO: {prop.get('change', 'No se requiere.')}
+CONTEXTO_DE_MEMORIA: {', '.join(prop.get('memory_notes', [])) if prop.get('memory_notes') else 'Sin interferencia sistémica.'}
 IMPACTO_RELACIONADO: {highest_risk} - Cambio local
 CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
 
@@ -259,6 +260,11 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         if "bloque" in msg.lower() and re.search(r"bloque\s+(\d+)", msg.lower()):
             new_block = re.search(r"bloque\s+(\d+)", msg.lower()).group(0)
             system_memory.set_roadmap_block(new_block.capitalize())
+            
+        if "decisión" in msg.lower() or "decidimos" in msg.lower():
+            match = re.search(r"(?:decidimos|decisi[óo]n:)\s+([^.\n]+)", msg.lower())
+            if match:
+                system_memory.add_decision(match.group(1).capitalize())
 
         return AICommandResponse(
             intent="copilot_proposal",
@@ -419,6 +425,38 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         if force_microfix and safety == "CAMBIO_INSEGURO_O_AMBIGUO" and new_content == content:
              new_content = "# [WARNING] Scope ambiguo detectado. Refactor masivo prevenido.\n" + content
 
+        # --- NEW: ACTIVE MEMORY REASONING ---
+        memory_notes = []
+        
+        # 1. Roadmap & Deferred Items Check
+        deferred = system_memory.data["project"].get("deferred_items", [])
+        for item in deferred:
+            if any(word in msg and len(word) > 4 for word in item.lower().split()):
+                memory_notes.append(f"⚠️ MEMORIA: El tema '{item}' fue diferido para bloques futuros. Respetando límite de roadmap.")
+                if safety == "CAMBIO_SEGURO": safety = "CAMBIO_POSPUESTO_POR_ROADMAP"
+                change = f"Diferido: {item} no pertenece al Bloque actual."
+
+        # 2. Validated Fixes Check (Anti-Regression)
+        validated = system_memory.data["project"].get("validated_fixes", [])
+        for fix in validated:
+             if any(word in msg and len(word) > 5 for word in fix.lower().split()):
+                 memory_notes.append(f"ℹ️ MEMORIA: El fix '{fix}' ya fue validado. Evitando reapertura innecesaria.")
+                 if "corregir" in msg or "fix" in msg:
+                    change = "No se requiere acción: Fix ya consolidado en memoria de sistema."
+                    if safety == "CAMBIO_SEGURO": safety = "CAMBIO_REDUNDANTE"
+
+        # 3. Sensitive Module Check (Harden Criteria)
+        sensitive = system_memory.data["project"].get("sensitive_modules", [])
+        if any(os.path.normpath(s) in os.path.normpath(path) for s in sensitive):
+             memory_notes.append("🛡️ MEMORIA: Módulo SENSIBLE detectado. Endureciendo criterio de seguridad.")
+             if safety == "CAMBIO_SEGURO":
+                 safety = "CAMBIO_RIESGO_MEDIO_CORE"
+             risk = f"ALTO - Módulo crítico del sistema detectado en memoria. {risk}"
+
+        # 4. Integrate Notes into Problem Description
+        if memory_notes:
+            problem = f"{problem} | " + " ".join(memory_notes)
+
         return {
             "file": path,
             "problem": problem,
@@ -427,7 +465,8 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
             "new_content": new_content,
             "risk": risk,
             "verification": verification,
-            "safety": safety
+            "safety": safety,
+            "memory_notes": memory_notes
         }
 
     def _generate_diff(self, old: str, new: str, path: str) -> str:

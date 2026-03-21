@@ -29,7 +29,19 @@ class SystemMemory:
                     },
                     "project": {
                         "roadmap_block": "Bloque 5",
-                        "decisions": [],
+                        "decisions": [
+                            "Implementación de arquitectura OS-like para la memoria de sistema.",
+                            "Cierre y validación de los Bloques 0, 1, 2, 3 y 4."
+                        ],
+                        "validated_fixes": [
+                            "Redirección de intención 'fix' a flujo de Proposal.",
+                            "Retorno limpio de Preview a Shell principal.",
+                            "Apply-loop verificado con refresco de editor."
+                        ],
+                        "deferred_items": [
+                            "Memoria total de larga duración (Infraestructura externa).",
+                            "Conexiones vivas a YouTube/ChatGPT via API dinámica."
+                        ],
                         "hard_rules": [
                             "Priorizar cambios mínimos y no destructivos.",
                             "Mantener trazabilidad absoluta por archivo.",
@@ -97,12 +109,34 @@ class SystemMemory:
             self.data["project"]["sensitive_modules"].append(path)
             self.save()
 
+    def add_validated_fix(self, fix: str):
+        if fix not in self.data["project"]["validated_fixes"]:
+            self.data["project"]["validated_fixes"].append(fix)
+            self.save()
+
+    def add_deferred_item(self, item: str):
+        if item not in self.data["project"]["deferred_items"]:
+            self.data["project"]["deferred_items"].append(item)
+            self.save()
+
     def get_project_context(self) -> str:
-        ctx = f"BLOQUE_ACTIVO: {self.data['project']['roadmap_block']}\n"
-        if self.data["project"]["hard_rules"]:
-            ctx += "REGLAS_DURAS_DETECTORAS:\n" + "\n".join([f"- {r}" for r in self.data["project"]["hard_rules"]]) + "\n"
-        if self.data["project"]["sensitive_modules"]:
-            ctx += "MÓDULOS_SENSIBLES_DETECTADOS:\n" + "\n".join([f"- {m}" for m in self.data["project"]["sensitive_modules"]]) + "\n"
+        p = self.data.get("project", {})
+        ctx = f"BLOQUE_ACTIVO: {p.get('roadmap_block', 'Bloque 5')}\n"
+        
+        if p.get("validated_fixes"):
+            ctx += "HISTORIAL_DE_FIXES_VALIDADOS:\n" + "\n".join([f"- {f}" for f in p["validated_fixes"]]) + "\n"
+        
+        if p.get("decisions"):
+            ctx += "DECISIONES_TÉCNICAS_CONSOLIDADAS:\n" + "\n".join([f"- {d}" for d in p["decisions"]]) + "\n"
+            
+        if p.get("deferred_items"):
+            ctx += "TEMAS_POSPUESTOS_PARA_FUTURO:\n" + "\n".join([f"- {it}" for it in p["deferred_items"]]) + "\n"
+
+        if p.get("hard_rules"):
+            ctx += "REGLAS_DURAS_DETECTORAS:\n" + "\n".join([f"- {r}" for r in p["hard_rules"]]) + "\n"
+            
+        if p.get("sensitive_modules"):
+            ctx += "MÓDULOS_SENSIBLES_DETECTADOS:\n" + "\n".join([f"- {m}" for m in p["sensitive_modules"]]) + "\n"
         return ctx
 
 # Singleton instance for the system
