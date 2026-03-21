@@ -121,7 +121,7 @@ class CognitiveOrchestrator:
                     norm_prompt = "".join(c for c in unicodedata.normalize('NFD', msg_low) if unicodedata.category(c) != 'Mn')
                     norm_prompt = re.sub(r'[\s\-]+', '_', norm_prompt)
                     
-                    fields = ["archivo_leido", "primera_linea", "resumen_real", "microfix_propuesto", "impacto_relacionado"]
+                    fields = ["archivo_leido", "primera_linea", "resumen_real", "microfix_propuesto", "impacto_relacionado", "criterio_de_seguridad"]
                     
                     # Nueva lógica: Detectar posiciones para preservar el orden del usuario
                     requested_with_pos = []
