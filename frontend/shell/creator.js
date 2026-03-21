@@ -289,27 +289,52 @@ class CreatorEnvironment {
             };
         }
 
-        // Editor: Save
-        const saveBtn = document.getElementById('ws-editor-save');
-        if (saveBtn) {
-            saveBtn.onclick = async () => {
+        // Editor: Propose
+        const proposeBtn = document.getElementById('ws-editor-propose');
+        if (proposeBtn) {
+            proposeBtn.onclick = async () => {
                 const path = document.getElementById('ws-editor-path').value.trim();
                 const content = document.getElementById('ws-editor-content').value;
-                if (!path || !window.creatorEditor) return;
+                if (!path) return;
 
-                saveBtn.innerText = "SAVING...";
-                saveBtn.disabled = true;
+                proposeBtn.innerText = "PROPOSING...";
+                proposeBtn.disabled = true;
 
-                window.creatorEditor.saveFile(path, content, (success, res) => {
-                    if (success) {
-                        this.addWorkspaceLog(`File saved: ${path}`, 'system');
-                        this.updateWorkspaceBackendState();
+                try {
+                    const res = await fetch('/api/v1/editor/file/propose-edit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer omniweb-dev-secret-token',
+                            'X-Shell-Identity': 'omniweb-shell'
+                        },
+                        body: JSON.stringify({ path: path, content: content })
+                    });
+                    const data = await res.json();
+
+                    if (data.status === 'success' && data.payload) {
+                        let preview_id = null;
+                        if (data.payload.payload && data.payload.payload.preview_id) {
+                            preview_id = data.payload.payload.preview_id;
+                        } else if (data.payload.preview_id) {
+                            preview_id = data.payload.preview_id;
+                        }
+
+                        if (preview_id && window.builderUI) {
+                            window.builderUI.showPreview(preview_id);
+                            this.addWorkspaceLog(`Proposal generated: ${preview_id}`, 'system');
+                        } else {
+                            this.addWorkspaceLog("Draft proposed but no preview ID returned.", 'warning');
+                        }
                     } else {
-                        this.addWorkspaceLog(`Save failed: ${path}`, 'error');
+                        this.addWorkspaceLog(`Propose failed: ${data.detail || "Unknown API error"}`, 'error');
                     }
-                    saveBtn.innerText = "SAVE";
-                    saveBtn.disabled = false;
-                });
+                } catch (err) {
+                    this.addWorkspaceLog(`CRITICAL ERROR during proposal: ${err.message}`, 'error');
+                } finally {
+                    proposeBtn.innerText = "PROPOSE";
+                    proposeBtn.disabled = false;
+                }
             };
         }
 

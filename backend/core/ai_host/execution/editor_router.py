@@ -4,7 +4,7 @@ import os
 import json
 from .patch_preview import patch_preview_engine, PatchPreview
 from .mutation_engine import MutationBatch, FileOperation, MutationType
-from .builder_engine import builder_execution_engine, BuilderTask, BuilderModule, BuilderStatus
+from .builder_engine import builder_execution_engine, BuilderTask, BuilderModule, BuilderStatus, BuilderModuleType
 from backend.core.security.dependencies import get_creator_user
 from backend.core.auth import OmniUser
 from pydantic import BaseModel

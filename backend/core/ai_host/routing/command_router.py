@@ -190,6 +190,25 @@ class CommandRouter:
                 if is_creator_prefixed and (not intent or intent == "chat"):
                     intent = "creator_command"
                     
+                # --- FIX OMNIWEB: RESOLVER COLISIÓN DE INTENT "FIX" ---
+                has_file_context = False
+                if context and "multimodal_evidence" in context:
+                    for item in context.get("multimodal_evidence", []):
+                        if item.get("type") == "current_file" and item.get("path"):
+                            has_file_context = True
+                            break
+                            
+                file_kws = ["archivo", "codigo", "código", "este", "file", "code", "script", "modulo", "módulo"]
+                has_file_ref = any(kw in msg_clean for kw in file_kws)
+                
+                if (intent == "healing" or intent == "remediation") and (has_file_context or has_file_ref):
+                    intent = "copilot_proposal"
+                    understanding["specific_intent"] = intent
+                    understanding["intent_group"] = "COPILOT_PROPOSAL_INTENT"
+                    understanding["mode"] = "constrained_output"
+                    logger.info("[ROUTING_OVERRIDE] Overriding healing/remediation intent to copilot_proposal due to active file context.")
+                # --- FIN FIX ---
+
                 logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
                 
                 # --- PRIORITY CHAIN EXECUTION ---

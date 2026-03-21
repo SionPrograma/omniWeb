@@ -250,10 +250,10 @@ IMPACTO_RELACIONADO: {impact}
                 new_content = "\n".join(lines)
                 change = "Minimal log injection in first function body."
                 risk = "Bajo."
-        elif "validacion_exitosa" in msg:
-            new_content = "# VALIDACION_EXITOSA\n" + content
-            problem = "Falta comentario de cierre de ciclo."
-            change = "Adición de comentario al inicio del archivo."
+        elif "validacion_exitosa" in msg or "validacion_fix_ok" in msg:
+            new_content = "# VALIDACION_FIX_OK\n" + content
+            problem = "Falta comentario de validación de fix."
+            change = "Adición de comentario # VALIDACION_FIX_OK al inicio."
             risk = "Mínimo (Solo comentario)."
         
         return {

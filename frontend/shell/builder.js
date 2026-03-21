@@ -300,7 +300,14 @@ class BuilderUI {
 
             // --- REFRESH EDITOR ---
             if (approved && window.creatorEditor && window.creatorEditor.currentPath) {
-                window.creatorEditor.loadFile(window.creatorEditor.currentPath);
+                window.creatorEditor.loadFile(window.creatorEditor.currentPath).then(content => {
+                    const wsContent = document.getElementById('ws-editor-content');
+                    if (wsContent && typeof content === "string") {
+                        wsContent.value = content;
+                        // Dispatch input event to refresh buttons state
+                        wsContent.dispatchEvent(new Event('input'));
+                    }
+                });
             }
 
             this.updateStatus();
