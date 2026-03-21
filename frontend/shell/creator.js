@@ -393,23 +393,33 @@ class CreatorEnvironment {
             this.switchView('workspace');
         }
 
-        // UX RULE: Editor + Copilot together by default if Editor is target
-        const panelsToOpen = targetPanel === 'editor' ? ['editor', 'copilot'] : [targetPanel];
+        // Initialize all panels as active if opening for the first time
+        if (!isAlreadyActive) {
+            ['editor', 'copilot', 'changes', 'backend'].forEach(pId => {
+                const panel = document.getElementById(`ws-panel-${pId}`);
+                const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
+                if (panel) panel.classList.add('active');
+                if (btn) btn.classList.add('active');
+            });
+        } else {
+            // UX RULE: If already active, toggle the specific panel
+            const panelsToOpen = targetPanel === 'editor' ? ['editor', 'copilot'] : [targetPanel];
 
-        panelsToOpen.forEach(pId => {
-            const panel = document.getElementById(`ws-panel-${pId}`);
-            const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
-            if (panel) {
-                // Toggle OFF if already active inside an active workspace (only for single panel targets)
-                if (isAlreadyActive && panel.classList.contains('active') && panelsToOpen.length === 1) {
-                    panel.classList.remove('active');
-                    if (btn) btn.classList.remove('active');
-                } else {
-                    panel.classList.add('active');
-                    if (btn) btn.classList.add('active');
+            panelsToOpen.forEach(pId => {
+                const panel = document.getElementById(`ws-panel-${pId}`);
+                const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
+                if (panel) {
+                    // Toggle OFF if already active inside an active workspace (only for single panel targets)
+                    if (panel.classList.contains('active') && panelsToOpen.length === 1) {
+                        panel.classList.remove('active');
+                        if (btn) btn.classList.remove('active');
+                    } else {
+                        panel.classList.add('active');
+                        if (btn) btn.classList.add('active');
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // If Editor is target or open, sync path & content from main editor
         const wsPathInput = document.getElementById('ws-editor-path');

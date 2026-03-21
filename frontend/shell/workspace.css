@@ -19,7 +19,9 @@ body.workspace-active .ai-orb,
 body.workspace-active .greeting-text,
 body.workspace-active .status-subtitle,
 body.workspace-active #bottom-nav,
-body.workspace-active #launcher-overlay {
+body.workspace-active #launcher-overlay,
+body.workspace-active #creator-toolbar,
+body.workspace-active #chat-log {
     display: none !important;
 }
 
