@@ -234,7 +234,7 @@ class BuilderUI {
         const wsContent = document.getElementById('ws-diff-preview-content');
         const wsActions = document.getElementById('ws-change-actions');
 
-        if (panel) panel.style.display = 'block';
+        if (panel) panel.style.display = 'none';
         if (wsActions) wsActions.style.display = 'flex';
 
         const diffHtml = preview.diffs.map(d => {

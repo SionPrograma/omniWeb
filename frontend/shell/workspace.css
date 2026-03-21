@@ -17,7 +17,9 @@
 body.workspace-active .input-bar,
 body.workspace-active .ai-orb,
 body.workspace-active .greeting-text,
-body.workspace-active .status-subtitle {
+body.workspace-active .status-subtitle,
+body.workspace-active #bottom-nav,
+body.workspace-active #launcher-overlay {
     display: none !important;
 }
 
@@ -119,8 +121,8 @@ body.workspace-active #shell-container {
 }
 
 .workspace-grid.solo-editor #ws-panel-copilot,
-.workspace-grid.solo-editor #ws-panel-preview,
-.workspace-grid.solo-editor #ws-panel-monitor {
+.workspace-grid.solo-editor #ws-panel-backend,
+.workspace-grid.solo-editor #ws-panel-changes {
     display: none;
 }
 

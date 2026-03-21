@@ -1,4 +1,3 @@
-# VALIDACION_EXITOSA
 <!DOCTYPE html>
 <html lang="es">
 
@@ -412,23 +411,21 @@
                 </svg>
                 <span>Copilot</span>
             </button>
-            <button id="toolbar-preview" title="Preview" onclick="creatorEnv.closeWorkspaceAndGoToMain()">
+            <button id="toolbar-preview" title="Exit to Main Shell" onclick="creatorEnv.closeWorkspaceAndGoToMain()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                     <polyline points="16 17 21 12 16 7"></polyline>
                     <line x1="21" y1="12" x2="9" y2="12"></line>
                 </svg>
-                <span>Preview</span>
+                <span>Exit Preview</span>
             </button>
-            <button id="toolbar-backend" title="Backend" onclick="creatorEnv.openWorkspace('backend')">
+            <button id="toolbar-monitor" title="Monitor" onclick="creatorEnv.openWorkspace('monitor')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="12" x2="2" y2="12" />
                     <path
-                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                    </path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
                 </svg>
-                <span>Backend</span>
+                <span>Monitor</span>
             </button>
             <button id="toolbar-reload" title="Reload">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -514,7 +511,60 @@
             </button>
         </form>
 
-        <!-- LEGACY CREATOR OVERLAY PANELS REMOVED FOR WORKSPACE V1 CLEANUP -->
+        <!-- CREATOR OVERLAY PANELS (Phase 36 Restore) -->
+        <div id="creator-editor-overlay" class="creator-overlay-panel" style="display:none;">
+            <div class="panel-header">
+                <h3>Creator Editor</h3>
+                <button class="close-overlay-btn"
+                    onclick="document.getElementById('creator-editor-overlay').style.display='none'">✕</button>
+            </div>
+            <div class="panel-body">
+                <input type="text" id="editor-file-path" placeholder="path/to/file.py" class="creator-input">
+                <button class="btn-apply" id="editor-open-btn" style="width: auto; margin: 10px 0;">Open File</button>
+                <textarea id="editor-content" placeholder="File content..." class="creator-textarea"></textarea>
+                <button class="btn-apply" id="editor-save-btn">Save Changes</button>
+            </div>
+        </div>
+
+        <div id="creator-patch-overlay" class="creator-overlay-panel" style="display:none;">
+            <div class="panel-header">
+                <h3>Patch Preview</h3>
+                <button class="close-overlay-btn"
+                    onclick="document.getElementById('creator-patch-overlay').style.display='none'">✕</button>
+            </div>
+            <div class="panel-body">
+                <div class="patch-diff-container">
+                    <div style="flex:1">
+                        <h4>Original</h4>
+                        <pre id="patch-original" class="diff-pre"></pre>
+                    </div>
+                    <div style="flex:1">
+                        <h4>Modified</h4>
+                        <pre id="patch-modified" class="diff-pre"></pre>
+                    </div>
+                </div>
+                <div style="display:flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn-cancel"
+                        onclick="document.getElementById('creator-patch-overlay').style.display='none'">Cancel</button>
+                    <button class="btn-apply" id="patch-apply-btn">Apply Patch</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="creator-copilot-overlay" class="creator-overlay-panel" style="display:none;">
+            <div class="panel-header">
+                <h3>Creator Copilot</h3>
+                <button class="close-overlay-btn"
+                    onclick="document.getElementById('creator-copilot-overlay').style.display='none'">✕</button>
+            </div>
+            <div class="panel-body">
+                <textarea id="copilot-prompt" placeholder="Ask Copilot..." class="creator-textarea"></textarea>
+                <button class="btn-apply" id="copilot-suggest-btn">Ask</button>
+                <div id="copilot-suggestion-output" style="margin-top: 15px; display: none;">
+                    <pre id="suggestion-text" class="diff-pre"></pre>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- COGNITIVE AUDIT DRAWER (ADDITIVE) -->
@@ -567,7 +617,7 @@
     <script src="/shell/voice.js"></script>
     <script src="/shell/builder.js"></script>
     <script src="/shell/galaxy.js"></script>
-    <script src="/shell/creator.js?v=fixed_v1_final"></script>
+    <script src="/shell/creator.js?v=fixed_v1"></script>
     <script src="/shell/editor.js?v=fixed_v1"></script>
     <script src="/shell/logbook.js"></script>
     <script src="/shell/main.js"></script>

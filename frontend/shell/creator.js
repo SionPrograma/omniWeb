@@ -215,6 +215,15 @@ class CreatorEnvironment {
         }
     }
 
+    closeWorkspaceAndGoToMain() {
+        const wsView = document.getElementById('creator-workspace-view');
+        if (wsView) {
+            wsView.classList.remove('active');
+        }
+        document.body.classList.remove('workspace-active');
+        this.switchView('chat');
+    }
+
     // 3. CREATOR WORKSPACE
     setupWorkspace() {
         if (this.workspaceInitialized) return;
@@ -294,10 +303,7 @@ class CreatorEnvironment {
                 window.creatorEditor.saveFile(path, content, (success, res) => {
                     if (success) {
                         this.addWorkspaceLog(`File saved: ${path}`, 'system');
-                        const frame = document.getElementById('ws-preview-frame');
-                        if (frame && frame.src && !frame.src.includes('blank')) {
-                            frame.contentWindow.location.reload();
-                        }
+                        this.updateWorkspaceBackendState();
                     } else {
                         this.addWorkspaceLog(`Save failed: ${path}`, 'error');
                     }
@@ -313,13 +319,41 @@ class CreatorEnvironment {
             copilotSend.onclick = () => this.sendCopilotPrompt();
         }
 
-        // Preview: Reload
-        const previewReload = document.getElementById('ws-preview-reload');
-        if (previewReload) {
-            previewReload.onclick = () => {
-                document.getElementById('ws-preview-frame').src = "/";
-            }
-        }
+        // Deleted: Preview Reload (Replaced by Backend State integration)
+    }
+
+    updateWorkspaceBackendState() {
+        if (!this.systemState) return;
+        const stateEl = document.getElementById('ws-backend-state');
+        if (!stateEl) return;
+
+        const uptime = Math.floor(this.systemState.uptime_seconds || 0);
+        const hours = Math.floor(uptime / 3600);
+        const minutes = Math.floor((uptime % 3600) / 60);
+        const uptimeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${uptime % 60}s`;
+
+        const cluster = this.systemState.cluster || {};
+        const flows = this.systemState.flow_data || {};
+
+        stateEl.innerHTML = `
+            <div style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>OmniEngine:</span> <span style="color:var(--pass-color)">${this.systemState.health || 'nominal'}</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Memory:</span> <span>${this.systemState.memory_usage?.rss_mb || 0} MB</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Uptime:</span> <span style="color:var(--creator-gold)">${uptimeStr}</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Cluster Load:</span> <span>${(cluster.cluster_load || 0).toFixed(1)}%</span></div>
+            </div>
+            
+            <h5 style="color:var(--creator-gold); font-family:'Outfit'; margin-bottom:6px; font-size: 0.75rem;">Technical Flows</h5>
+            <div style="margin-bottom: 12px; font-size: 0.7rem; opacity: 0.8;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span>AI Core Latency:</span> <span>${flows.ai_to_chips?.latency || 0}ms</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Knowledge Sync:</span> <span>${flows.chips_to_state?.latency || 0}ms</span></div>
+            </div>
+
+            <h5 style="color:var(--creator-gold); font-family:'Outfit'; margin-bottom:6px; font-size: 0.75rem;">Active Chips</h5>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                ${(this.systemState.chips || []).map(c => `<span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:3px; font-size:0.65rem; border: 1px solid rgba(255,255,255,0.05);">${c.slug}</span>`).join('')}
+            </div>
+        `;
     }
 
     openWorkspace(targetPanel = 'editor') {
@@ -361,11 +395,8 @@ class CreatorEnvironment {
             if (mainContent && wsContentInput) wsContentInput.value = mainContent.value;
         }
 
-        // Ensure preview is initialized
-        const frame = document.getElementById('ws-preview-frame');
-        if (frame && (frame.src === 'about:blank' || frame.src.endsWith('blank') || !frame.src)) {
-            frame.src = "/";
-        }
+        // Update backend state panel when workspace is active
+        this.updateWorkspaceBackendState();
 
         this.updateGridLayout();
     }

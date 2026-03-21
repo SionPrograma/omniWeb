@@ -107,7 +107,7 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
         "perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", "claro"
     ],
     "copilot_proposal": [
-        "analizá este archivo", "proponé un fix", "detectá el error", "mostrame un diff", 
+        "analizá este archivo", "analiza este archivo", "proponé un fix", "propone un fix", "detectá el error", "mostrame un diff", 
         "proponé una mejora", "analiza el código", "qué le falta", "cómo lo ves", 
         "propuesta de fix", "fix mínimo", "detecta el problema", "analizame este",
         "mejorá este archivo", "mejora este código", "mejorar el archivo", "mejorá los logs",

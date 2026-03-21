@@ -30,10 +30,13 @@ def validate_path(path: str) -> str:
     project_root = os.path.abspath(os.getcwd())
     target_path = os.path.abspath(os.path.join(project_root, path))
     
+    # Normalize for Windows case-insensitivity
+    norm_target = os.path.normcase(target_path)
+    
     # 1. Root check
     is_safe = False
     for root in ALLOWED_ROOTS:
-        if target_path.startswith(root):
+        if norm_target.startswith(os.path.normcase(root)):
             is_safe = True
             break
     
