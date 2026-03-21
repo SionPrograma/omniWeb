@@ -178,7 +178,28 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
             highest_risk = f"ALTO: {compatibility_warning}. {highest_risk}"
 
         # 7. FORMAT FINAL MESSAGE
-        if is_dir_scope:
+        is_global = self._is_global_project_request(msg)
+        
+        if is_global:
+            pmap = self._build_project_map()
+            formatted_message = f"""SCOPE_RAÍZ: OmniWeb Project (Global Context)
+CAPAS_PRINCIPALES:
+{chr(10).join(['  - ' + c for c in pmap['CAPAS']])}
+MÓDULOS_CENTRALES:
+{chr(10).join(['  - ' + m for m in pmap['MODULOS']])}
+RELACIONES_CRÍTICAS:
+{chr(10).join(['  - ' + r for r in pmap['RELACIONES']])}
+ZONAS_DE_ACOPLAMIENTO:
+{chr(10).join(['  - ' + a for a in pmap['ACOPLAMIENTOS']])}
+CONTRATOS_SENSIBLES:
+{chr(10).join(['  - ' + s for s in pmap['CONTRATOS']])}
+RIESGOS_SISTÉMICOS:
+{chr(10).join(['  - ' + ri for ri in pmap['RIESGOS']])}
+CRITERIO_DE_SEGURIDAD: GLOBAL_SYSTEM_ENGINEER_MODE (Read-Only)
+
+---
+# ANÁLISIS DE SISTEMA COMPLETO: OmniWeb detectado como OS-like Architecture."""
+        elif is_dir_scope:
             changed_names = [os.path.basename(op.path) for op in operations]
             all_names = [os.path.basename(f) for f in target_files]
             changes_desc = "\n".join([f"- {os.path.basename(p['file'])}: {p.get('change', 'fix')}" for p in all_proposals])
@@ -227,24 +248,72 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
                 "allowed_files": [op.path for op in operations] if operations else target_files,
                 "forbidden_files": safety_policy.FORBIDDEN_FILES,
                 "proposal": all_proposals[0] if all_proposals else {},
-                "diff": aggregate_diff,
-                "preview_id": preview_id,
-                "mode": "proposal_only"
+                "diff": aggregate_diff if not is_global else "",
+                "preview_id": preview_id if not is_global else None,
+                "mode": "proposal_only",
+                "is_global_analysis": is_global
             }
         )
 
     def _resolve_target(self, msg: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
         # Priority 1: Explicit Folder/Module/Hierarchy Mention
-        match = re.search(r"(?:carpeta|m[oó]dulo|directorio|estructura|jerarqu[íi]a|[aá]rbol)\s+([\w/\.-]+)", msg)
+        match = re.search(r"(?:carpeta|m[oó]dulo|directorio|estructura|jerarqu[íi]a|[aá]rbol|proyecto)\s+([\w/\.-]+)", msg)
         if match:
             return match.group(1)
 
-        # Priority 2: Current Editor Path from context
+        # Priority 2: Global Project Keywords
+        if self._is_global_project_request(msg):
+            return os.path.abspath(".")
+
+        # Priority 3: Current Editor Path from context
         match = re.search(r"en ([\w/\.-]+)", msg)
         if match:
             return match.group(1)
             
         return None
+
+    def _is_global_project_request(self, msg: str) -> bool:
+        keywords = ["omniweb completo", "proyecto entero", "todo el sistema", "arquitectura del sistema", "proyecto completo", "analizá omniweb", "entendé omniweb", "visión sistémica", "cómo se conectan"]
+        return any(kw in msg.lower() for kw in keywords)
+
+    def _build_project_map(self) -> Dict[str, Any]:
+        """
+        OmniWeb System Topology Mapper.
+        Provides a systemic view of connections, coupling, and global risks.
+        """
+        return {
+            "CAPAS": [
+                "FRONTEND: Shell (Creator/Builder), Workspace UI, Monaco Editor integration.",
+                "BACKEND: FastAPI API, AI Host (Router/Processors), Cache & Persistence.",
+                "CORE: Mutation Engine, Patch Preview, Safety Audit Layer.",
+                "CHIPS: Atomic logic and task specialized handlers.",
+                "RUNTIME: Deno/Python execution isolation and environment management."
+            ],
+            "MODULOS": [
+                "ProposalProcessor: Context-aware patch generation engine.",
+                "CognitiveOrchestrator: High-level intention management.",
+                "MutationEngine: Transactional filesystem operations.",
+                "SafetyPolicy: Static and runtime security gatekeeper."
+            ],
+            "RELACIONES": [
+                "Request -> Intent (Context) -> BrainRouter -> Selected Processor.",
+                "Proposal -> Validation -> Preview (UI) -> Approval -> Mutation."
+            ],
+            "ACOPLAMIENTOS": [
+                "BrainRouter <-> Processors: Shared interface for AICommandResponse.",
+                "MutationEngine <-> SafetyPolicy: Dependency on pre-write validation rules.",
+                "Frontend <-> Backend: State synchronization via BuilderTask models."
+            ],
+            "CONTRATOS": [
+                "MutationBatch: The fundamental unit of cross-file atomic updates.",
+                "AICommandResponse: The system-wide protocol for AI intent feedback.",
+                "SafetyPolicy: The final authority on which modifications are permitted."
+            ],
+            "RIESGOS": [
+                "GLOBAL: Changes in CORE (Mutation/Safety) propagate across all features.",
+                "COUPLED: desynchronization between Workspace frontend and Builder backend."
+            ]
+        }
 
     def _is_safe_path(self, path: str) -> bool:
         abs_path = os.path.abspath(path)
@@ -358,6 +427,9 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         # --- NEW: OMNI SEMANTIC AWARENESS LAYER ---
         # Detect relevant dependencies to calculate systemic risk.
         detected_deps = []
+        is_core_system = any(p in path_lower for p in ["core/", "backend/core", "infrastructure/", "safety_policy"])
+        global_impact_note = " [CRÍTICO: Módulo CORE]" if is_core_system else ""
+
         if path_lower.endswith(".py"):
             imports = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_\.]+)', content, re.MULTILINE)
             for imp in imports:
@@ -374,7 +446,7 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         # Filter duplicates and limit
         detected_deps = list(dict.fromkeys(detected_deps))
         top_deps_str = ", ".join(detected_deps[:3])
-        dependency_impact = f" (Impacto cruzado: altera contratos con [{top_deps_str}])" if top_deps_str else ""
+        dependency_impact = f" (Impacto cruzado: altera contratos con [{top_deps_str}]){global_impact_note}" if (top_deps_str or global_impact_note) else ""
         # ------------------------------------------
 
         # 1. Detect JS/TS specific smells (Focus on Architecture & UX)
