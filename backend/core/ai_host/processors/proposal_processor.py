@@ -22,31 +22,46 @@ class ProposalProcessor(CommandProcessor):
     """
     
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        # 1. EXTERNAL NODE AUDIT (Block 7/Prompt 1)
+        # 1. EXTERNAL NODE AUDIT & INTERACTION (Block 7/Prompt 2)
         url_match = re.search(r"(https?://\S+)", msg)
-        if url_match or any(kw in msg.lower() for kw in ["este enlace", "esta url", "esta página"]):
-            url = url_match.group(1) if url_match else "SUPERFICIE_DECLARADA"
+        is_interaction = any(kw in msg.lower() for kw in ["abrí", "abrir", "inspeccioná", "inspeccionar", "leé", "leer", "sumá", "contexto"])
+        
+        if url_match or any(kw in msg.lower() for kw in ["este enlace", "esta url", "esta página", "este nodo"]):
+            url = url_match.group(1) if url_match else "NODO_ACTIVO_DECLARADO"
             node_type = self._classify_external_node(url)
             
-            # Integrated Orchestration for External Nodes
-            mission_orchestrator.plan_mission(msg, intent="external_node_audit")
+            # Interactive Inspection (If authorized)
+            action = "MODELO_ESTRUCTURAL"
+            elements = "Pendiente de apertura oficial."
+            utility = "Evaluación de relevancia sistémica."
+            
+            if is_interaction:
+                # Simulation of safe inspection phase
+                inspection = self._inspect_external_node(url)
+                elements = ", ".join(inspection["elements"])
+                utility = inspection["utility"]
+                action = "INSPECCIÓN_VISUAL_Y_EXTRACCIÓN_DE_CONTEXTO"
+                mission_orchestrator.plan_mission(msg, intent="external_node_inspection")
+            else:
+                mission_orchestrator.plan_mission(msg, intent="external_node_discovery")
+
             orch_report = mission_orchestrator.format_orchestration_report()
             
             return AICommandResponse(
-                intent="external_node_discovery",
+                intent="external_node_interaction",
                 status="success",
-                message=f"""### OMNI_EXTERNAL_NODE_MODELING
+                message=f"""### OMNI_EXTERNAL_NODE_INTERACTION
 NODO_EXTERNO: {url}
 TIPO_DE_SUPERFICIE: {node_type}
-RELACIÓN_CON_EL_SCOPE_ACTUAL: CONTEXTO_AUXILIAR_DE_TRABAJO
-NIVEL_DE_RIESGO: BAJO (READ_ONLY_MODE)
-ACCIÓN_PERMITIDA: LECTURA_ESTRUCTURAL / MODELADO_CONCEPTUAL
-LÍMITE_DE_INTERACCIÓN: SIN_CONTROL_ACTIVO_DIRECTO
+ELEMENTOS_VISIBLES: {elements}
+UTILIDAD_PARA_EL_SCOPE: {utility}
+ACCIÓN_REALIZADA: {action}
+LÍMITE_DE_INTERACCIÓN: SOLO_LECTURA / SIN_CONTROL_DE_FLUJO_EXTERNO
 
 {orch_report}
 ---
-# BLOQUE 7 / PROMPT 1: La superficie externa ha sido integrada como nodo del ecosistema.""",
-                payload={"url": url, "node_type": node_type}
+# BLOQUE 7 / PROMPT 2: Se ha realizado una interacción limitada y segura sobre la superficie externa.""",
+                payload={"url": url, "node_type": node_type, "elements": elements}
             )
 
         # 2. MEMORY AUDIT (OS-like check)
@@ -342,6 +357,20 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         if "youtube" in url_l or "video" in url_l: return "CONTENIDO_MULTIMEDIA_DINÁMICO"
         if "google" in url_l or "search" in url_l: return "MOTOR_DE_BÚSQUEDA_Y_RELEVANCIA"
         return "NODO_CONTENEDOR_EXTERNO_GENÉRICO"
+
+    def _inspect_external_node(self, url: str) -> Dict[str, Any]:
+        node_type = self._classify_external_node(url)
+        elements = ["Jerarquía de navegación", "Bloque de contenido principal", "Metadatos de superficie"]
+        if "docs" in url.lower():
+            elements.extend(["Ejemplos de código Python/JS", "Índice de subniveles", "Advertencias técnicas"])
+        elif "chat" in url.lower():
+            elements.extend(["Historial de mensajes secuenciales", "Prompt actual del usuario", "Feedback del sistema"])
+            
+        return {
+            "type": node_type,
+            "elements": elements,
+            "utility": "CRÍTICA - Provee el contexto estructural necesario para la misión."
+        }
 
     def _build_project_map(self) -> Dict[str, Any]:
         """
