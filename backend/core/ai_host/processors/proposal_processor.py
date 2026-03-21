@@ -22,29 +22,42 @@ class ProposalProcessor(CommandProcessor):
     """
     
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        # 1. EXTERNAL NODE AUDIT & INTERACTION (Block 7/Prompt 2)
+        # 1. HYBRID ORCHESTRATION & EXTERNAL NODES (Block 7/Prompt 3)
         url_match = re.search(r"(https?://\S+)", msg)
-        is_interaction = any(kw in msg.lower() for kw in ["abrí", "abrir", "inspeccioná", "inspeccionar", "leé", "leer", "sumá", "contexto"])
+        is_interaction = any(kw in msg.lower() for kw in ["abrí", "abrir", "inspeccioná", "inspeccionar", "leé", "leer", "sumá", "usá", "vinculá"])
         
-        if url_match or any(kw in msg.lower() for kw in ["este enlace", "esta url", "esta página", "este nodo"]):
-            url = url_match.group(1) if url_match else "NODO_ACTIVO_DECLARADO"
+        if url_match:
+            url = url_match.group(1)
+            internal_target = self._resolve_target(msg, context)
             node_type = self._classify_external_node(url)
+            inspection = self._inspect_external_node(url)
             
-            # Interactive Inspection (If authorized)
-            action = "MODELO_ESTRUCTURAL"
-            elements = "Pendiente de apertura oficial."
-            utility = "Evaluación de relevancia sistémica."
-            
-            if is_interaction:
-                # Simulation of safe inspection phase
-                inspection = self._inspect_external_node(url)
-                elements = ", ".join(inspection["elements"])
-                utility = inspection["utility"]
-                action = "INSPECCIÓN_VISUAL_Y_EXTRACCIÓN_DE_CONTEXTO"
-                mission_orchestrator.plan_mission(msg, intent="external_node_inspection")
-            else:
-                mission_orchestrator.plan_mission(msg, intent="external_node_discovery")
+            if internal_target and internal_target != os.path.abspath("."):
+                # HYBRID CASE: Link external to specific internal file/module
+                mission_orchestrator.plan_mission(msg, intent="hybrid_mission_orchestration")
+                orch_report = mission_orchestrator.format_orchestration_report()
+                
+                return AICommandResponse(
+                    intent="hybrid_context_proposal",
+                    status="success",
+                    message=f"""### OMNI_HYBRID_WORK_ORCHESTRATION
+NODO_EXTERNO: {url}
+TIPO_DE_SUPERFICIE: {node_type}
+RELACIÓN_CON_EL_SCOPE_INTERNO: {internal_target}
+APORTE_AL_TRABAJO: Enlace de requerimientos y guías externas con el flujo de implementación local.
+CONTEXTO_UTILIZADO: {", ".join(inspection["elements"])}
+LÍMITE_DE_INTERACCIÓN: SOLO_LECTURA_Y_REFERENCIA / SIN_ESCRITURA_EXTERNA
+CRITERIO_DE_SEGURIDAD: BOUNDARY_TRANSVERSAL_ACTIVO
 
+{orch_report}
+---
+# BLOQUE 7 / PROMPT 3: Orquestación híbrida completada. El nodo externo sirve de apoyo al scope interno.""",
+                    payload={"url": url, "target_file": internal_target, "node_type": node_type}
+                )
+            
+            # DEFAULT EXTERNAL CASE (Block 7/Prompt 2)
+            action = "INSPECCIÓN_VISUAL_Y_EXTRACCIÓN_DE_CONTEXTO" if is_interaction else "MODELO_ESTRUCTURAL"
+            mission_orchestrator.plan_mission(msg, intent="external_node_inspection" if is_interaction else "external_node_discovery")
             orch_report = mission_orchestrator.format_orchestration_report()
             
             return AICommandResponse(
@@ -53,16 +66,18 @@ class ProposalProcessor(CommandProcessor):
                 message=f"""### OMNI_EXTERNAL_NODE_INTERACTION
 NODO_EXTERNO: {url}
 TIPO_DE_SUPERFICIE: {node_type}
-ELEMENTOS_VISIBLES: {elements}
-UTILIDAD_PARA_EL_SCOPE: {utility}
+ELEMENTOS_VISIBLES: {", ".join(inspection["elements"]) if is_interaction else "Pendiente de apertura."}
+UTILIDAD_PARA_EL_SCOPE: {inspection["utility"] if is_interaction else "Evaluación de relevancia sistémica."}
 ACCIÓN_REALIZADA: {action}
 LÍMITE_DE_INTERACCIÓN: SOLO_LECTURA / SIN_CONTROL_DE_FLUJO_EXTERNO
 
 {orch_report}
 ---
-# BLOQUE 7 / PROMPT 2: Se ha realizado una interacción limitada y segura sobre la superficie externa.""",
-                payload={"url": url, "node_type": node_type, "elements": elements}
+# BLOQUE 7 / PROMPT 3: Se ha realizado una interacción limitada y segura sobre la superficie externa.""",
+                payload={"url": url, "node_type": node_type}
             )
+
+        # 2. MEMORY AUDIT (OS-like check)
 
         # 2. MEMORY AUDIT (OS-like check)
         if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope", "decisión", "decisiones", "fixes validados", "pospuesto", "pospudo"]):
