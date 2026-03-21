@@ -9,6 +9,7 @@ from ..execution.patch_preview import patch_preview_engine
 from ..execution.mutation_engine import MutationBatch, FileOperation, MutationType
 from ..execution.builder_models import BuilderTask, BuilderModule, BuilderStatus, BuilderModuleType
 from ..execution.builder_engine import builder_execution_engine
+from ..memory.system_memory import system_memory
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,16 @@ class ProposalProcessor(CommandProcessor):
     """
     
     async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        # 1. AUDIT & ISOLATE (Resolve Target)
+        # 1. MEMORY AUDIT (OS-like check)
+        if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope"]):
+             return AICommandResponse(
+                intent="system_memory_report",
+                status="success",
+                message=f"### OMNI_SYSTEM_MEMORY\n\n{system_memory.get_project_context()}\n{system_memory.get_working_context()}",
+                payload={"memory": system_memory.data}
+             )
+
+        # 2. AUDIT & ISOLATE (Resolve Target)
         raw_target = self._resolve_target(msg, context)
         if not raw_target:
             return AICommandResponse(intent="proposal_error", status="success", message="ARCHIVO_LEIDO: NONE")
@@ -239,6 +249,17 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
 ---
 {aggregate_diff or '# ARCHIVO BAJO AUDITORÍA (Sin cambios generados)'}"""
 
+        # 8. UPDATE WORKING MEMORY
+        system_memory.update_working(
+            active_scope=raw_target,
+            last_important_file=target_files[0] if target_files else None,
+            last_operation_summary=all_proposals[0].get("change") if all_proposals else "Auditoría del sistema (Solo Lectura).",
+            workspace_state="analyzing" if is_global else "proposing"
+        )
+        if "bloque" in msg.lower() and re.search(r"bloque\s+(\d+)", msg.lower()):
+            new_block = re.search(r"bloque\s+(\d+)", msg.lower()).group(0)
+            system_memory.set_roadmap_block(new_block.capitalize())
+
         return AICommandResponse(
             intent="copilot_proposal",
             status="success",
@@ -251,7 +272,8 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
                 "diff": aggregate_diff if not is_global else "",
                 "preview_id": preview_id if not is_global else None,
                 "mode": "proposal_only",
-                "is_global_analysis": is_global
+                "is_global_analysis": is_global,
+                "working_memory": system_memory.get_working()
             }
         )
 

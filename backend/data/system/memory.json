@@ -1,0 +1,24 @@
+{
+    "working": {
+        "active_scope": null,
+        "last_proposal_id": null,
+        "session_focus": "System Audit",
+        "workspace_state": "idle"
+    },
+    "project": {
+        "roadmap_block": "Bloque 5",
+        "decisions": [],
+        "hard_rules": [
+            "Priorizar cambios m\u00ednimos y no destructivos.",
+            "Mantener trazabilidad absoluta por archivo.",
+            "No tocar CORE sin advertencia de impacto sist\u00e9mico.",
+            "Validar que el Preview siempre permita retorno limpio."
+        ],
+        "sensitive_modules": [
+            "backend/core/ai_host/processors/proposal_processor.py",
+            "backend/core/ai_host/orchestration/cognitive_orchestrator.py",
+            "backend/core/execution/safety_policy.py"
+        ],
+        "last_applied_fix": null
+    }
+}
