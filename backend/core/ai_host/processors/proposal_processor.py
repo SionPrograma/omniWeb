@@ -10,6 +10,7 @@ from ..execution.mutation_engine import MutationBatch, FileOperation, MutationTy
 from ..execution.builder_models import BuilderTask, BuilderModule, BuilderStatus, BuilderModuleType
 from ..execution.builder_engine import builder_execution_engine
 from ..memory.system_memory import system_memory
+from ..orchestration.mission_orchestrator import mission_orchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -187,43 +188,43 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
         if compatibility_warning:
             highest_risk = f"ALTO: {compatibility_warning}. {highest_risk}"
 
-        # 7. FORMAT FINAL MESSAGE
+        # 7. ORCHESTRATE MISSION PHASES
+        mission_plan = mission_orchestrator.plan_mission(msg, intent="copilot_proposal")
+        orch_report = mission_orchestrator.format_orchestration_report()
+
+        # 8. FORMAT FINAL MESSAGE
         is_global = self._is_global_project_request(msg)
         
         if is_global:
             pmap = self._build_project_map()
-            formatted_message = f"""SCOPE_RAÍZ: OmniWeb Project (Global Context)
-CAPAS_PRINCIPALES:
-{chr(10).join(['  - ' + c for c in pmap['CAPAS']])}
-MÓDULOS_CENTRALES:
-{chr(10).join(['  - ' + m for m in pmap['MODULOS']])}
-RELACIONES_CRÍTICAS:
-{chr(10).join(['  - ' + r for r in pmap['RELACIONES']])}
-ZONAS_DE_ACOPLAMIENTO:
-{chr(10).join(['  - ' + a for a in pmap['ACOPLAMIENTOS']])}
-CONTRATOS_SENSIBLES:
-{chr(10).join(['  - ' + s for s in pmap['CONTRATOS']])}
-RIESGOS_SISTÉMICOS:
-{chr(10).join(['  - ' + ri for ri in pmap['RIESGOS']])}
-CRITERIO_DE_SEGURIDAD: GLOBAL_SYSTEM_ENGINEER_MODE (Read-Only)
-
----
-# ANÁLISIS DE SISTEMA COMPLETO: OmniWeb detectado como OS-like Architecture."""
+            formatted_message = f"### VISIÓN_SISTÉMICA_OMNIWEB (GLOBAL_AWARE_READ_ONLY)\n"
+            formatted_message += f"PROYECTO_RAÍZ: OmniWeb Project (Global Context)\n"
+            formatted_message += f"TIPO_ANÁLISIS: COMPRENSIÓN_ARQUITECTÓNICA_TRANSVERSAL\n\n"
+            
+            formatted_message += f"CAPAS_PRINCIPALES:\n" + "\n".join([f"- {c}" for c in pmap['CAPAS']]) + "\n\n"
+            formatted_message += f"MÓDULOS_CENTRALES:\n" + "\n".join([f"- {m}" for m in pmap['MODULOS']]) + "\n\n"
+            formatted_message += f"RELACIONES_CRÍTICAS:\n" + "\n".join([f"- {r}" for r in pmap['RELACIONES']]) + "\n\n"
+            formatted_message += f"ZONAS_DE_ACOPLAMIENTO:\n" + "\n".join([f"- {a}" for a in pmap['ACOPLAMIENTOS']]) + "\n\n"
+            formatted_message += f"CONTRATOS_SENSIBLES:\n" + "\n".join([f"- {s}" for s in pmap['CONTRATOS']]) + "\n\n"
+            formatted_message += f"RIESGOS_SISTÉMICOS:\n" + "\n".join([f"- {ri}" for ri in pmap['RIESGOS']]) + "\n\n"
+            formatted_message += f"{orch_report}\n"
+            formatted_message += f"---\n"
+            formatted_message += f"# ANÁLISIS DE SISTEMA COMPLETO: OmniWeb detectado como OS-like Architecture."
         elif is_dir_scope:
             changed_names = [os.path.basename(op.path) for op in operations]
             all_names = [os.path.basename(f) for f in target_files]
             changes_desc = "\n".join([f"- {os.path.basename(p['file'])}: {p.get('change', 'fix')}" for p in all_proposals])
             
-            formatted_message = f"""SCOPE_RAÍZ: {raw_target} ({total_files_in_tree} nodos totales detectados)
-SUBNIVELES_RELEVANTES: {', '.join(subniveles) if subniveles else 'Ninguno (Plano)'}
-ARCHIVOS_RELEVANTES: {', '.join(changed_names)}
-CAMBIO_PROPUESTO_POR_ARCHIVO:
-{changes_desc}
-IMPACTO_RELACIONADO: {highest_risk} - Alteración contenida a la jerarquía declarada.
-CRITERIO_DE_SEGURIDAD: MULTI_FILE_SAFE{scope_warning}
-
----
-{aggregate_diff}"""
+            formatted_message = f"### SCOPE_JERÁRQUICO (Jerarquía Detallada)\n"
+            formatted_message += f"SCOPE_RAÍZ: {raw_target} ({total_files_in_tree} nodos totales detectados)\n"
+            formatted_message += f"SUBNIVELES_RELEVANTES: {', '.join(subniveles) if subniveles else 'Ninguno (Plano)'}\n"
+            formatted_message += f"ARCHIVOS_RELEVANTES: {', '.join(changed_names)}\n"
+            formatted_message += f"CAMBIO_PROPUESTO_POR_ARCHIVO:\n{changes_desc}\n\n"
+            formatted_message += f"{orch_report}\n"
+            formatted_message += f"IMPACTO_RELACIONADO: {highest_risk} - Alteración contenida a la jerarquía declarada.\n"
+            formatted_message += f"CRITERIO_DE_SEGURIDAD: MULTI_FILE_SAFE{scope_warning}\n\n"
+            formatted_message += f"---\n"
+            formatted_message += f"{aggregate_diff}"
 
         else:
             t_file = target_files[0]
@@ -246,6 +247,8 @@ MICROFIX_PROPUESTO: {prop.get('change', 'No se requiere.')}
 CONTEXTO_DE_MEMORIA: {', '.join(prop.get('memory_notes', [])) if prop.get('memory_notes') else 'Sin interferencia sistémica.'}
 IMPACTO_RELACIONADO: {highest_risk} - Cambio local
 CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
+
+{orch_report}
 
 ---
 {aggregate_diff or '# ARCHIVO BAJO AUDITORÍA (Sin cambios generados)'}"""
