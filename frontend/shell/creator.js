@@ -393,27 +393,30 @@ class CreatorEnvironment {
             this.switchView('workspace');
         }
 
-        // Initialize all panels as active if opening for the first time
-        if (!isAlreadyActive) {
+        // Initialize all panels as active ONLY if opening for the first time
+        if (!this.workspaceHasBeenOpenedBefore) {
+            this.workspaceHasBeenOpenedBefore = true;
             ['editor', 'copilot', 'changes', 'backend'].forEach(pId => {
                 const panel = document.getElementById(`ws-panel-${pId}`);
                 const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
                 if (panel) panel.classList.add('active');
                 if (btn) btn.classList.add('active');
             });
-        } else {
-            // UX RULE: If already active, toggle the specific panel
-            const panelsToOpen = targetPanel === 'editor' ? ['editor', 'copilot'] : [targetPanel];
+        }
 
+        // UX RULE: If targetPanel is explicitly requested (from outside or inside)
+        if (targetPanel) {
+            const panelsToOpen = targetPanel === 'editor' ? ['editor', 'copilot'] : [targetPanel];
             panelsToOpen.forEach(pId => {
                 const panel = document.getElementById(`ws-panel-${pId}`);
                 const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
                 if (panel) {
                     // Toggle OFF if already active inside an active workspace (only for single panel targets)
-                    if (panel.classList.contains('active') && panelsToOpen.length === 1) {
+                    if (isAlreadyActive && panel.classList.contains('active') && panelsToOpen.length === 1) {
                         panel.classList.remove('active');
                         if (btn) btn.classList.remove('active');
                     } else {
+                        // Otherwise ensure it's ON
                         panel.classList.add('active');
                         if (btn) btn.classList.add('active');
                     }

@@ -21,7 +21,14 @@ body.workspace-active .status-subtitle,
 body.workspace-active #bottom-nav,
 body.workspace-active #launcher-overlay,
 body.workspace-active #creator-toolbar,
-body.workspace-active #chat-log {
+body.workspace-active #chat-log,
+body.workspace-active .global-announcement-bar,
+body.workspace-active .system-status-bar,
+body.workspace-active #context-panel,
+body.workspace-active #audit-drawer-container,
+body.workspace-active #shell-media-evidence,
+body.workspace-active #permission-modal,
+body.workspace-active #qr-scanner-overlay {
     display: none !important;
 }
 
