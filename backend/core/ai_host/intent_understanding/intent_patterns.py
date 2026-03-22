@@ -38,7 +38,8 @@ INTENT_GROUPS: Dict[str, List[str]] = {
     ],
     "FOLLOW_UP_INTENT": [
         "y ahora", "and now", "seguimos", "keep going", "siguiente paso", 
-        "next step", "dale", "continuemos", "go on", "what next", "continuar"
+        "next step", "dale", "continuemos", "go on", "what next", "continuar",
+        "retomemos lo anterior", "retomemos", "anterior", "lo otro"
     ],
     "EXPLORATION_INTENT": [
         "muéstrame", "show me", "explora", "explore", "inspecciona", 

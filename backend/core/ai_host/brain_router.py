@@ -234,16 +234,6 @@ class BrainRouter:
         action = analysis.recommended_action
         
         if lang == "es":
-            # Simple technical translation/cleanup
-            obs = obs.replace("Metrics are nominal, but the user reports a localized operational anomaly", "Las métricas parecen nominales, pero se reconoce la anomalía reportada localmente")
-            obs = obs.replace("The system is currently in", "El sistema se encuentra en estado")
-            obs = obs.replace("state with", "con")
-            obs = obs.replace("active chips", "chips activos")
-            obs = obs.replace("Primary anomaly detected", "Anomalía primaria detectada")
-            
-            action = action.replace("Initiate Creator Plan for targeted repair of the identified layer", "Iniciar Plan del Creador para reparar la capa identificada")
-            action = action.replace("Collect more specific evidence from the affected layer before proceeding with a patch", "Colectar más evidencia de la capa afectada antes de proceder con el fix")
-
             body = (
                 f"**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n"
                 f"- **PROBLEMA**: {symptom}.\n"

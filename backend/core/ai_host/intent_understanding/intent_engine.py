@@ -107,18 +107,17 @@ class IntentEngine:
         if group == "NATURAL_CHAT":
             return "natural_chat"
 
-        # 3. IF input is simple -> direct_response  
-        if words <= 4 and group not in ["ANALYSIS_INTENT"]:
+        # 5. IF input is simple or synthesis/memory request -> direct_response  
+        # This covers both short messages and synthesis/memory requests regardless of length
+        if group in ["COGNITIVE_SYNTHESIS", "MEMORY_INTENT"] or (words <= 4 and group not in ["ANALYSIS_INTENT"]):
+            # For memory intent, check if it's conversational
+            if group == "MEMORY_INTENT":
+                conv_keywords = ["che", "andabamos", "andábamos", "haciendo", "que tal", "qué tal", "omni", "andabas", "hicimos"]
+                if any(k in msg_lower for k in conv_keywords):
+                    return "natural_chat"
             return "direct_response"
             
-        # 3. IF memory intent -> direct_response (unless conversational)
-        if group == "MEMORY_INTENT":
-             conv_keywords = ["che", "andabamos", "andábamos", "haciendo", "que tal", "qué tal", "omni", "andabas", "hicimos"]
-             if any(k in msg_lower for k in conv_keywords):
-                 return "natural_chat"
-             return "direct_response"
-            
-        # 4. ELSE -> reflective_analysis
+        # 6. ELSE -> reflective_analysis
         return "reflective_analysis"
 
 intent_engine = IntentEngine()

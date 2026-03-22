@@ -46,14 +46,12 @@ class ReflectiveDeliberation:
         
         # 4. Observation - Grounded in current state
         ws = cognitive_core.world_state
-        observation = f"The system is currently in {ws.system_health} state with {len(ws.active_chips)} active chips."
         if claim.supporting_evidence:
-            observation += f" Primary anomaly detected in {claim.supporting_evidence[0].key}."
-        
-        # Apply translations to observation
-        observation = observation.replace("Metrics are nominal, but the user reports a localized operational anomaly", "Las métricas parecen nominales, pero se reconoce la anomalía reportada localmente")
-        observation = observation.replace("The system is currently in", "El sistema se encuentra en estado")
-        
+            obs_key = claim.supporting_evidence[0].key
+            observation = f"Anomalía primaria detectada en el componente `{obs_key}`." if "es" in message.lower() or "che" in message.lower() else f"Primary anomaly detected in `{obs_key}` component."
+        else:
+            observation = f"El sistema se encuentra en estado estable ({ws.system_health})." if "es" in message.lower() or "che" in message.lower() else f"The system is currently in {ws.system_health} state."
+            
         # 5. Primary Hypothesis
         primary = claim.claim
         
@@ -75,7 +73,8 @@ class ReflectiveDeliberation:
             missing.append("Cross-layer metric correlation failure")
 
         # 9. Recommended Best Next Action
-        action = self._determine_next_action(claim, history)
+        lang = "es" if "es" in message.lower() or "che" in message.lower() else "en"
+        action = self._determine_next_action(claim, history, lang=lang)
             
         logger.info(f"[REFLECTIVE_DELIBERATION] Deep analysis completed for primary hypothesis: {primary}")
         
@@ -107,18 +106,18 @@ class ReflectiveDeliberation:
             
         return "Underlying resource contention or OS-level context switching impacting module execution."
 
-    def _determine_next_action(self, claim: TechnicalClaim, history: List[Any]) -> str:
+    def _determine_next_action(self, claim: TechnicalClaim, history: List[Any], lang: str = "en") -> str:
         """Recommends the best next action based on claim and past results."""
         if claim.is_insufficient:
-            return "Increase metric sampling priority and check raw module logs."
+            return "Aumentar prioridad de muestreo de métricas y revisar logs crudos del módulo." if lang == "es" else "Increase metric sampling priority and check raw module logs."
             
         recent_failures = [h for h in history[-5:] if h.outcome == "FAILED"]
         if len(recent_failures) > 2:
-            return "Rollback last mutation and enter Deep Diagnostic Mode."
+            return "Realizar rollback de la última mutación y entrar en Modo de Diagnóstico Profundo." if lang == "es" else "Rollback last mutation and enter Deep Diagnostic Mode."
             
         if claim.confidence < 0.5:
-            return "Collect more specific evidence from the affected layer before proceeding with a patch."
+            return "Colectar más evidencia específica de la capa afectada antes de proceder con un parche." if lang == "es" else "Collect more specific evidence from the affected layer before proceeding with a patch."
             
-        return "Initiate Creator Plan for targeted repair of the identified layer."
+        return "Iniciar Plan del Creador para la reparación dirigida de la capa identificada." if lang == "es" else "Initiate Creator Plan for targeted repair of the identified layer."
 
 reflective_deliberation = ReflectiveDeliberation()

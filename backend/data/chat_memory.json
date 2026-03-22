@@ -148,5 +148,59 @@
     "prompt": "omni, refrescame qué queda por cerrar antes de avanzar con el roadmap, pero hablame natural y sin modo reporte.",
     "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. El trabajo actual se enmarca en el Bloque 5 (activo).",
     "intent": "system_memory_report"
+  },
+  {
+    "timestamp": "2026-03-22T21:31:45.913119",
+    "prompt": "Hola Omni",
+    "response": "Good evening. Initializing your OmniWeb knowledge environment.",
+    "intent": "onboarding_greeting"
+  },
+  {
+    "timestamp": "2026-03-22T21:31:48.285197",
+    "prompt": "che omni, recordame qué estamos cerrando ahora.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema.",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-22T21:31:48.346008",
+    "prompt": "che omni, recordame qué estamos cerrando ahora.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema.",
+    "intent": "system_memory_report"
+  },
+  {
+    "timestamp": "2026-03-22T21:32:24.045873",
+    "prompt": "omni, en una sola respuesta decime qué sigue vigente ahora y qué no conviene tocar todavía.",
+    "response": "**OBSERVACIÓN**\nAnomalía primaria detectada en el componente `flow.ai_to_chips.latency`.\n\n**HIPÓTESIS PRIMARIA**\nDetected performance degradation likely centered in flow.ai_to_chips.latency.\n\n**EXPLICACIÓN ALTERNATIVA**\nMetrical noise or NTP drift causing false positive latency spikes in the bus.\n\n**NIVEL DE CONFIANZA**\n0.8\n\n**EVIDENCIA FALTANTE**\nNinguna\n\n**ACCIÓN RECOMENDADA**\nIniciar Plan del Creador para la reparación dirigida de la capa identificada.",
+    "intent": "ANALYSIS_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:32:24.105314",
+    "prompt": "omni, en una sola respuesta decime qué sigue vigente ahora y qué no conviene tocar todavía.",
+    "response": "Actualmente, hay señales fuera de rango en esta capa Estaba revisando esto. OBSERVACIÓN\nAnomalía primaria detectada en el componente flow.ai_to_chips.latency. HIPÓTESIS PRIMARIA\nDetected performance degradation likely centered in flow.ai_to_chips.latency. EXPLICACIÓN ALTERNATIVA\nMetrical noise or NTP drift causing false positive latency spikes in the bus. NIVEL DE CONFIANZA\n0.8 EVIDENCIA FALTANTE\nNinguna ACCIÓN RECOMENDADA\nIniciar Plan del Creador para la reparación dirigida de la capa identificada.",
+    "intent": "reflective_analysis"
+  },
+  {
+    "timestamp": "2026-03-22T21:32:54.590448",
+    "prompt": "omni, retomemos lo anterior: ¿qué veníamos mirando?",
+    "response": "**OBSERVACIÓN**\nPrimary anomaly detected in `flow.ai_to_chips.latency` component.\n\n**HIPÓTESIS PRIMARIA**\nDetected performance degradation likely centered in flow.ai_to_chips.latency.\n\n**EXPLICACIÓN ALTERNATIVA**\nMetrical noise or NTP drift causing false positive latency spikes in the bus.\n\n**NIVEL DE CONFIANZA**\n0.8\n\n**EVIDENCIA FALTANTE**\nNinguna\n\n**ACCIÓN RECOMENDADA**\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "FOLLOW_UP_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:32:54.647172",
+    "prompt": "omni, retomemos lo anterior: ¿qué veníamos mirando?",
+    "response": "De acuerdo a los datos, se detectan irregularidades en el flujo analizando componentes de esta capa Estaba revisando esto. OBSERVACIÓN\nPrimary anomaly detected in flow.ai_to_chips.latency component. HIPÓTESIS PRIMARIA\nDetected performance degradation likely centered in flow.ai_to_chips.latency. EXPLICACIÓN ALTERNATIVA\nMetrical noise or NTP drift causing false positive latency spikes in the bus. NIVEL DE CONFIANZA\n0.8 EVIDENCIA FALTANTE\nNinguna ACCIÓN RECOMENDADA\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "reflective_analysis"
+  },
+  {
+    "timestamp": "2026-03-22T21:33:07.661453",
+    "prompt": "el mapa del chip reparto no se está viendo.",
+    "response": "**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n- **PROBLEMA**: Fallo de representación visual.\n- **CHIP**: `REPARTO` (Componente: `mapa`)\n- **CAPA PROBABLE**: Frontend / UI Layer\n- **CONFIANZA**: 0.8\n\n**OBSERVACIÓN**\nAnomalía primaria detectada en el componente `flow.ai_to_chips.latency`.\n\n**SIGUIENTE PASO**\nIniciar Plan del Creador para la reparación dirigida de la capa identificada.\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?",
+    "intent": "OPERATIONAL_DIAGNOSTIC"
+  },
+  {
+    "timestamp": "2026-03-22T21:33:07.718116",
+    "prompt": "el mapa del chip reparto no se está viendo.",
+    "response": "**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n- **PROBLEMA**: Fallo de representación visual.\n- **CHIP**: `REPARTO` (Componente: `mapa`)\n- **CAPA PROBABLE**: Frontend / UI Layer\n- **CONFIANZA**: 0.8\n\n**OBSERVACIÓN**\nAnomalía primaria detectada en el componente `flow.ai_to_chips.latency`.\n\n**SIGUIENTE PASO**\nIniciar Plan del Creador para la reparación dirigida de la capa identificada.\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?",
+    "intent": "operational_diagnostic"
   }
 ]

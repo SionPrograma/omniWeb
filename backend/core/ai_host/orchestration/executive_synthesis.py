@@ -117,8 +117,8 @@ class ExecutiveSynthesis:
         if continuity_msg: msg_parts.append(continuity_msg)
 
         # B. Context & Roadmap (Project Memory)
-        # Enforcement: hard hide if minimal and not explicitly whitelisted
-        if not hide_block and (is_roadmap or (is_discovery and not last_op) or is_concrete):
+        # Enforcement: hide block unless the user is specifically interested in the roadmap/plan.
+        if not hide_block and (is_roadmap or is_concrete or "en qué bloque" in low_query):
             status = "activo" if lang == "es" else "active"
             if lang == "es":
                 text = f"Esta labor pertenece al **{block}** ({status})"

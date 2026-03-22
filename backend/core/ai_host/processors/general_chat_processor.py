@@ -17,14 +17,15 @@ class GeneralChatProcessor(CommandProcessor):
         "haciendo", "que estábamos", "qué estábamos", "qué estabamos", "que estabamos",
         "andábamos", "andabamos", "qué veníamos", "que veniamos", "continuidad",
         "qué hicimos", "que hicimos", "recién", "lo último", "lo ultimo", "hicimos recién",
-        "en qué estábamos", "en que estabamos"
+        "en qué estábamos", "en que estabamos", "retomemos", "anterior", "veníamos mirando", "veníamos analizando"
     ]
     
     MEMORY_QUERY_KEYWORDS = [
         "vigente", "archivo", "módulo", "modulo", "bloque", "roadmap", "plan",
         "pendientes", "pendiente", "diferido", "pospuesto", "sensible", "riesgo",
         "closed", "already", "bugs", "done", "módulo", "modulo", "archivo", 
-        "hicimos", "andábamos", "andabamos", "comprometido", "reabrir", "pertenece"
+        "hicimos", "andábamos", "andabamos", "comprometido", "reabrir", "pertenece",
+        "qué estamos cerrando", "qué veníamos cerrando", "qué cerramos"
     ]
     GREETINGS = ["hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", "buenos días", "todo bien", "todo ok", "buenas"]
     WHO_ARE_YOU = ["quien eres", "quién eres", "who are you", "que eres", "qué eres", "what are you", "tu nombre", "your name"]
