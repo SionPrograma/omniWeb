@@ -11,6 +11,17 @@ class GeneralChatProcessor(CommandProcessor):
     than just saving to the Idea Cloud.
     """
 
+    CONTINUITY_KEYWORDS = [
+        "estábamos haciendo", "estabamos haciendo", "qué hicimos", "que hicimos", 
+        "andábamos", "andabamos", "what were we doing", "what did we do",
+        "roadmap", "bloque", "memoria de sistema", "continuidad",
+        "qué estábamos haciendo", "que estabamos haciendo", "en qué andábamos", "en que andabamos",
+        "últimos cambios", "qué bloque", "qué veníamos haciendo", "que veniamos haciendo",
+        "how is the project", "estado del proyecto", "qué sigue", "what's next",
+        "scope", "fixes", "cuál era el", "ya están", "cerrados", "terminado",
+        "closed", "already", "bugs", "done", "módulo", "modulo", "archivo", 
+        "hicimos", "andábamos", "andabamos", "comprometido", "reabrir", "pertenece"
+    ]
     GREETINGS = ["hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", "buenos días"]
     WHO_ARE_YOU = ["quien eres", "quién eres", "who are you", "que eres", "qué eres", "what are you", "tu nombre", "your name"]
     HOW_ARE_YOU = ["como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", "cómo vas"]
@@ -25,12 +36,12 @@ class GeneralChatProcessor(CommandProcessor):
             return True
         
         # Whole word matching for greetings, identity, or acknowledgments
-        all_keywords = self.GREETINGS + self.WHO_ARE_YOU + self.HOW_ARE_YOU + self.ACKNOWLEDGMENTS
+        all_keywords = self.GREETINGS + self.WHO_ARE_YOU + self.HOW_ARE_YOU + self.ACKNOWLEDGMENTS + self.CONTINUITY_KEYWORDS
         if any(w in words for w in all_keywords):
             return True
             
         # Also check for exact multi-word matches (like "who are you")
-        if any(phrase in cmd for phrase in self.WHO_ARE_YOU + self.HOW_ARE_YOU if " " in phrase):
+        if any(phrase in cmd for phrase in self.WHO_ARE_YOU + self.HOW_ARE_YOU + self.CONTINUITY_KEYWORDS if " " in phrase):
             return True
 
         # Extremely short messages (1 word) that aren't obviously commands
@@ -49,6 +60,25 @@ class GeneralChatProcessor(CommandProcessor):
         
         lang = session_state.get_language(session_id)
         words = cmd.split()
+
+        # 0. Memory Continuity (Composition & Executive Reasoning)
+        if any(kw in cmd for kw in self.CONTINUITY_KEYWORDS):
+             from ..memory.system_memory import system_memory
+             from ..orchestration.executive_synthesis import executive_synthesis
+             
+             w = system_memory.get_working()
+             p = system_memory.get_project()
+             
+             # Centralized synthesize call (Unified across processors)
+             msg_out = executive_synthesis.synthesize(w, p, msg, lang=lang)
+             
+             # Specific Intent logic for fixes list if specifically asked
+             if ("fix" in cmd or "cerrado" in cmd) and len(cmd.split()) < 6:
+                  fixes = p.get("validated_fixes", [])
+                  if fixes:
+                       msg_out += "\n\n**HISTORIAL DE FIXES VALIDADOS:**\n" + ("\n".join([f"- {f}" for f in fixes]))
+             
+             return AICommandResponse(intent="system_memory_report", status="success", message=msg_out)
 
         # 1. Greetings
         if any(w in words for w in self.GREETINGS):
@@ -102,8 +132,15 @@ class GeneralChatProcessor(CommandProcessor):
 
         # 5. Fallback conversational reply
         if lang == "es":
-            res_msg = f"No detecté un comando operativo específico para '{msg[:40]}...'. Si quieres guardar una idea, prueba con 'guarda esta idea:'. De lo contrario, ¿qué chip te gustaría inspeccionar?"
+            msg_out = f"No detecté un comando operativo específico para '{msg[:40]}...'. Si quieres guardar una idea, prueba con 'guarda esta idea:'. De lo contrario, ¿qué chip te gustaría inspeccionar?"
         else:
-            res_msg = f"I didn't detect a specific operational command for '{msg[:40]}...'. If you want to save an idea, try 'save this idea:'. Otherwise, which chip would you like to inspect?"
+            msg_out = f"I didn't detect a specific operational command for '{msg[:40]}...'. If you want to save an idea, try 'save this idea:'. Otherwise, which chip would you like to inspect?"
             
-        return AICommandResponse(intent="general_chat", status="success", message=res_msg)
+        # Voice-Aware Polish (Block 8)
+        if context and context.get("source") == "voice":
+             if lang == "es":
+                 msg_out = f"🎙️ [VOZ_NATURAL] {msg_out}\n\n*Estoy escuchando...*"
+             else:
+                 msg_out = f"🎙️ [NATURAL_VOICE] {msg_out}\n\n*I'm listening...*"
+
+        return AICommandResponse(intent="general_chat", status="success", message=msg_out)

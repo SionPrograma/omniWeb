@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from .interface_adapter import MultimodalInterface
 
 logger = logging.getLogger(__name__)
@@ -12,17 +12,17 @@ class VoiceInterface(MultimodalInterface):
     def __init__(self, provider: str = "simulation"):
         self.provider = provider
 
-    def normalize(self, audio_data: bytes) -> str:
+    def normalize(self, audio_data: Any) -> str:
         """
-        Simulates or executes STT processing.
-        In simulation mode, it assumes the 'audio' is a string for testing.
+        Transforms raw voice signal into a system-ready intent bundle.
         """
-        if self.provider == "simulation":
-            # In simulation, we assume audio_data is already a pre-processed string
-            # or a specific token.
-            if isinstance(audio_data, str):
-                return audio_data
-            return "Comando de voz detectado (Simulado)"
+        text = "Comando de voz (Simulado)"
+        if isinstance(audio_data, str):
+            text = audio_data
+        
+        logger.info(f"[VOICE] Normalizing: '{text[:20]}...'")
+        
+        return text
         
         # Real implementation would call a Whisper instance here
         logger.info("Processing voice input with provider: %s", self.provider)

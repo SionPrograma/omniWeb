@@ -19,6 +19,7 @@ class IntentClassifier:
         # Memory / Creator Mode Intents (Highest Priority)
         priority_intents = [
             "copilot_proposal",
+            "memory_continuity", "memory_project",
             "idea_captured", "list_ideas", "search_knowledge", "list_clusters", 
             "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft",
             "initialize_project", "show_cluster_lineage", "show_project_evolution",

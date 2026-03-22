@@ -116,6 +116,19 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
         "responde solo con", "solo responde con", "decime solo", "responde con",
         "archivo_leido:", "primera_linea:", "microfix_propuesto:", "impacto_relacionado:",
         "archivo_leido", "primera_linea", "microfix_propuesto", "impacto_relacionado"
+    ],
+    "memory_continuity": [
+        "qué estábamos haciendo", "que estabamos haciendo", "en qué andábamos", 
+        "en que andabamos", "qué veníamos haciendo", "que veniamos haciendo",
+        "continuidad", "qué hicimos recién", "what were we doing", "what did we do",
+        "qué archivo", "qué módulo", "archivo o módulo", "último archivo", "lo último que hicimos"
+    ],
+    "memory_project": [
+        "en qué bloque estamos", "que bloque", "roadmap", "fixes cerrados", 
+        "qué arreglamos", "scope", "alcance", "últimos cambios", 
+        "estado del proyecto", "how is the project",
+        "qué fixes", "que fixes", "fixes validados", "fixes are already closed", "bugs cerramos",
+        "pertenece al bloque", "es de este bloque", "redundante", "reabrir fixes"
     ]
 }
 

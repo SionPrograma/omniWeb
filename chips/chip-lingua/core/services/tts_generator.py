@@ -25,12 +25,55 @@ class TTSGenerator:
             self.tts = TTS(settings.COQUI_TTS_MODEL).to(self.device)
         return self.tts
 
+    def _normalize_text(self, text: str) -> str:
+        """
+        Transforms markdown and technical patterns into natural human speech.
+        """
+        if not text:
+            return ""
+
+        # 1. Remove Markdown syntax
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # Bold **text**
+        text = re.sub(r'__([^_]+)__', r'\1', text)      # Bold __text__
+        text = re.sub(r'`([^`]+)`', r'\1', text)        # Inline code `text`
+        text = re.sub(r'#+\s+', '', text)               # Headers #
+        text = re.sub(r'[-*]\s+', ' ', text)            # Bullets at start
+
+        # 2. Normalize technical paths (backend/core/...)
+        def path_replacer(match):
+            path = match.group(0)
+            # Remove extension
+            path = re.sub(r'\.(py|js|ts|css|html|md|json)$', '', path)
+            # Replace separators with space or " de " contextually
+            parts = re.split(r'[\\/]', path)
+            if len(parts) > 1:
+                # If it looks like a deep path, summarize
+                # "backend/core/ai_host" -> "módulo ai host del backend"
+                if len(parts) > 3:
+                    return f"el módulo {parts[-1].replace('_', ' ')} de {parts[0]}"
+                return " de ".join(reversed([p.replace('_', ' ') for p in parts]))
+            return path.replace('_', ' ')
+
+        # Detect paths with / or \
+        text = re.sub(r'\b[\w\-\.\\]+[\\/][\w\-\.\\/]+\b', path_replacer, text)
+        
+        # 3. Clean up remaining underscores and miscellaneous symbols
+        text = text.replace('_', ' ')
+        text = text.replace('*', '')  # Just in case
+        text = re.sub(r'\s+', ' ', text) # Collapse spaces
+
+        return text.strip()
+
     def generate(self, text: str, output_path: Path, job_id: str, speaker_wav: Path = None, language: str = "en"):
         # If disabled in config, skip
         if not settings.TTS_ENABLED:
             print("TTS Generation is disabled in config.")
             return None
             
+        # Normalize for natural speech
+        original_text = text
+        text = self._normalize_text(text)
+        
         tts = self.get_tts()
         
         # Determine speaker

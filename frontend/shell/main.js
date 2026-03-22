@@ -504,8 +504,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.creatorEnv.updateAuditResult(data.audit);
                 }
 
-                // Voice Feedback
-                voice.speak(data.message);
+                // Voice Feedback (Use normalized speech if available)
+                voice.speak(data.speech || data.message);
             }
 
             if (data.intent === 'idea_captured') {

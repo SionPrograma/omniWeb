@@ -12,18 +12,46 @@ class HumanInputInterpreter:
     
     def interpret(self, text: str) -> Dict[str, Any]:
         msg = text.lower().strip()
+        refined_text = self.refine_input(msg)
         
         interpretation = {
-            "intent": self._extract_intent(msg),
-            "context": self._extract_context(msg),
-            "signals": self._extract_signals(msg),
-            "clarity": self._assess_clarity(msg),
-            "user_state": self._detect_user_state(msg),
-            "original_text": text
+            "intent": self._extract_intent(refined_text),
+            "context": self._extract_context(refined_text),
+            "signals": self._extract_signals(refined_text),
+            "clarity": self._assess_clarity(refined_text),
+            "user_state": self._detect_user_state(refined_text),
+            "original_text": text,
+            "refined_text": refined_text
         }
         
         logger.info(f"[HUMAN_INTERPRETATION] {interpretation}")
         return interpretation
+
+    def refine_input(self, text: str) -> str:
+        """
+        Segment and self-correct input based on reformulation markers.
+        "Do X, no wait, do Y" -> returns "do Y"
+        """
+        msg = text.lower().strip()
+        
+        # Reformulation markers (ES/EN)
+        markers = [
+            r"no,\s+mejor\s+dicho", r"no,\s+mejor", r"perd[óo]n,\s+", 
+            r"no,\s+wait", r"no,\s+actualmente", r"actually", r"better\s+said",
+            r"no,\s+olv[íi]dalo", r"no,\s+mejor\s+decime", r"pero\s+mejor",
+            r"en\s+realidad"
+        ]
+        
+        for marker in markers:
+            parts = re.split(marker, msg, flags=re.IGNORECASE)
+            if len(parts) > 1:
+                # We take the last part since it's the correction
+                correction = parts[-1].strip()
+                if len(correction) > 3: # Ensure it's not a tiny fragment
+                    logger.info(f"[SELF_CORRECTION] Reformulation detected. Picked: {correction}")
+                    return correction
+                    
+        return text
 
     def _extract_intent(self, msg: str) -> str:
         # Debug/Fix triggers

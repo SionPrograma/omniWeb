@@ -81,17 +81,22 @@ LÍMITE_DE_INTERACCIÓN: SOLO_LECTURA / SIN_CONTROL_DE_FLUJO_EXTERNO
 
         # 2. MEMORY AUDIT (OS-like check)
         if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope", "decisión", "decisiones", "fixes validados", "pospuesto", "pospudo"]):
+             from ..orchestration.executive_synthesis import executive_synthesis
+             lang = "es" if any(w in msg.lower() for w in ["qué", "quien", "cómo", "donde", "estábamos", "bloque", "decisión"]) else "en"
+             
+             msg_out = executive_synthesis.synthesize(system_memory.get_working(), system_memory.get_project(), msg, lang=lang)
+             
              return AICommandResponse(
                 intent="system_memory_report",
                 status="success",
-                message=f"### OMNI_SYSTEM_MEMORY\n\n{system_memory.get_project_context()}\n{system_memory.get_working_context()}",
+                message=f"### OMNI_SYSTEM_MEMORY\n\n{msg_out}",
                 payload={"memory": system_memory.data}
              )
 
         # 2. AUDIT & ISOLATE (Resolve Target)
         raw_target = self._resolve_target(msg, context)
         if not raw_target:
-            return AICommandResponse(intent="proposal_error", status="success", message="ARCHIVO_LEIDO: NONE")
+            return AICommandResponse(intent="proposal_error", status="success", message="No se pudo identificar un archivo o módulo válido para analizar en tu solicitud.")
 
         # Absolutize path if not absolute
         abs_target = os.path.abspath(raw_target)
@@ -189,7 +194,7 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
 
         # 4. VALIDATE & POLICY GATE
         if not operations and not is_dir_scope:
-            return AICommandResponse(intent="copilot_proposal", status="success", message="ARCHIVO_LEIDO: NONE", payload={"target_files": target_files})
+            return AICommandResponse(intent="copilot_proposal", status="success", message="El archivo fue leído correctamente pero no se detectaron cambios necesarios bajo el criterio de mínima intervención.", payload={"target_files": target_files})
             
         validation = safety_policy.validate_proposal({
             "files": [op.path for op in operations],
@@ -246,7 +251,8 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
             highest_risk = f"ALTO: {compatibility_warning}. {highest_risk}"
 
         # 7. ORCHESTRATE MISSION PHASES
-        mission_plan = mission_orchestrator.plan_mission(msg, intent="copilot_proposal")
+        source = context.get("source", "text") if context else "text"
+        mission_plan = mission_orchestrator.plan_mission(msg, intent="copilot_proposal", source=source)
         orch_report = mission_orchestrator.format_orchestration_report()
 
         # 8. FORMAT FINAL MESSAGE

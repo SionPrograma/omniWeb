@@ -77,6 +77,9 @@ class SystemMemory:
     def get_working(self) -> Dict[str, Any]:
         return self.data.get("working", {})
 
+    def get_project(self) -> Dict[str, Any]:
+        return self.data.get("project", {})
+
     def get_working_context(self) -> str:
         w = self.data.get("working", {})
         ctx = "CONTEXTO_OPERATIVO_RECIENTE:\n"

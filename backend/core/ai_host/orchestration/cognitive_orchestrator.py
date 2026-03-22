@@ -105,8 +105,8 @@ class CognitiveOrchestrator:
 
         # 5. Cognitive Unification: Weave context + state + mode into the response
         is_technical = (
-            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write"] or 
-            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM"] or
+            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write", "system_memory_report"] or 
+            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM", "MEMORY_INTENT"] or
             understanding.get("mode") == "constrained_output"
         )
         

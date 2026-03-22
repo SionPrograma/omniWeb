@@ -22,13 +22,14 @@ class IntentEngine:
         interpretation = human_interpreter.interpret(msg)
         
         # 2. BUILD SEMANTIC CONTEXT (Enhanced with interpretation)
-        ctx = await semantic_context_builder.build(msg, session_id)
+        refined_msg = interpretation.get("refined_text", msg)
+        ctx = await semantic_context_builder.build(refined_msg, session_id)
         ctx.interpretation = interpretation # Attach interpretation to context
         
         # 3. DETECT CORE INTENT GROUP & SPECIFIC INTENT
         from ..routing.intent_classifier import intent_classifier
-        specific_intent = intent_classifier.classify(msg)
-        detected_group = self._detect_semantic_group(msg, ctx)
+        specific_intent = intent_classifier.classify(refined_msg)
+        detected_group = self._detect_semantic_group(refined_msg, ctx)
         
         # Mapping specific intents back to groups if needed
         if specific_intent == "healing":
@@ -39,6 +40,8 @@ class IntentEngine:
             detected_group = "SYSTEM_AUDIT_INTENT"
         elif specific_intent == "copilot_proposal":
             detected_group = "COPILOT_PROPOSAL_INTENT"
+        elif specific_intent in ["memory_continuity", "memory_project"]:
+            detected_group = "MEMORY_INTENT"
 
         # 3. RECONSTRUCT INCOMPLETE PROMPTS (Context-Awareness)
         if detected_group == "FOLLOW_UP_INTENT" and ctx.active_mission:
@@ -97,7 +100,11 @@ class IntentEngine:
         if words <= 4 and group not in ["ANALYSIS_INTENT"]:
             return "direct_response"
             
-        # 3. ELSE -> reflective_analysis
+        # 3. IF memory intent -> direct_response (regardless of length)
+        if group == "MEMORY_INTENT":
+             return "direct_response"
+            
+        # 4. ELSE -> reflective_analysis
         return "reflective_analysis"
 
 intent_engine = IntentEngine()

@@ -40,8 +40,12 @@ class BrainRouter:
         msg = message.lower().strip()
         session_id = str(context.get("user_id", "default_user")) if context else "default_user"
         lang = session_state.get_language(session_id)
+        source = context.get("source", "text") if context else "text"
         
         # 0. NORMALIZE & SEMANTIC UNDERSTANDING
+        # Voice-specific cleanup
+        if source == "voice":
+             msg = re.sub(r"^(escuchame|omni|che omni|por favor|podrias)\s+", "", msg)
         msg_clean = self._normalize_request(msg)
         
         if not understanding:
@@ -83,7 +87,7 @@ class BrainRouter:
                  else:
                      chat_proc = self.command_router.registry.get_processor("chat")
                      if chat_proc:
-                         res = await chat_proc.process(msg_clean, context=context)
+                         res = await chat_proc.process(msg_clean, context={**(context or {}), "source": source})
                      else:
                          res = self._generate_natural_fallback(lang)
             elif mode == "reflective" or mode == "reflective_analysis":
