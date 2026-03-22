@@ -105,11 +105,16 @@ class CognitiveOrchestrator:
 
         # 5. Cognitive Unification: Weave context + state + mode into the response
         is_technical = (
-            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write", "system_memory_report"] or 
-            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM", "MEMORY_INTENT"] or
-            understanding.get("mode") == "constrained_output"
+            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write", "system_memory_report", "operational_diagnostic"] or 
+            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM", "MEMORY_INTENT", "OPERATIONAL_DIAGNOSTIC"] or
+            understanding.get("mode") in ["constrained_output", "operational_diagnostic"]
         )
         
+        # 5.5 Natural Chat Bypass (Phase 11: Conversational Balance)
+        if understanding.get("mode") == "natural_chat" and not is_technical:
+            # Bypass heavy cognitive layers for pure human conversation
+            return brain_response
+
         if is_technical:
             # HARD LOCK: No unification, but handle filtering for SOLO requests
             if understanding.get("mode") == "constrained_output":

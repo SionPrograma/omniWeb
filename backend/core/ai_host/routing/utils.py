@@ -1,57 +1,42 @@
 import re
+from typing import Optional
 from .patterns import INTENT_PATTERNS
 
 def extract_chip_target(msg: str) -> str:
     """
-    Robustly extracts a chip target from a natural language command.
-    Removes prefixes, verbs, and common connector words.
+    Isolates the main chip/entity name from a technical query.
     """
-    if not msg:
-        return ""
-
-    # 1. Basic normalization
+    if not msg: return ""
     clean = msg.lower().strip()
     
-    # Remove leading/trailing punctuation and common filler
-    clean = re.sub(r'^[¡¿!?,. ]+', '', clean)
-    clean = re.sub(r'[!?,. ]+$', '', clean)
-    
-    # 2. Strip Creator Prefixes
-    prefixes = ["omni", "system", "host", "ia", "ai", "creator"]
-    for p in prefixes:
-        # Match as word to avoid partial matches
-        pattern = rf'^{p}\b[,. ]*'
-        clean = re.sub(pattern, '', clean).strip()
-
-    # 3. Multi-word Phrases (Priority: Longest first)
-    # Combine patterns from open_chip and inspect_chip
-    core_noise = INTENT_PATTERNS["open_chip"] + INTENT_PATTERNS["inspect_chip"]
-    noise_phrases = sorted(core_noise, key=len, reverse=True)
-    
-    # Add articles and connectors
-    noise_phrases += [
-        "el chip", "la chip", "un chip", "the chip", "my chip",
-        "por favor", "please", "dame", "ver el", "el ", "la ", "the "
+    # 1. Removal of technical filler/predicates
+    noise_predicates = [
+        "no se ve", "no responde", "falla", "anda mal", "anda raro",
+        "no se ve bien", "no está viendo", "no se esta viendo",
+        "no carga", "error en", "problema en", "bug en", "se rompió"
     ]
-    
-    for phrase in noise_phrases:
-        clean = clean.replace(phrase, " ")
+    for p in noise_predicates:
+        clean = clean.replace(p, " ")
 
-    # 4. Single-word Verbs and Noise
-    noise_words = [
-        "abre", "abrí", "open", "launch", "ejecutar", "lanzar", "chip",
-        "inspecciona", "inspeccioná", "inspeccionar", "auditá", "audita", "auditar",
-        "ver", "acceder", "start", "run", "inicia", "iniciá", "mostrá", "mostrar", "lista",
-        "el", "la", "los", "las", "the", "a", "an", "de", "con", "en", "qué", "que"
-    ]
+    # 2. Extract specific chip names if preceded by "chip"
+    chip_match = re.search(r"chip\s+([a-z0-9_-]+)", clean)
+    if chip_match:
+        return chip_match.group(1).strip()
+        
+    # 3. Fallback: use basic isolation logic
+    noise_words = ["el", "la", "un", "una", "de", "del", "en", "mapa", "botón", "interfaz"]
+    words = [w for w in clean.split() if w not in noise_words and len(w) > 2]
     
-    # Split into words and filter
-    words = clean.split()
-    filtered_words = [w for w in words if w not in noise_words]
-    
-    final_target = " ".join(filtered_words).strip()
-    
-    return final_target
+    return words[0] if words else "sistema"
+
+def extract_component_from_target(msg: str) -> Optional[str]:
+    """Extracts a subcomponent like 'mapa', 'botón', 'listado' if mentioned."""
+    low = msg.lower()
+    if "mapa" in low: return "mapa"
+    if "botón" in low or "boton" in low: return "botón"
+    if "lista" in low: return "listado"
+    if "selector" in low: return "selector"
+    return None
 
 def _strip_host_prefixes(msg: str) -> str:
     """Helper to remove Omni/System/Host prefixes."""

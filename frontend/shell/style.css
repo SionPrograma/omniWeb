@@ -232,6 +232,11 @@ button:active {
     user-select: text;
     -webkit-user-select: text;
     cursor: text;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .message {
@@ -247,6 +252,8 @@ button:active {
     font-size: 0.95rem;
     line-height: 1.5;
     backdrop-filter: blur(10px);
+    width: fit-content;
+    max-width: 100%;
 }
 
 .message.user .msg-bubble {
@@ -272,7 +279,7 @@ button:active {
 .msg-actions.top {
     position: relative;
     margin-top: 8px;
-    margin-bottom: -12px;
+    margin-bottom: 4px;
     z-index: 5;
     padding-left: 14px;
     opacity: 0.2;
@@ -750,7 +757,7 @@ button:active {
 
     .chat-interaction-area {
         max-width: 100%;
-        padding: 0.5rem;
+        padding: 0.75rem 0.5rem 180px;
     }
 
     .input-bar {
@@ -775,8 +782,8 @@ button:active {
 
     /* Message Actions Mobile Fix (Omni Ghost Pill) */
     .msg-actions.top {
-        margin-top: -2px;
-        margin-bottom: -6px;
+        margin-top: 0px;
+        margin-bottom: 4px;
         opacity: 0.7 !important;
         padding: 2px 10px;
         background: rgba(255, 255, 255, 0.04);

@@ -180,7 +180,7 @@ class CommandRouter:
                 
                 # 1. SEMANTIC INTENT UNDERSTANDING
                 from ..intent_understanding.intent_engine import intent_engine
-                session_id = str(context.get("user_id", "default_user"))
+                session_id = str(context.get("user_id", "default_user")) if context else "default_user"
                 understanding = await intent_engine.understand(msg_clean, session_id)
                 
                 intent = understanding["specific_intent"]
@@ -220,7 +220,7 @@ class CommandRouter:
                 builder_intents = ["approve_roadmap", "start_execution"]
                 proposal_intents = ["copilot_proposal"]
                 
-                priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents
+                priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents + ["operational_failure_report"]
                 
                 if intent in priority_intents and intent in self.intents and intent not in brain_intents:
                     logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")

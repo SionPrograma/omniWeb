@@ -363,7 +363,7 @@ body.workspace-active #shell-container {
     margin: 12px 0;
     font-family: 'Inter', monospace;
     font-size: 0.72rem;
-    overflow: hidden;
+    overflow: auto;
     line-height: 1.5;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }

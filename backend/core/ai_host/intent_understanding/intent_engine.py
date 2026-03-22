@@ -36,10 +36,13 @@ class IntentEngine:
             detected_group = "REMEDIATION_INTENT"
         elif specific_intent in ["creator_analysis", "creator_plan"]:
             detected_group = "ANALYSIS_INTENT" if specific_intent == "creator_analysis" else "BUILD_INTENT"
-        elif specific_intent == "system_audit":
+        elif specific_intent == "system_audit" and detected_group != "OPERATIONAL_DIAGNOSTIC":
+            # Only use system_audit group if we didn't already detect a concrete operational failure
             detected_group = "SYSTEM_AUDIT_INTENT"
         elif specific_intent == "copilot_proposal":
             detected_group = "COPILOT_PROPOSAL_INTENT"
+        elif detected_group == "OPERATIONAL_DIAGNOSTIC":
+            specific_intent = "operational_failure_report"
         elif specific_intent in ["memory_continuity", "memory_project"]:
             detected_group = "MEMORY_INTENT"
 
@@ -75,33 +78,44 @@ class IntentEngine:
              # If it's short and we have a previous intent, it's likely a follow-up
              return "FOLLOW_UP_INTENT"
              
-        return "CONVERSATIONAL_INTENT"
+        # Default now fallback to NATURAL_CHAT for better balance
+        return "NATURAL_CHAT"
 
     def _decide_mode(self, group: str, msg: str, ctx: SemanticContext) -> str:
         """Translates semantic groups into Omni's execution modes."""
         words = len(msg.split())
         msg_lower = msg.lower()
         
-        # 0. DETECT CONSTRAINED OUTPUT SIGNAL (SOLO, ONLY, FORMATO, EXACTO)
-        # These override default length-based modes for disciplined output.
+        # 1. PRIORITY MODE: Operational Diagnostic (Must take precedence over format signals)
+        if group == "OPERATIONAL_DIAGNOSTIC":
+            return "operational_diagnostic"
+
+        # 2. DETECT CONSTRAINED OUTPUT SIGNAL (SOLO, ONLY, FORMATO, EXACTO)
         constrained_signals = [
             r"\bsolo\b", r"\bonly\b", r"\bformato\b", r"\bexacto\b", r"\bexacta\b", 
-            r"\bdecime\b", r"\brespond\b", r"archivo_leido", r"primera_linea", 
+            r"archivo_leido", r"primera_linea", 
             r"microfix_propuesto", r"impacto_relacionado"
         ]
         if any(re.search(s, msg_lower) for s in constrained_signals):
             return "constrained_output"
         
-        # 1. IF input is command -> action_execution
+        # 3. IF input is command -> action_execution
         if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "SYSTEM_AUDIT_INTENT"]:
             return "action_execution"
             
-        # 2. IF input is simple -> direct_response  
+        # 4. IF input is clearly conversational -> natural_chat
+        if group == "NATURAL_CHAT":
+            return "natural_chat"
+
+        # 3. IF input is simple -> direct_response  
         if words <= 4 and group not in ["ANALYSIS_INTENT"]:
             return "direct_response"
             
-        # 3. IF memory intent -> direct_response (regardless of length)
+        # 3. IF memory intent -> direct_response (unless conversational)
         if group == "MEMORY_INTENT":
+             conv_keywords = ["che", "andabamos", "andábamos", "haciendo", "que tal", "qué tal", "omni", "andabas", "hicimos"]
+             if any(k in msg_lower for k in conv_keywords):
+                 return "natural_chat"
              return "direct_response"
             
         # 4. ELSE -> reflective_analysis

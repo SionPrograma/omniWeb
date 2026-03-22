@@ -1,120 +1,98 @@
-from typing import Dict, Any, Optional
 import logging
 import random
-from .base import CommandProcessor, AICommandResponse
+import re
+from typing import Dict, Any, Optional, List
+from backend.core.ai_host.processors.base import CommandProcessor, AICommandResponse
+from backend.core.ai_host.orchestration.executive_synthesis import executive_synthesis
 
 logger = logging.getLogger(__name__)
 
 class GeneralChatProcessor(CommandProcessor):
     """
-    Handles general conversation and provides a more 'human-like' fallback 
-    than just saving to the Idea Cloud.
+    Handles unstructured conversation, greetings, status checks, 
+    and general knowledge queries using memory-augmented synthesis.
     """
-
+    
     CONTINUITY_KEYWORDS = [
-        "estábamos haciendo", "estabamos haciendo", "qué hicimos", "que hicimos", 
-        "andábamos", "andabamos", "what were we doing", "what did we do",
-        "roadmap", "bloque", "memoria de sistema", "continuidad",
-        "qué estábamos haciendo", "que estabamos haciendo", "en qué andábamos", "en que andabamos",
-        "últimos cambios", "qué bloque", "qué veníamos haciendo", "que veniamos haciendo",
-        "how is the project", "estado del proyecto", "qué sigue", "what's next",
-        "scope", "fixes", "cuál era el", "ya están", "cerrados", "terminado",
+        "haciendo", "que estábamos", "qué estábamos", "qué estabamos", "que estabamos",
+        "andábamos", "andabamos", "qué veníamos", "que veniamos", "continuidad",
+        "qué hicimos", "que hicimos", "recién", "lo último", "lo ultimo", "hicimos recién",
+        "en qué estábamos", "en que estabamos"
+    ]
+    
+    MEMORY_QUERY_KEYWORDS = [
+        "vigente", "archivo", "módulo", "modulo", "bloque", "roadmap", "plan",
+        "pendientes", "pendiente", "diferido", "pospuesto", "sensible", "riesgo",
         "closed", "already", "bugs", "done", "módulo", "modulo", "archivo", 
         "hicimos", "andábamos", "andabamos", "comprometido", "reabrir", "pertenece"
     ]
-    GREETINGS = ["hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", "buenos días"]
+    GREETINGS = ["hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", "buenos días", "todo bien", "todo ok", "buenas"]
     WHO_ARE_YOU = ["quien eres", "quién eres", "who are you", "que eres", "qué eres", "what are you", "tu nombre", "your name"]
-    HOW_ARE_YOU = ["como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", "cómo vas"]
+    HOW_ARE_YOU = ["como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", "cómo vas", "todo bien", "qué pasa", "que pasa"]
     ACKNOWLEDGMENTS = ["perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", "bien", "claro", "awesome", "great", "thanks", "got it", "understood"]
 
     async def can_handle(self, command: str) -> bool:
-        cmd = command.lower().strip()
-        words = cmd.split()
-        
-        # Detect language change triggers
-        if any(k in cmd for k in ["responde en", "habla en", "idioma", "language", "speak in", "respond in"]):
-            return True
-        
-        # Whole word matching for greetings, identity, or acknowledgments
-        all_keywords = self.GREETINGS + self.WHO_ARE_YOU + self.HOW_ARE_YOU + self.ACKNOWLEDGMENTS + self.CONTINUITY_KEYWORDS
-        if any(w in words for w in all_keywords):
-            return True
-            
-        # Also check for exact multi-word matches (like "who are you")
-        if any(phrase in cmd for phrase in self.WHO_ARE_YOU + self.HOW_ARE_YOU + self.CONTINUITY_KEYWORDS if " " in phrase):
-            return True
+        """Always returns True as a universal fallback, but logic determines specificity."""
+        return True
 
-        # Extremely short messages (1 word) that aren't obviously commands
-        if len(words) == 1 and cmd not in ["diagnostic", "diagnóstico", "log", "audit", "memory", "memoria"]:
-            return True
-        return False
-
-    async def process(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        cmd = msg.lower().strip()
-        from ..sessions import session_state
-        session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+    async def process(self, command: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        """Processes the command using semantic memory and executive synthesis."""
+        msg = command.lower().strip()
+        cmd = msg # Alias for shorter ref
+        words = msg.split()
+        lang = "es" # Default
         
-        # Detect language change
-        if any(k in cmd for k in ["responde en", "habla en", "idioma", "language", "speak in", "respond in"]):
-            session_state.set_language(session_id, cmd)
-        
-        lang = session_state.get_language(session_id)
-        words = cmd.split()
+        # 0. Context extraction
+        if context:
+            lang = context.get("language", "es")
 
-        # 0. Memory Continuity (Composition & Executive Reasoning)
-        if any(kw in cmd for kw in self.CONTINUITY_KEYWORDS):
-             from ..memory.system_memory import system_memory
-             from ..orchestration.executive_synthesis import executive_synthesis
+        # 1. Memory Continuity & Project Scope (Primary Balance)
+        # If the user asks what we were doing or details about the work
+        if any(kw in cmd for kw in self.CONTINUITY_KEYWORDS) or \
+           any(kw in cmd for kw in self.MEMORY_QUERY_KEYWORDS):
              
+             # Use the global AI Host memory via the synthesis engine
+             # Note: orchestration usually passes system_memory but if not, use default
+             from backend.core.ai_host.memory.system_memory import system_memory
              w = system_memory.get_working()
              p = system_memory.get_project()
              
              # Centralized synthesize call (Unified across processors)
-             msg_out = executive_synthesis.synthesize(w, p, msg, lang=lang)
+             tone = context.get("tone") if context else None
+             msg_out = executive_synthesis.synthesize(w, p, msg, lang=lang, tone=tone)
              
              # Specific Intent logic for fixes list if specifically asked
              if ("fix" in cmd or "cerrado" in cmd) and len(cmd.split()) < 6:
-                  fixes = p.get("validated_fixes", [])
-                  if fixes:
-                       msg_out += "\n\n**HISTORIAL DE FIXES VALIDADOS:**\n" + ("\n".join([f"- {f}" for f in fixes]))
+                 return AICommandResponse(intent="project_status", status="success", message=msg_out)
              
              return AICommandResponse(intent="system_memory_report", status="success", message=msg_out)
 
-        # 1. Greetings
-        if any(w in words for w in self.GREETINGS):
+        # 2. Greetings & Acknowledgments
+        if any(w in words or w in cmd for w in self.GREETINGS):
             if lang == "es":
                 responses = [
-                    "¡Hola! Soy Omni, tu asistente de creación. ¿En qué puedo ayudarte hoy?",
-                    "Hola. El sistema está listo para tus comandos. ¿Qué tienes en mente?",
-                    "¡Hola! Estoy monitoreando tus chips y memoria. ¿Quieres empezar algo nuevo?"
+                    "¡Hola! ¿Todo bien por ahí? Decime en qué puedo ayudarte hoy.",
+                    "¡Buenas! Acá reportándome. ¿Qué tenemos para hoy?",
+                    "¡Hola! Listos para seguir. Vos dirás qué paso damos.",
+                    "¡Buenas! ¿En qué andamos?"
                 ]
             else:
                 responses = [
-                    "Hello! I am Omni, your creation assistant. How can I help you today?",
-                    "Hi there. The system is ready for your commands. What's on your mind?",
-                    "Hello! I'm monitoring your chips and memory. Want to start something new?"
+                    "Hello! Everything okay there? Let me know how I can help today.",
+                    "Hey! Reporting in. What's on the agenda?",
+                    "Hi! Ready to go. You tell me what step we take.",
+                    "Hello! What are we working on?"
                 ]
             return AICommandResponse(intent="greeting", status="success", message=random.choice(responses))
 
-        # 2. Acknowledgments
-        if any(w in words for w in self.ACKNOWLEDGMENTS):
-            if lang == "es":
-                responses = [
-                    "¡Excelente! Seguimos adelante.",
-                    "Entendido. Estoy a la espera de tu próxima instrucción.",
-                    "Genial, cuéntame más o dime qué chip quieres abrir ahora.",
-                    "Perfecto. El sistema se mantiene estable."
-                ]
-            else:
-                responses = [
-                    "Excellent! Let's keep going.",
-                    "Understood. Awaiting your next instruction.",
-                    "Great, tell me more or let me know which chip you'd like to open next.",
-                    "Perfect. System remains stable."
-                ]
-            return AICommandResponse(intent="acknowledgment", status="success", message=random.choice(responses))
+        if any(w == words[0] if words else False for w in self.ACKNOWLEDGMENTS):
+             if lang == "es":
+                  msg_out = "¡Excelente! Seguimos entonces."
+             else:
+                  msg_out = "Excellent! Let's keep going then."
+             return AICommandResponse(intent="acknowledgment", status="success", message=msg_out)
 
-        # 3. Identity
+        # 3. Identity (Who am I?)
         if any(w in words or w in cmd for w in self.WHO_ARE_YOU):
             if lang == "es":
                 msg_out = "Soy Omni, el núcleo de inteligencia de OmniWeb. Estoy aquí para ayudarte a construir, auditar y expandir tu ecosistema digital."
@@ -125,22 +103,29 @@ class GeneralChatProcessor(CommandProcessor):
         # 4. Status/How are you
         if any(w in words or w in cmd for w in self.HOW_ARE_YOU):
             if lang == "es":
-                msg_out = "Sistema operando al 100%. Todos los procesos están estables y los chips sincronizados. ¿En qué trabajamos hoy?"
+                responses = [
+                    "¡Todo impecable! Los procesos están estables y el cerebro funcionando a pleno. ¿Y vos?",
+                    "Por ahora todo en orden por acá. Me siento listo para cualquier reto técnico hoy.",
+                    "Sistema al 100%. ¿Cómo va tu día? ¿En qué nos enfocamos ahora?"
+                ]
             else:
-                msg_out = "System operating at 100%. All processes are stable and chips are synchronized. What are we working on today?"
-            return AICommandResponse(intent="status_check", status="success", message=msg_out)
+                responses = [
+                    "Everything is great! Processes are stable and the brain is running at full capacity. And you?",
+                    "All good over here for now. Feeling ready for any technical challenge today.",
+                    "System at 100%. How's your day going? What are we focusing on now?"
+                ]
+            return AICommandResponse(intent="status_check", status="success", message=random.choice(responses))
 
         # 5. Fallback conversational reply
-        if lang == "es":
-            msg_out = f"No detecté un comando operativo específico para '{msg[:40]}...'. Si quieres guardar una idea, prueba con 'guarda esta idea:'. De lo contrario, ¿qué chip te gustaría inspeccionar?"
-        else:
-            msg_out = f"I didn't detect a specific operational command for '{msg[:40]}...'. If you want to save an idea, try 'save this idea:'. Otherwise, which chip would you like to inspect?"
-            
-        # Voice-Aware Polish (Block 8)
-        if context and context.get("source") == "voice":
+        tone = context.get("tone") if context else None
+        if tone == "natural_chatbot" or any(w in cmd for w in ["raro", "entiendes", "pasa", "confuso", "weird", "wrong"]):
              if lang == "es":
-                 msg_out = f"🎙️ [VOZ_NATURAL] {msg_out}\n\n*Estoy escuchando...*"
+                  msg_out = "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?"
              else:
-                 msg_out = f"🎙️ [NATURAL_VOICE] {msg_out}\n\n*I'm listening...*"
-
+                  msg_out = "I'm here, maybe I got a bit too rigid reviewing the modules. Everything okay? What's on your mind?"
+        elif lang == "es":
+            msg_out = f"No detecté un comando operativo específico, pero acá estoy. Si querés que analice algo técnico, decime el chip o el problema. Si no, ¡podemos seguir charlando!"
+        else:
+            msg_out = f"I didn't detect an operational command, but I'm here. Let me know if you want a technical audit or just want to chat."
+            
         return AICommandResponse(intent="general_chat", status="success", message=msg_out)

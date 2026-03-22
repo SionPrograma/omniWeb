@@ -322,10 +322,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const isNearBottom = (aiHostView.scrollHeight - aiHostView.scrollTop - aiHostView.clientHeight) < threshold;
 
         if (force || isNearBottom) {
-            aiHostView.scrollTo({
-                top: aiHostView.scrollHeight,
-                behavior: 'smooth'
-            });
+            setTimeout(() => {
+                aiHostView.scrollTo({
+                    top: aiHostView.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
         }
     }
 

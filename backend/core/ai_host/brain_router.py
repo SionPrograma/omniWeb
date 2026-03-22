@@ -66,9 +66,11 @@ class BrainRouter:
                 return await chat_proc.process(msg_clean, context=context)
             return self._generate_natural_fallback(lang)
             
-        # Apply semantic mode if deliberation doesn't override with a higher priority (remediation/limitation)
+        # Preferred Mode Logic: Specific overrides (from IntentEngine) take precedence for targeted tasks.
         mode = delib_context.reasoning_mode
-        if mode in ["conversational", "diagnostic"] and mode_override != "conversational":
+        if mode_override in ["operational_diagnostic", "natural_chat", "constrained_output", "action_execution"]:
+            mode = mode_override
+        elif mode in ["conversational", "diagnostic"] and mode_override != "conversational":
             mode = mode_override
             
         logger.info(f"[POWER_BRAIN] Mode: {mode} | Intent: {intent}")
@@ -114,6 +116,11 @@ class BrainRouter:
                          res = await chat_proc.process(msg_clean, context=context)
                      else:
                          res = self._generate_natural_fallback(lang)
+            elif mode == "natural_chat":
+                 # Focus on fluid, human conversation bypasses heavy templates
+                 res = await self._handle_natural_chat(msg_clean, delib_context, lang)
+            elif mode == "operational_diagnostic":
+                 res = await self._handle_operational_diagnostic(msg_clean, delib_context, lang)
             elif mode == "remediation":
                  res = await self._handle_remediation(msg_clean, delib_context, lang)
             elif mode == "swarm_orchestration":
@@ -186,6 +193,90 @@ class BrainRouter:
             status="success",
             message=body,
             payload={"proposal": proposal.dict()}
+        )
+
+    async def _handle_natural_chat(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
+        """Handles organic/human conversation with a lighter tone."""
+        chat_proc = self.command_router.registry.get_processor("chat")
+        if chat_proc:
+             # Natural shaping: tell the processor to be a chatbot, not an operator.
+             res = await chat_proc.process(msg, context={**(vars(ctx) if hasattr(ctx, '__dict__') else {}), "tone": "natural_chatbot"})
+             return res
+        return self._generate_natural_fallback(lang)
+
+    async def _handle_operational_diagnostic(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
+        from .routing.utils import extract_chip_target, extract_component_from_target
+        target_chip = extract_chip_target(msg)
+        component = extract_component_from_target(msg)
+        
+        # Inference logic for technical layers
+        layer = "Core System (Kernel)"
+        symptom = "Anomalía funcional"
+        
+        low_msg = msg.lower()
+        if any(w in low_msg for w in ["ve", "visual", "interfaz", "botón", "pantalla", "render", "mapa"]):
+            layer = "Frontend / UI Layer"
+            symptom = "Fallo de representación visual"
+        elif any(w in low_msg for w in ["responde", "carga", "tarda", "latencia", "api", "backend"]):
+            layer = "Backend / Módulo Bus"
+            symptom = "Fallo de respuesta o latencia"
+        elif any(w in low_msg for w in ["memoria", "recorda", "olvida", "persiste"]):
+            layer = "Memory / Persistence Layer"
+            symptom = "Fallo de persistencia de datos"
+        elif any(w in low_msg for w in ["entiende", "chat", "intención", "dijo"]):
+            layer = "Cognition / Intent Layer"
+            symptom = "Fallo de interpretación semántica"
+        
+        # Consult Reflective Deliberation for technical depth
+        analysis = await reflective_deliberation.analyze(msg)
+        
+        obs = analysis.observation
+        action = analysis.recommended_action
+        
+        if lang == "es":
+            # Simple technical translation/cleanup
+            obs = obs.replace("Metrics are nominal, but the user reports a localized operational anomaly", "Las métricas parecen nominales, pero se reconoce la anomalía reportada localmente")
+            obs = obs.replace("The system is currently in", "El sistema se encuentra en estado")
+            obs = obs.replace("state with", "con")
+            obs = obs.replace("active chips", "chips activos")
+            obs = obs.replace("Primary anomaly detected", "Anomalía primaria detectada")
+            
+            action = action.replace("Initiate Creator Plan for targeted repair of the identified layer", "Iniciar Plan del Creador para reparar la capa identificada")
+            action = action.replace("Collect more specific evidence from the affected layer before proceeding with a patch", "Colectar más evidencia de la capa afectada antes de proceder con el fix")
+
+            body = (
+                f"**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n"
+                f"- **PROBLEMA**: {symptom}.\n"
+                f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
+                f"- **CAPA PROBABLE**: {layer}\n"
+                f"- **CONFIANZA**: {analysis.confidence_level}\n\n"
+                f"**OBSERVACIÓN**\n"
+                f"{obs}\n\n"
+                f"**SIGUIENTE PASO**\n"
+                f"{action}\n\n"
+                f"---\n"
+                f"¿Deseas iniciar una auditoría profunda sobre esta capa?"
+            )
+        else:
+            body = (
+                f"**TECHNICAL DIAGNOSTIC**\n"
+                f"- **PROBLEM**: {symptom}.\n"
+                f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
+                f"- **LIKELY LAYER**: {layer}\n"
+                f"- **CONFIDENCE**: {analysis.confidence_level}\n\n"
+                f"**OBSERVATION**\n"
+                f"{obs}\n\n"
+                f"**NEXT STEP**\n"
+                f"{action}\n\n"
+                f"---\n"
+                f"Shall I initiate a deep audit on this layer?"
+            )
+            
+        return AICommandResponse(
+            intent="operational_diagnostic",
+            status="success",
+            message=body,
+            payload={"chip": target_chip, "layer": layer, "analysis": analysis.__dict__}
         )
 
     async def _handle_swarm_orchestration(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:

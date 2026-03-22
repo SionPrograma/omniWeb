@@ -4,6 +4,14 @@ from typing import Dict, List
 # Groups linguistic triggers into major mission-scale categories
 
 INTENT_GROUPS: Dict[str, List[str]] = {
+    "OPERATIONAL_DIAGNOSTIC": [
+        "no se ve", "no responde", "no carga", "falla", "anda mal", "revisá por qué", 
+        "revisa por qué", "qué capa falla", "qué modulo falla", "qué chip falla",
+        "error en el chip", "problema en el chip", "no está funcionando", "no funciona",
+        "se rompió", "se rompio", "bug en", "falla visual", "falla funcional",
+        "no se está viendo", "no se esta viendo", "no se ve bien", "anda raro", "está roto", "esta roto",
+        "no carga bien", "no aparece", "falla el", "no sale", "se ve mal", "decime qué chip", "qué chip está", "qué parte falla"
+    ],
     "COGNITIVE_COMMITMENT": [
         "solo puedes arreglar uno", "elige uno", "decidí", "toma una decisión", 
         "qué cambiarías primero", "qué priorizarías", "qué ignorarías", 
@@ -81,6 +89,11 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "propuesta de fix", "fix mínimo", "detecta el problema",
         "analizá el archivo abierto", "analiza el archivo abierto", "open file", "archivo en el editor"
     ],
+    "NATURAL_CHAT": [
+        "hola", "buen día", "todo bien", "qué tal", "cómo va", "cómo estás", 
+        "quién sos", "qué haces", "che", "háblame", "charlemos", "contame",
+        "hello", "hi", "how are you", "what's up", "everything ok", "tell me"
+    ]
 }
 
 # Mapping of legacy intents to these new semantic groups if needed

@@ -17,11 +17,18 @@ class RuntimeTruthEvaluator:
     Evaluates evidence sufficiency and builds grounded technical claims.
     Prevents the AI from hallucinating technical causes without data.
     """
-    def evaluate(self, bundle: EvidenceBundle, request_type: str = "technical") -> TechnicalClaim:
+    def evaluate(self, bundle: EvidenceBundle, request_msg: Optional[str] = None) -> TechnicalClaim:
+        # Detect if user is reporting a concrete symptom even if metrics are silent
+        user_symptom = None
+        if request_msg:
+            low_msg = request_msg.lower()
+            if any(w in low_msg for w in ["falla", "no carga", "no se ve", "problema", "bug", "roto", "anda mal"]):
+                user_symptom = "reported_symptom"
+
         if not bundle.has_sufficient_evidence:
             return TechnicalClaim(
-                claim="Insufficient runtime data to support a concrete claim.",
-                confidence=0.1,
+                claim="Awaiting deeper metrics to confirm reported symptom." if user_symptom else "Insufficient runtime data to support a concrete claim.",
+                confidence=0.2 if user_symptom else 0.1,
                 limitations=[bundle.uncertainty_reason or "No supporting metrics found."],
                 is_insufficient=True
             )
@@ -49,6 +56,9 @@ class RuntimeTruthEvaluator:
             if has_overall_warning:
                 claim = "The system reports a non-nominal state, but specific metrics do not yet isolate the root cause."
                 confidence = 0.3
+            elif user_symptom:
+                claim = "Metrics are nominal, but the user reports a localized operational anomaly."
+                confidence = 0.4
             else:
                 claim = "The system appears to be operating within normal technical parameters."
                 confidence = 0.9

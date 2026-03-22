@@ -27,8 +27,10 @@ class ExecutiveSynthesis:
                    working: Dict[str, Any], 
                    project: Dict[str, Any], 
                    query: str, 
-                   lang: str = "es") -> str:
+                   lang: str = "es",
+                   tone: Optional[str] = None) -> str:
         
+        is_natural = tone == "natural_chatbot"
         # 1. Null-handling & Defaults (OS-like resilience)
         last_op = working.get("last_operation_summary")
         last_file = working.get("last_important_file")
@@ -49,11 +51,11 @@ class ExecutiveSynthesis:
         is_forbidden_gen = any(k in low_query for k in ["frase genérica", "frases genéricas", "no reemplaces", "sin rellenar"])
         
         # Positive specific requests (Whitelist for Minimal Mode)
-        positive_discovery = any(k in low_query for k in ["qué estábamos haciendo", "qué hicimos", "en qué andábamos", "qué veníamos haciendo", "que estabamos haciendo"])
+        positive_discovery = any(k in low_query for k in ["qué estábamos haciendo", "qué hicimos", "en qué andábamos", "qué veníamos haciendo", "que estabamos haciendo", "qué estamos cerrando", "qué queda por cerrar", "qué veníamos cerrando", "recordame qué", "recordame que", "antes de seguir"])
         positive_roadmap = any(k in low_query for k in ["qué bloque", "en qué bloque", "dime el bloque", "decime el bloque", "cuál bloque", "roadmap", "plan"])
         
         # Determine if we should treat this as discovery/roadmap even if not specific whitelist (for normal mode)
-        is_discovery = positive_discovery or (not is_minimal and any(k in low_query for k in ["haciendo", "andábamos", "hicimos"]))
+        is_discovery = positive_discovery or (not is_minimal and any(k in low_query for k in ["haciendo", "andábamos", "hicimos", "cerrando", "terminando"]))
         is_roadmap = positive_roadmap or (not is_minimal and any(k in low_query for k in ["bloque", "roadmap", "plan"]))
 
         # 4. HARD SUPPRESSION (Decision Gate)
@@ -84,8 +86,9 @@ class ExecutiveSynthesis:
                 if not should_omit and (is_discovery or is_concrete or "vigente" in low_query or "último archivo" in low_query):
                     if lang == "es":
                         parts = []
-                        if "vigente" in low_query:
-                            parts.append("Actualmente sigue vigente el cierre y estabilización de la capa de memoria, síntesis y verbalización.")
+                        # Focus on concrete current goal if no last_op exists
+                        if is_discovery or "vigente" in low_query:
+                            parts.append("Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema.")
                         if "último archivo" in low_query and not last_file:
                             parts.append("No tengo registro del último archivo real procesado.")
                         
@@ -178,10 +181,18 @@ class ExecutiveSynthesis:
         if not msg_parts:
             if should_omit or is_minimal: return ""
             if lang == "es":
-                return "Sistema nominal. Todo coordinado dentro del Bloque actual. ¿Cómo procedemos?"
+                return "Acá estoy, monitoreando el flujo. Todo coordinado dentro del bloque actual." if is_natural else "Sistema nominal. Todo coordinado dentro del Bloque actual. ¿Cómo procedemos?"
             else:
-                return "System nominal. Everything coordinated within the current Block. How shall we proceed?"
+                return "I'm here, monitoring the flow. Everything is coordinated within the current block." if is_natural else "System nominal. Everything coordinated within the current Block. How shall we proceed?"
 
-        return " ".join(msg_parts)
+        final_msg = " ".join(msg_parts)
+        if is_natural:
+            final_msg = final_msg.replace("**", "").replace("`", "")
+            if lang == "es":
+                final_msg = final_msg.replace("Sigue vigente la ", "Seguimos con la ").replace("Esta labor pertenece al ", "Estamos en el ")
+            else:
+                final_msg = final_msg.replace("The ", "").replace(" is still current", " is what we're on")
+        
+        return final_msg
 
 executive_synthesis = ExecutiveSynthesis()

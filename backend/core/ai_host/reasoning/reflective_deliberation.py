@@ -38,7 +38,7 @@ class ReflectiveDeliberation:
             bundle = await evidence_engine.collect_evidence()
             
         # 2. Base Claim from Runtime Truth
-        claim = runtime_truth.evaluate(bundle)
+        claim = runtime_truth.evaluate(bundle, request_msg=message)
         
         # 3. Pull context from Learning & History
         reliability_report = adaptive_learning.get_reliability_report()
@@ -49,6 +49,10 @@ class ReflectiveDeliberation:
         observation = f"The system is currently in {ws.system_health} state with {len(ws.active_chips)} active chips."
         if claim.supporting_evidence:
             observation += f" Primary anomaly detected in {claim.supporting_evidence[0].key}."
+        
+        # Apply translations to observation
+        observation = observation.replace("Metrics are nominal, but the user reports a localized operational anomaly", "Las métricas parecen nominales, pero se reconoce la anomalía reportada localmente")
+        observation = observation.replace("The system is currently in", "El sistema se encuentra en estado")
         
         # 5. Primary Hypothesis
         primary = claim.claim
