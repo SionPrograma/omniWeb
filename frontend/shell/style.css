@@ -258,6 +258,66 @@ button:active {
     max-width: 85%;
 }
 
+/* Message Actions & Replay Button */
+.msg-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 4px;
+    padding-left: 8px;
+    gap: 8px;
+    opacity: 0.4;
+    transition: opacity 0.3s;
+}
+
+.msg-actions.top {
+    position: relative;
+    margin-top: 8px;
+    margin-bottom: -12px;
+    z-index: 5;
+    padding-left: 14px;
+    opacity: 0.2;
+    /* Subtler when not hovered */
+}
+
+.message:hover .msg-actions {
+    opacity: 1;
+}
+
+.msg-feedback {
+    display: flex;
+    gap: 4px;
+    border-right: 1px solid var(--glass-border);
+    padding-right: 8px;
+}
+
+.replay-btn,
+.action-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 4px;
+    transition: all 0.2s;
+    min-width: 30px !important;
+    min-height: 30px !important;
+}
+
+.replay-btn:hover,
+.action-btn:hover,
+.action-btn.active {
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.replay-btn svg,
+.action-btn svg {
+    pointer-events: none;
+}
+
 .ai-visual {
     margin: 10px 0;
 }
@@ -269,6 +329,55 @@ button:active {
     border-radius: 12px;
     backdrop-filter: blur(20px);
     box-shadow: 0 5px 15px rgba(0, 212, 255, 0.1);
+    position: relative;
+    z-index: 2;
+}
+
+/* Capability UI */
+.capability-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.capability-item .label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.capability-item .status {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.capability-item .status.pass {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+}
+
+.capability-item .status.info {
+    background: rgba(0, 212, 255, 0.1);
+    color: #00d4ff;
+}
+
+.capability-item .status.fail {
+    background: rgba(255, 80, 80, 0.1);
+    color: #ff5050;
+}
+
+.capability-item .status.warning {
+    background: rgba(255, 170, 0, 0.1);
+    color: #ffaa00;
+}
+
+.capability-item .status.neutral {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
 }
 
 .visual-card h4 {
@@ -663,6 +772,32 @@ button:active {
         height: 55px;
         font-size: 1.1rem;
     }
+
+    /* Message Actions Mobile Fix (Omni Ghost Pill) */
+    .msg-actions.top {
+        margin-top: -2px;
+        margin-bottom: -6px;
+        opacity: 0.7 !important;
+        padding: 2px 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        margin-left: 10px;
+        gap: 8px;
+        transform: scale(0.85);
+        transform-origin: left bottom;
+    }
+
+    .msg-feedback {
+        gap: 8px;
+        padding-right: 8px;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+    }
 }
 
 @media screen and (max-width: 480px) {
@@ -803,5 +938,69 @@ button {
     .ai-orb-inner,
     .ai-orb-glow {
         will-change: transform, opacity;
+    }
+}
+
+/* --- OMNI UNIFIED GHOST ACTION BAR (Final Restoration) --- */
+/* This block overrides both global mobile accessibility and Creator Mode themes */
+@media screen and (max-width: 768px) {
+
+    /* Use high-specificity body selector to win over Creator Theme */
+    body .message.ai .msg-actions.top,
+    body.creator-authenticated .message.ai .msg-actions.top {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 4px 0 4px 14px !important;
+        margin: 0 !important;
+        width: auto !important;
+        opacity: 0.8 !important;
+        box-shadow: none !important;
+    }
+
+    body .message.ai .msg-actions.top .msg-feedback,
+    body.creator-authenticated .message.ai .msg-actions.top .msg-feedback {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        padding-right: 8px !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+        margin-right: 8px !important;
+    }
+
+    /* Force circularity and small size (30px) for all context buttons */
+    body .message.ai .msg-actions.top button.action-btn,
+    body .message.ai .msg-actions.top button.replay-btn,
+    body.creator-authenticated .message.ai .msg-actions.top button.action-btn,
+    body.creator-authenticated .message.ai .msg-actions.top button.replay-btn {
+        width: 30px !important;
+        height: 30px !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
+        border-radius: 50% !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: var(--text-dim) !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        box-shadow: none !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Special active state for both modes */
+    body .message.ai .msg-actions.top button.action-btn.active,
+    body.creator-authenticated .message.ai .msg-actions.top button.action-btn.active {
+        color: var(--accent) !important;
+        background: rgba(0, 212, 255, 0.1) !important;
+        border-color: rgba(0, 212, 255, 0.3) !important;
     }
 }

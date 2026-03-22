@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
     // Rule: Eliminate all cache/SW interference to ensure single-source-of-truth.
-    const CACHE_RESET_ID = "omni_v1_stable";
+    const CACHE_RESET_ID = "omni_v2_unified";
     try {
         if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
             // Fixed by Jetski Subagent
@@ -82,11 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Onboarding Greeting ---
     async function initGreeting() {
+        const fallback = "Hola, soy Omni. ¿En qué te ayudo hoy?";
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const inviteToken = urlParams.get('invite') || urlParams.get('beta');
+            const browser_lang = navigator.language.split('-')[0] || 'es';
 
-            const browser_lang = navigator.language.split('-')[0] || 'en';
+            // Still call API to trigger system state/audit if necessary, but we override greeting text for UX consistency
             const res = await fetch('/api/v1/onboarding/greeting', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -97,26 +99,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            if (!res.ok) throw new Error("API response not ok");
-
-            const data = await res.json();
-            if (data.payload?.message) {
-                if (data.payload.title) {
-                    const greetingEl = document.getElementById('greeting');
-                    if (greetingEl) greetingEl.innerText = data.payload.title;
-                }
-                addMessage(data.payload.message, 'ai');
+            if (res.ok) {
+                const data = await res.json();
                 if (window.creatorEnv && data.audit) {
                     window.creatorEnv.updateAuditResult(data.audit);
                 }
-            } else {
-                // Local fallback if message is empty
-                addMessage("Sistema Omni inicializado. Listo para recibir instrucciones.", 'ai');
             }
         } catch (err) {
-            console.error("Greeting failed:", err);
-            // Local fallback on error
-            addMessage("Enlace Omni Establecido. ¿Cómo puedo ayudarte hoy?", 'ai');
+            console.warn("Greeting API background error:", err);
+        } finally {
+            // UNIFIED: One message, one language (ES), one source for text+voice
+            addMessage(fallback, 'ai');
+
+            // --- ADVANCED GREETING UNLOCK (Best effort + Deferred) ---
+            let greetingPlayed = false;
+            const playGreeting = (event) => {
+                if (greetingPlayed || !window.voice) return;
+                window.voice.speak(fallback);
+                greetingPlayed = true;
+
+                // Cleanup listeners. Use verbose removal for maximum mobile compatibility
+                ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
+                    document.removeEventListener(evt, playGreeting)
+                );
+            };
+
+            // 1. Initial attempt (Best effort autoplay after delay)
+            setTimeout(() => {
+                if (!greetingPlayed) playGreeting();
+            }, 800);
+
+            // 2. Fallback: Unlock on first user interaction if blocked
+            ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
+                document.addEventListener(evt, playGreeting, { once: true, passive: true })
+            );
+
+            // Refresh Capabilities after initial setup
+            if (window.updateCapabilities) window.updateCapabilities();
         }
     }
     initGreeting();
@@ -314,9 +333,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
 
-        // --- VISUAL DIFF ENHANCEMENT ---
+        // --- ADVANCED ACTION BAR & BUBBLE ---
         const content = renderDiff(text);
-        msgDiv.innerHTML = `<div class="msg-bubble">${content}</div>`;
+        let innerHTML = "";
+
+        if (sender === 'ai') {
+            const speechText = text.replace(/[*#`]/g, '').trim();
+            const shareText = speechText.length > 100 ? speechText.substring(0, 100) + '...' : speechText;
+
+            innerHTML += `
+            <div class="msg-actions top">
+                <button class="replay-btn" title="Repetir audio" onclick="window.voice.speak(\`${speechText.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                </button>
+                <div class="msg-feedback">
+                    <button class="action-btn" title="Útil" onclick="this.classList.toggle('active')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                        </svg>
+                    </button>
+                    <button class="action-btn" title="No útil" onclick="this.classList.toggle('active')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button class="action-btn" title="Compartir" onclick="navigator.share && navigator.share({title: 'Omni Output', text: '${shareText}'})">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/>
+                    </svg>
+                </button>
+            </div>`;
+        }
+
+        innerHTML += `<div class="msg-bubble">${content}</div>`;
+        msgDiv.innerHTML = innerHTML;
 
         chatLog.appendChild(msgDiv);
         scrollToBottom(forceScroll || sender === 'user');
@@ -446,6 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (orb) orb.classList.remove('speaking');
         }
     });
+
+    window.voice = voice; // Global for replay actions
 
     if (voiceBtn) {
         voiceBtn.addEventListener('click', () => {
@@ -825,4 +881,65 @@ document.addEventListener('DOMContentLoaded', () => {
         .particle { animation-name: ${animId} !important; }
     `;
     document.head.appendChild(style);
+
+    // --- Capabilities Management (Monitoring Only, Progressive Request) ---
+    async function updateCapabilities() {
+        const caps = [
+            { id: 'cap-sound', check: () => ('speechSynthesis' in window) },
+            {
+                id: 'cap-mic', check: async () => {
+                    if (!navigator.mediaDevices) return 'no-https';
+                    try {
+                        const status = await navigator.permissions.query({ name: 'microphone' });
+                        return status.state;
+                    } catch (e) { return 'unsupported'; }
+                }
+            },
+            {
+                id: 'cap-camera', check: async () => {
+                    if (!navigator.mediaDevices) return 'no-https';
+                    try {
+                        const status = await navigator.permissions.query({ name: 'camera' });
+                        return status.state;
+                    } catch (e) { return 'unsupported'; }
+                }
+            },
+            {
+                id: 'cap-geo', check: async () => {
+                    try {
+                        const status = await navigator.permissions.query({ name: 'geolocation' });
+                        return status.state;
+                    } catch (e) { return 'unsupported'; }
+                }
+            }
+        ];
+
+        for (const cap of caps) {
+            const el = document.getElementById(cap.id);
+            if (!el) continue;
+            const statusEl = el.querySelector('.status');
+            const result = await cap.check();
+
+            if (result === true || result === 'granted') {
+                statusEl.innerText = 'Permitido';
+                statusEl.className = 'status pass';
+            } else if (result === 'prompt' || result === 'prompted') {
+                statusEl.innerText = 'Disponible';
+                statusEl.className = 'status info';
+            } else if (result === 'denied') {
+                statusEl.innerText = 'Bloqueado';
+                statusEl.className = 'status fail';
+            } else if (result === 'no-https') {
+                statusEl.innerText = 'Requiere HTTPS';
+                statusEl.className = 'status warning';
+            } else {
+                statusEl.innerText = 'Inactivo';
+                statusEl.className = 'status neutral';
+            }
+        }
+    }
+    window.updateCapabilities = updateCapabilities;
+    updateCapabilities(); // Initial check
+    setInterval(updateCapabilities, 8000); // Polling status
+
 });

@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@200;400;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/shell/style.css">
+    <link rel="stylesheet" href="/shell/style.css?v=v3_unified">
     <link rel="stylesheet" href="/shell/logbook.css">
     <link rel="stylesheet" href="/shell/creator.css">
     <link rel="stylesheet" href="/shell/cluster.css">
@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="/shell/human_dev.css">
     <link rel="stylesheet" href="/shell/ecosystem_collab.css">
     <link rel="stylesheet" href="/shell/scaling_beta.css">
-    <link rel="stylesheet" href="/shell/creator_theme.css">
+    <link rel="stylesheet" href="/shell/creator_theme.css?v=v3_unified">
     <link rel="stylesheet" href="/shell/builder.css">
     <link rel="stylesheet" href="/shell/editor.css">
     <link rel="stylesheet" href="/shell/workspace.css">
@@ -106,10 +106,6 @@
             <div class="chat-interaction-area">
                 <div class="conversation-log" id="chat-log">
                     <!-- Dynamic messages -->
-                    <div class="message ai">
-                        <div class="msg-bubble">How can I assist you today? I'm observing your active chips and
-                            long-term memory.</div>
-                    </div>
                 </div>
             </div>
         </main>
@@ -341,6 +337,25 @@
                     <div class="chip-status-list" id="chip-status-container">
                         <!-- Dynamic chip status cards -->
                         <div class="loading-indicator">Escaneando módulos de IA...</div>
+                    </div>
+                </div>
+                <div class="context-section">
+                    <h3>Capacidades del Sistema</h3>
+                    <div class="capability-item" id="cap-sound">
+                        <span class="label">Sonido</span>
+                        <span class="status info">...</span>
+                    </div>
+                    <div class="capability-item" id="cap-mic">
+                        <span class="label">Micrófono</span>
+                        <span class="status info">...</span>
+                    </div>
+                    <div class="capability-item" id="cap-camera">
+                        <span class="label">Cámara</span>
+                        <span class="status info">...</span>
+                    </div>
+                    <div class="capability-item" id="cap-geo">
+                        <span class="label">Ubicación</span>
+                        <span class="status info">...</span>
                     </div>
                 </div>
                 <div class="context-section">
