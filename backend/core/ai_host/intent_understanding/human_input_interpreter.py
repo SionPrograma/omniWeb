@@ -34,19 +34,30 @@ class HumanInputInterpreter:
         """
         msg = text.lower().strip()
         
-        # Reformulation markers (ES/EN)
+        # Case A: Explicit Reformulation (No, mejor dicho...)
+        # Combined markers for both original and new logic
         markers = [
             r"no,\s+mejor\s+dicho", r"no,\s+mejor", r"perd[óo]n,\s+", 
             r"no,\s+wait", r"no,\s+actualmente", r"actually", r"better\s+said",
             r"no,\s+olv[íi]dalo", r"no,\s+mejor\s+decime", r"pero\s+mejor",
-            r"en\s+realidad"
+            r"en\s+realidad", r"no,\s+espera", r"perdón,\s+quise\s+decir"
         ]
         
         for marker in markers:
             parts = re.split(marker, msg, flags=re.IGNORECASE)
             if len(parts) > 1:
-                # We take the last part since it's the correction
+                # We take the last part as the primary correction, 
+                # but we scan the discarded part for legacy negative constraints
+                discarded = parts[0].strip()
                 correction = parts[-1].strip()
+                
+                # Capture "no me digas", "no repitas", "sin frases", "solo", "mínima", "nada más" etc.
+                negations = re.findall(r"(no me digas [^,.]+?|no repitas [^,.]+?|sin [^,.]+?|solo [^,.]+?|mínima [^,.]+?|nada más[^,.]*)", discarded, flags=re.IGNORECASE)
+                if negations:
+                    combined_negations = ". ".join(negations)
+                    logger.info(f"[SELF_CORRECTION] Reformulation detected with constraints. Picked: {combined_negations}. {correction}")
+                    return f"{combined_negations}. {correction}"
+                
                 if len(correction) > 3: # Ensure it's not a tiny fragment
                     logger.info(f"[SELF_CORRECTION] Reformulation detected. Picked: {correction}")
                     return correction

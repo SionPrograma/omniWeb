@@ -13,6 +13,16 @@ class ExecutiveSynthesis:
     Requirement: single useful conclusion, no 'None' values.
     """
 
+    def _humanize_path(self, path: str) -> str:
+        if not path: return ""
+        path = path.replace("\\", "/")
+        parts = path.split("/")
+        if len(parts) > 1:
+            filename = parts[-1]
+            name = filename.split(".")[0].replace("_", " ")
+            return f"el módulo {name} ({filename}) en {parts[0]}"
+        return path.replace("_", " ")
+
     def synthesize(self, 
                    working: Dict[str, Any], 
                    project: Dict[str, Any], 
@@ -29,46 +39,78 @@ class ExecutiveSynthesis:
         deferred = project.get("deferred_items", [])
 
         # 2. Executive Reasoning Logic (Synthesis Layer)
-        # Unified keywords with intent patterns (L120-132) to prevent partial synthesis
-        is_continuity = any(k in query.lower() for k in ["haciendo", "andábamos", "andabamos", "historial", "hicimos", "doing", "was doing", "archivo", "módulo", "modulo"])
-        is_roadmap = any(k in query.lower() for k in ["bloque", "roadmap", "plan", "sigue", "next", "vigent", "pertenece"])
-        is_fixes = any(k in query.lower() for k in ["fix", "cerrado", "arregla", "redundante", "reabrir", "closed", "validados"])
-        is_impact = any(k in query.lower() for k in ["sensible", "tocar", "peligro", "riesgo", "comprometido", "delicada"])
+        low_query = query.lower()
+        
+        # 3. Signals & Intents
+        is_entity_mention = any(re.search(rf"\b{k}\b", low_query) for k in ["archivo", "módulo", "modulo"])
+        is_fixes = any(re.search(rf"\b{k}\b", low_query) for k in ["fix", "cerrado", "arregla", "redundante", "reabrir", "closed", "validados", "cerrada"])
+        is_impact = any(re.search(rf"\b{k}\b", low_query) for k in ["sensible", "tocar", "peligro", "riesgo", "comprometido", "delicada", "arriesgado"])
+        is_minimal = any(k in low_query for k in ["solo", "only", "nada más", "nada mas", "frase corta", "una frase", "únicamente", "unicamente", "mínima", "minima", "sin agregar"])
+        is_forbidden_gen = any(k in low_query for k in ["frase genérica", "frases genéricas", "no reemplaces", "sin rellenar"])
+        
+        # Positive specific requests (Whitelist for Minimal Mode)
+        positive_discovery = any(k in low_query for k in ["qué estábamos haciendo", "qué hicimos", "en qué andábamos", "qué veníamos haciendo", "que estabamos haciendo"])
+        positive_roadmap = any(k in low_query for k in ["qué bloque", "en qué bloque", "dime el bloque", "decime el bloque", "cuál bloque", "roadmap"])
+        
+        # Determine if we should treat this as discovery/roadmap even if not specific whitelist (for normal mode)
+        is_discovery = positive_discovery or (not is_minimal and any(k in low_query for k in ["haciendo", "andábamos", "hicimos"]))
+        is_roadmap = positive_roadmap or (not is_minimal and any(k in low_query for k in ["bloque", "roadmap", "plan", "vigen"]))
+
+        # 4. HARD SUPPRESSION (Decision Gate)
+        negation_markers = ["no me digas", "no menciones", "no repitas", "no agregues", "no incluyas", "sin decir", "sin leer", "sin mencionar", "sin incluir", "omite", "omití"]
+        
+        # Rule: In minimal mode, hide Sections A and B unless they are explicitly whitelisted.
+        hide_working = (is_minimal and not positive_discovery) or (any(n in low_query for n in negation_markers) and ("haciendo" in low_query or "working" in low_query or "memoria" in low_query))
+        hide_block = (is_minimal and not positive_roadmap) or (any(n in low_query for n in negation_markers) and ("bloque" in low_query or "roadmap" in low_query))
+        
+        should_omit = any(k in low_query for k in ["omitila", "omite", "omití"])
+        is_concrete = any(k in low_query for k in ["vigencia concreta", "exactamente qué", "exactamente que", "dime exactamente", "decime exactamente", "decime solo"])
 
         msg_parts = []
 
         # A. Continuity & Vigency (Working Memory)
         continuity_msg = ""
-        if is_continuity or not (is_roadmap or is_fixes or is_impact):
+        # Enforcement: hard hide if minimal and not explicitly whitelisted
+        if not hide_working and (is_discovery or is_concrete or not (is_roadmap or is_fixes or is_impact or is_entity_mention)):
             if last_op and last_file:
                 if lang == "es":
                     continuity_msg = f"Sigue vigente la **{last_op}** en el archivo `{last_file}`."
                 else:
                     continuity_msg = f"The **{last_op}** is still current, specifically on `{last_file}`."
             else:
-                # INTEGRATED NO-DATA: subordinate clause instead of leading dominance
-                if is_continuity:
+                if not should_omit and (is_discovery or is_concrete):
                     if lang == "es":
-                        continuity_msg = "No tengo registro del último archivo, pero mantengo la vinculación con el flujo actual."
+                        if is_forbidden_gen or is_concrete:
+                            continuity_msg = "No hay una tarea específica en registro inmediato,"
+                        else:
+                            continuity_msg = "No tengo registro del último archivo, pero mantengo la vinculación con el flujo actual."
                     else:
-                        continuity_msg = "I don't have a record of the last file, but I'm keeping the link to the current flow."
+                        if is_forbidden_gen or is_concrete:
+                            continuity_msg = "No specific task in storage right now,"
+                        else:
+                            continuity_msg = "I don't have a record of the last file, but I'm keeping the link to the current flow."
         
         if continuity_msg: msg_parts.append(continuity_msg)
 
         # B. Context & Roadmap (Project Memory)
-        if is_roadmap or (is_continuity and not last_op):
+        # Enforcement: hard hide if minimal and not explicitly whitelisted
+        if not hide_block and (is_roadmap or (is_discovery and not last_op) or is_concrete):
             status = "activo" if lang == "es" else "active"
             if lang == "es":
-                msg_parts.append(f"Esta labor pertenece al **{block}** ({status}) y es coherente con las reglas del roadmap actual.")
+                text = f"Esta labor pertenece al **{block}** ({status})"
+                if is_concrete:
+                    text = f"El trabajo actual se enmarca en el **{block}** ({status})."
+                msg_parts.append(text)
             else:
-                msg_parts.append(f"This work belongs to **{block}** ({status}) and is consistent with the current roadmap rules.")
+                text = f"This work belongs to **{block}** ({status})"
+                if is_concrete:
+                    text = f"Current work is framed within **{block}** ({status})."
+                msg_parts.append(text)
 
         # C. Proactive Redundancy Check (Validated Fixes Reasoning)
-        if is_fixes or is_continuity:
-            # Proactive check: avoid common adjectives false positives by using tighter word matching or length check
+        if (is_fixes or is_concrete) and not is_minimal:
             already_fixed = None
             if fixes:
-                # Avoid matching common words like "limpio", "módulo", "sistema"
                 forbidden_keywords = ["limpio", "sistema", "módulo", "archivo", "nuevo", "actual"]
                 for fix in fixes:
                     fix_words = [w for w in fix.lower().split() if len(w) > 5 and w not in forbidden_keywords]
@@ -82,38 +124,37 @@ class ExecutiveSynthesis:
                     else:
                         msg_parts.append(f"Be careful: reopening topics about `{already_fixed}` would be **redundant** as that fix was previously validated and closed.")
                 elif is_fixes:
-                    # General fix status
                     if lang == "es":
                         msg_parts.append(f"Hemos validado {len(fixes)} fixes en este bloque.")
                     else:
                         msg_parts.append(f"We have validated {len(fixes)} fixes in this block.")
 
         # D. Roadmap & Deferred Items (Project Memory)
-        if deferred and any(k in query.lower() for k in ["diferid", "pospue", "later", "deferred"]):
-            # Specifically alert about deferred items if asked or if roza
+        if deferred and (is_concrete or any(k in query.lower() for k in ["diferid", "pospue", "later", "deferred"])) and not is_minimal:
             item = deferred[0]
             if lang == "es":
                 msg_parts.append(f"Ojo: nota que `{item}` quedó **diferido** para más adelante según el roadmap.")
             else:
                 msg_parts.append(f"Note: `{item}` was **deferred** for later in the roadmap.")
 
-        # D. Impact Warning (Sensitive Modules)
-        if is_impact or is_continuity:
+        # E. Impact Warning (Sensitive Modules)
+        if is_impact or (is_entity_mention and "sensible" in low_query) or is_concrete:
             if sensitive:
-                # Find if query mentions a sensitive module
                 target_sens = sensitive[0]
                 for s in sensitive:
                     if s.split('/')[-1] in query.lower():
                         target_sens = s
                         break
                 
+                human_sens = self._humanize_path(target_sens)
                 if lang == "es":
-                    msg_parts.append(f"Como advertencia de impacto, evitá tocar `{target_sens}` aún, para no comprometer la estabilidad base.")
+                    msg_parts.append(f"Como advertencia de impacto, evitá tocar **{human_sens}** aún, para no comprometer la estabilidad base.")
                 else:
-                    msg_parts.append(f"Impact warning: avoid touching `{target_sens}` for now to maintain stability.")
+                    msg_parts.append(f"Impact warning: avoid touching **{human_sens}** for now to maintain stability.")
 
-        # E. Final Executive Polish
+        # F. Final Executive Polish
         if not msg_parts:
+            if should_omit or is_minimal: return ""
             if lang == "es":
                 return "Sistema nominal. Todos los procesos están sincronizados dentro del roadmap del Bloque actual. ¿En qué puedo ayudarte hoy?"
             else:

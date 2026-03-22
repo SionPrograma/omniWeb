@@ -86,10 +86,16 @@ LÍMITE_DE_INTERACCIÓN: SOLO_LECTURA / SIN_CONTROL_DE_FLUJO_EXTERNO
              
              msg_out = executive_synthesis.synthesize(system_memory.get_working(), system_memory.get_project(), msg, lang=lang)
              
+             # Removal of header if specifically requested or if it's a concrete/forbidden request
+             header = "### OMNI_SYSTEM_MEMORY\n\n"
+             low_msg = msg.lower()
+             if any(k in low_msg for k in ["no me digas", "sin cabecera", "sin encabezado", "no muestres", "solo", "exacto", "concreta", "mínima", "nada más", "nada mas"]):
+                 header = ""
+             
              return AICommandResponse(
                 intent="system_memory_report",
                 status="success",
-                message=f"### OMNI_SYSTEM_MEMORY\n\n{msg_out}",
+                message=f"{header}{msg_out}",
                 payload={"memory": system_memory.data}
              )
 
