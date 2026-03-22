@@ -138,7 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.updateCapabilities) window.updateCapabilities();
         }
     }
-    initGreeting();
+    // --- Persistent History Rehydration ---
+    const historyFound = loadHistory();
+    if (!historyFound) {
+        initGreeting();
+    } else {
+        // Still call capabilities refresh
+        if (window.updateCapabilities) window.updateCapabilities();
+    }
 
     // --- Deep Link Handling (Phase 14) ---
     function handleDeepLink() {
@@ -331,7 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addMessage(text, sender = 'ai', forceScroll = false) {
+    function addMessage(text, sender = 'ai', forceScroll = false, shouldSave = true) {
+        if (!text) return;
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
 
@@ -376,6 +384,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chatLog.appendChild(msgDiv);
         scrollToBottom(forceScroll || sender === 'user');
+
+        if (shouldSave && sender !== 'typing') {
+            saveHistory(text, sender);
+        }
+    }
+
+    function saveHistory(text, sender) {
+        try {
+            const history = JSON.parse(localStorage.getItem("omni_chat_history_v1") || "[]");
+            history.push({ text, sender, timestamp: Date.now() });
+            // Keep last 100 for UI performance
+            if (history.length > 100) history.shift();
+            localStorage.setItem("omni_chat_history_v1", JSON.stringify(history));
+        } catch (e) { console.warn("Save history failed:", e); }
+    }
+
+    function loadHistory() {
+        try {
+            const historyStr = localStorage.getItem("omni_chat_history_v1");
+            if (historyStr) {
+                const history = JSON.parse(historyStr);
+                if (history && history.length > 0) {
+                    chatLog.innerHTML = "";
+                    history.forEach(m => {
+                        addMessage(m.text, m.sender, false, false);
+                    });
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn("Load history failed:", e);
+        }
+        return false;
     }
 
     // --- DIFF RENDERER HELPERS ---

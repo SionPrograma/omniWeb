@@ -1,28 +1,54 @@
+import json
+import os
+import collections
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-import collections
 
 class SemanticMemoryBuffer:
     """
     Short-term working memory for the AI Host.
     Retains recent interactions to provide conversational continuity.
+    Now with persistent disk fallback.
     """
-    def __init__(self, capacity: int = 10):
+    def __init__(self, capacity: int = 50):
         self.capacity = capacity
-        # Use simple in-memory storage for now, scoped to the singleton lifecycle
         self.buffer = collections.deque(maxlen=capacity)
+        self.storage_path = "backend/data/chat_memory.json"
+        self._load_from_disk()
+
+    def _load_from_disk(self):
+        """Rehydrates memory from disk on startup."""
+        if os.path.exists(self.storage_path):
+            try:
+                with open(self.storage_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    # Limit reload to current capacity
+                    for item in data[-self.capacity:]:
+                        self.buffer.append(item)
+            except Exception as e:
+                print(f"[MEMORY] Load error: {e}")
+
+    def _save_to_disk(self):
+        """Persists current buffer to disk."""
+        try:
+            os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
+            with open(self.storage_path, "w", encoding="utf-8") as f:
+                json.dump(list(self.buffer), f, default=str, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[MEMORY] Save error: {e}")
 
     def add_interaction(self, prompt: str, response: str, intent: str):
-        """Adds a new interaction to the semantic buffer."""
+        """Adds a new interaction to the semantic buffer and persists it."""
         interaction = {
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now().isoformat(),
             "prompt": prompt,
             "response": response,
             "intent": intent
         }
         self.buffer.append(interaction)
+        self._save_to_disk()
 
-    def get_context_summary(self, max_items: int = 3) -> str:
+    def get_context_summary(self, max_items: int = 5) -> str:
         """Returns a string summary of recent context for prompt enrichment."""
         if not self.buffer:
             return ""
@@ -45,13 +71,17 @@ class SemanticMemoryBuffer:
             return self.buffer[-1]["prompt"]
         return None
 
-    def get_recent_interactions(self, session_id: str = "default_user", limit: int = 3) -> List[Dict[str, Any]]:
-        """Returns recent interactions for context enrichment."""
+    def get_recent_interactions(self, session_id: str = "default_user", limit: int = 5) -> List[Dict[str, Any]]:
+        """Returns recent interactions for context enrichment. Increased default limit."""
         return list(self.buffer)[-limit:] if self.buffer else []
 
     def clear(self):
-        """Resets the memory buffer."""
+        """Resets the memory buffer and deletes the persistence file."""
         self.buffer.clear()
+        if os.path.exists(self.storage_path):
+            try:
+                os.remove(self.storage_path)
+            except: pass
 
 # Global working memory instance
 semantic_memory = SemanticMemoryBuffer()

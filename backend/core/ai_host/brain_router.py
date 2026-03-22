@@ -418,9 +418,7 @@ class BrainRouter:
 
         # C. Memory Logic
         if intent in ["idea_captured", "log_entry", "search_knowledge"]:
-             res = await self.command_router.intents[intent](msg)
-             semantic_memory.add_interaction(msg, res.message, intent)
-             return res
+             return await self.command_router.intents[intent](msg)
 
         # D. Conversational Logic (Using Memory for Better Replies)
         if mode == "conversational" or intent in ["acknowledgment", "greeting", "identity", "status_check", "chat", "unknown"]:
@@ -448,7 +446,6 @@ class BrainRouter:
                  else:
                      res = self._generate_natural_fallback(lang)
              
-             semantic_memory.add_interaction(msg, res.message, intent)
              return res
 
         return None

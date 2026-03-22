@@ -742,8 +742,10 @@ button:active {
 @media screen and (max-width: 768px) {
     #ai-host-view {
         padding: 1rem;
-        justify-content: center;
-        padding-top: 20px;
+        justify-content: flex-start;
+        /* FIX: Avoid top clipping when content overflows */
+        padding-top: 5.5rem;
+        /* FIX: Space for status-bar + hero breathing room */
     }
 
     .ai-orb {

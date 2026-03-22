@@ -1,0 +1,152 @@
+[
+  {
+    "timestamp": "2026-03-22T21:04:07.966160",
+    "prompt": "Hola Omni",
+    "response": "Good evening. Initializing your OmniWeb knowledge environment.",
+    "intent": "onboarding_greeting"
+  },
+  {
+    "timestamp": "2026-03-22T21:04:16.699324",
+    "prompt": "Hola Omni",
+    "response": "Actualmente, good evening. Initializing your OmniWeb knowledge environment.",
+    "intent": "onboarding_greeting"
+  },
+  {
+    "timestamp": "2026-03-22T21:04:24.599970",
+    "prompt": "omni, recordame en criollo qué veníamos cerrando antes de esta recarga.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. Estamos en el Bloque 5 (activo)",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-22T21:04:24.662643",
+    "prompt": "omni, recordame en criollo qué veníamos cerrando antes de esta recarga.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. Estamos en el Bloque 5 (activo)",
+    "intent": "system_memory_report"
+  },
+  {
+    "timestamp": "2026-03-22T21:04:48.767777",
+    "prompt": "omni, retomemos lo anterior: ¿qué problema técnico veníamos mirando y qué capa parecía más probable?",
+    "response": "**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency.\n\n**HIPÓTESIS PRIMARIA**\nDetected performance degradation likely centered in flow.ai_to_chips.latency.\n\n**EXPLICACIÓN ALTERNATIVA**\nMetrical noise or NTP drift causing false positive latency spikes in the bus.\n\n**NIVEL DE CONFIANZA**\n0.8\n\n**EVIDENCIA FALTANTE**\nNinguna\n\n**ACCIÓN RECOMENDADA**\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "ANALYSIS_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:04:48.844924",
+    "prompt": "omni, retomemos lo anterior: ¿qué problema técnico veníamos mirando y qué capa parecía más probable?",
+    "response": "De acuerdo a los datos, hay señales fuera de rango en esta capa mapeando dependencias activas Estaba revisando esto. OBSERVACIÓN\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency. HIPÓTESIS PRIMARIA\nDetected performance degradation likely centered in flow.ai_to_chips.latency. EXPLICACIÓN ALTERNATIVA\nMetrical noise or NTP drift causing false positive latency spikes in the bus. NIVEL DE CONFIANZA\n0.8 EVIDENCIA FALTANTE\nNinguna ACCIÓN RECOMENDADA\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "reflective_analysis"
+  },
+  {
+    "timestamp": "2026-03-22T21:05:15.989638",
+    "prompt": "omni, en una sola respuesta y sin volcarme toda la memoria, decime qué sigue vigente ahora y qué no conviene tocar todavía.",
+    "response": "**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency.\n\n**HIPÓTESIS PRIMARIA**\nDetected performance degradation likely centered in flow.ai_to_chips.latency.\n\n**EXPLICACIÓN ALTERNATIVA**\nMetrical noise or NTP drift causing false positive latency spikes in the bus.\n\n**NIVEL DE CONFIANZA**\n0.8\n\n**EVIDENCIA FALTANTE**\nNinguna\n\n**ACCIÓN RECOMENDADA**\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "ANALYSIS_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:05:16.054226",
+    "prompt": "omni, en una sola respuesta y sin volcarme toda la memoria, decime qué sigue vigente ahora y qué no conviene tocar todavía.",
+    "response": "De acuerdo a los datos, hay señales fuera de rango en esta capa analizando componentes de esta capa Estaba revisando esto. OBSERVACIÓN\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency. HIPÓTESIS PRIMARIA\nDetected performance degradation likely centered in flow.ai_to_chips.latency. EXPLICACIÓN ALTERNATIVA\nMetrical noise or NTP drift causing false positive latency spikes in the bus. NIVEL DE CONFIANZA\n0.8 EVIDENCIA FALTANTE\nNinguna ACCIÓN RECOMENDADA\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "reflective_analysis"
+  },
+  {
+    "timestamp": "2026-03-22T21:13:07.039347",
+    "prompt": "Hola Omni",
+    "response": "Good evening. Initializing your OmniWeb knowledge environment.",
+    "intent": "onboarding_greeting"
+  },
+  {
+    "timestamp": "2026-03-22T21:14:05.356325",
+    "prompt": "todo bien, omni?",
+    "response": "¡Hola! ¿Todo bien por ahí? Decime en qué puedo ayudarte hoy.",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-22T21:14:31.442667",
+    "prompt": "che omni, recordame en criollo qué estamos cerrando ahora antes de seguir con el roadmap.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. Estamos en el Bloque 5 (activo)",
+    "intent": "MEMORY_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:14:31.497604",
+    "prompt": "che omni, recordame en criollo qué estamos cerrando ahora antes de seguir con el roadmap.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. Estamos en el Bloque 5 (activo)",
+    "intent": "system_memory_report"
+  },
+  {
+    "timestamp": "2026-03-22T21:14:55.540589",
+    "prompt": "omni, en una sola respuesta y sin volcarme toda la memoria, decime qué sigue vigente ahora y qué no conviene tocar todavía",
+    "response": "**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency.\n\n**HIPÓTESIS PRIMARIA**\nDetected performance degradation likely centered in flow.ai_to_chips.latency.\n\n**EXPLICACIÓN ALTERNATIVA**\nMetrical noise or NTP drift causing false positive latency spikes in the bus.\n\n**NIVEL DE CONFIANZA**\n0.8\n\n**EVIDENCIA FALTANTE**\nNinguna\n\n**ACCIÓN RECOMENDADA**\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "ANALYSIS_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:14:55.714292",
+    "prompt": "omni, en una sola respuesta y sin volcarme toda la memoria, decime qué sigue vigente ahora y qué no conviene tocar todavía",
+    "response": "Hay señales fuera de rango en esta capa analizando componentes de esta capa Estaba revisando esto. OBSERVACIÓN\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency. HIPÓTESIS PRIMARIA\nDetected performance degradation likely centered in flow.ai_to_chips.latency. EXPLICACIÓN ALTERNATIVA\nMetrical noise or NTP drift causing false positive latency spikes in the bus. NIVEL DE CONFIANZA\n0.8 EVIDENCIA FALTANTE\nNinguna ACCIÓN RECOMENDADA\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "reflective_analysis"
+  },
+  {
+    "timestamp": "2026-03-22T21:15:36.402516",
+    "prompt": "si no te acordás del último archivo exacto, decímelo limpio y sin inventar.",
+    "response": "No tengo registro del último archivo real procesado.",
+    "intent": "MEMORY_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:15:36.470592",
+    "prompt": "si no te acordás del último archivo exacto, decímelo limpio y sin inventar.",
+    "response": "No tengo registro del último archivo real procesado.",
+    "intent": "system_memory_report"
+  },
+  {
+    "timestamp": "2026-03-22T21:16:02.190576",
+    "prompt": "el mapa del chip reparto no se está viendo.",
+    "response": "**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n- **PROBLEMA**: Fallo de representación visual.\n- **CHIP**: `REPARTO` (Componente: `mapa`)\n- **CAPA PROBABLE**: Frontend / UI Layer\n- **CONFIANZA**: 0.8\n\n**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY con 0 chips activos. Anomalía primaria detectada in flow.ai_to_chips.latency.\n\n**SIGUIENTE PASO**\nIniciar Plan del Creador para reparar la capa identificada.\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?",
+    "intent": "OPERATIONAL_DIAGNOSTIC"
+  },
+  {
+    "timestamp": "2026-03-22T21:16:02.264430",
+    "prompt": "el mapa del chip reparto no se está viendo.",
+    "response": "**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n- **PROBLEMA**: Fallo de representación visual.\n- **CHIP**: `REPARTO` (Componente: `mapa`)\n- **CAPA PROBABLE**: Frontend / UI Layer\n- **CONFIANZA**: 0.8\n\n**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY con 0 chips activos. Anomalía primaria detectada in flow.ai_to_chips.latency.\n\n**SIGUIENTE PASO**\nIniciar Plan del Creador para reparar la capa identificada.\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?",
+    "intent": "operational_diagnostic"
+  },
+  {
+    "timestamp": "2026-03-22T21:16:36.749379",
+    "prompt": "el mapa de reparto anda mal; decime qué chip está afectado, qué parte concreta falla y qué capa probable sería.",
+    "response": "**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n- **PROBLEMA**: Fallo de representación visual.\n- **CHIP**: `EST` (Componente: `mapa`)\n- **CAPA PROBABLE**: Frontend / UI Layer\n- **CONFIANZA**: 0.8\n\n**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY con 0 chips activos. Anomalía primaria detectada in flow.ai_to_chips.latency.\n\n**SIGUIENTE PASO**\nIniciar Plan del Creador para reparar la capa identificada.\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?",
+    "intent": "OPERATIONAL_DIAGNOSTIC"
+  },
+  {
+    "timestamp": "2026-03-22T21:16:36.801787",
+    "prompt": "el mapa de reparto anda mal; decime qué chip está afectado, qué parte concreta falla y qué capa probable sería.",
+    "response": "**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n- **PROBLEMA**: Fallo de representación visual.\n- **CHIP**: `EST` (Componente: `mapa`)\n- **CAPA PROBABLE**: Frontend / UI Layer\n- **CONFIANZA**: 0.8\n\n**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY con 0 chips activos. Anomalía primaria detectada in flow.ai_to_chips.latency.\n\n**SIGUIENTE PASO**\nIniciar Plan del Creador para reparar la capa identificada.\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?",
+    "intent": "operational_diagnostic"
+  },
+  {
+    "timestamp": "2026-03-22T21:17:01.222326",
+    "prompt": "che omni, me estás contestando medio raro. ¿estás bien?",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-22T21:17:24.618037",
+    "prompt": "omni, retomemos lo anterior: ¿qué problema técnico veníamos mirando y qué capa parecía más probable?",
+    "response": "**OBSERVACIÓN**\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency.\n\n**HIPÓTESIS PRIMARIA**\nDetected performance degradation likely centered in flow.ai_to_chips.latency.\n\n**EXPLICACIÓN ALTERNATIVA**\nMetrical noise or NTP drift causing false positive latency spikes in the bus.\n\n**NIVEL DE CONFIANZA**\n0.8\n\n**EVIDENCIA FALTANTE**\nNinguna\n\n**ACCIÓN RECOMENDADA**\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "ANALYSIS_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:17:24.677663",
+    "prompt": "omni, retomemos lo anterior: ¿qué problema técnico veníamos mirando y qué capa parecía más probable?",
+    "response": "Se detectan irregularidades en el flujo verificando integridad de módulos Estaba revisando esto. OBSERVACIÓN\nEl sistema se encuentra en estado HEALTHY state with 0 active chips. Primary anomaly detected in flow.ai_to_chips.latency. HIPÓTESIS PRIMARIA\nDetected performance degradation likely centered in flow.ai_to_chips.latency. EXPLICACIÓN ALTERNATIVA\nMetrical noise or NTP drift causing false positive latency spikes in the bus. NIVEL DE CONFIANZA\n0.8 EVIDENCIA FALTANTE\nNinguna ACCIÓN RECOMENDADA\nInitiate Creator Plan for targeted repair of the identified layer.",
+    "intent": "reflective_analysis"
+  },
+  {
+    "timestamp": "2026-03-22T21:18:08.604399",
+    "prompt": "omni, refrescame qué queda por cerrar antes de avanzar con el roadmap, pero hablame natural y sin modo reporte.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. El trabajo actual se enmarca en el Bloque 5 (activo).",
+    "intent": "MEMORY_INTENT"
+  },
+  {
+    "timestamp": "2026-03-22T21:18:08.690552",
+    "prompt": "omni, refrescame qué queda por cerrar antes de avanzar con el roadmap, pero hablame natural y sin modo reporte.",
+    "response": "Actualmente seguimos cerrando la capa de memoria, síntesis y verbalización para asegurar la estabilidad del sistema. El trabajo actual se enmarca en el Bloque 5 (activo).",
+    "intent": "system_memory_report"
+  }
+]

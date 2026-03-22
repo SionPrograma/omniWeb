@@ -210,7 +210,14 @@ class CognitiveOrchestrator:
                 }
             )
         except: pass
-        
+        # 8. Persistent Memory Update (Centralized)
+        if brain_response.status == "success":
+            try:
+                from backend.core.ai_host.memory.semantic_memory import semantic_memory
+                semantic_memory.add_interaction(message, brain_response.message, brain_response.intent)
+            except Exception as e:
+                logger.error(f"[ORCHESTRATOR] Failed to persist memory interaction: {e}")
+                
         return brain_response
 
     def _deliberate_cognition(self, text: str, intent_group: str, recent_context: list, system_state: Any, session_id: str = "default", interpretation: dict = {}) -> str:
