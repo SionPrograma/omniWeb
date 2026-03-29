@@ -2,6 +2,7 @@ import logging
 import random
 import re
 from typing import Dict, Any, Optional
+from .output_policy import get_output_policy
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,8 @@ class ExecutiveSynthesis:
                    lang: str = "es",
                    tone: Optional[str] = None) -> str:
         
-        is_natural = tone == "natural_chatbot"
+        policy = get_output_policy(query)
+        is_natural = tone == "natural_chatbot" or policy.tone == "natural"
         # 1. Null-handling & Defaults (OS-like resilience)
         last_op = working.get("last_operation_summary")
         last_file = working.get("last_important_file")
@@ -47,29 +49,28 @@ class ExecutiveSynthesis:
         is_entity_mention = any(re.search(rf"\b{k}\b", low_query) for k in ["archivo", "módulo", "modulo"])
         is_fixes = any(re.search(rf"\b{k}\b", low_query) for k in ["fix", "cerrado", "arregla", "redundante", "reabrir", "closed", "validados", "cerrada"])
         is_impact = any(re.search(rf"\b{k}\b", low_query) for k in ["sensible", "tocar", "peligro", "riesgo", "comprometido", "delicada", "arriesgado"])
-        is_minimal = any(k in low_query for k in ["solo", "only", "nada más", "nada mas", "frase corta", "una frase", "únicamente", "unicamente", "mínima", "minima", "sin agregar"])
+        is_minimal = policy.is_minimal
         is_forbidden_gen = any(k in low_query for k in ["frase genérica", "frases genéricas", "no reemplaces", "sin rellenar"])
         
         # Positive specific requests (Whitelist for Minimal Mode)
-        positive_discovery = any(k in low_query for k in ["qué estábamos haciendo", "qué hicimos", "en qué andábamos", "qué veníamos haciendo", "que estabamos haciendo", "qué estamos cerrando", "qué queda por cerrar", "qué veníamos cerrando", "recordame qué", "recordame que", "antes de seguir"])
+        positive_discovery = any(k in low_query for k in ["qué estábamos haciendo", "qué hicimos", "en qué andábamos", "qué veníamos haciendo", "que estabamos haciendo", "qué estamos cerrando", "qué queda por cerrar", "qué veníamos cerrando", "recordame qué", "recordame que", "antes de seguir", "hilo", "lo último", "lo ultimo", "delicado"])
         positive_roadmap = any(k in low_query for k in ["qué bloque", "en qué bloque", "dime el bloque", "decime el bloque", "cuál bloque", "roadmap", "plan"])
         
         # Determine if we should treat this as discovery/roadmap even if not specific whitelist (for normal mode)
-        is_discovery = positive_discovery or (not is_minimal and any(k in low_query for k in ["haciendo", "andábamos", "hicimos", "cerrando", "terminando"]))
+        is_discovery = positive_discovery or (not is_minimal and any(k in low_query for k in ["haciendo", "andábamos", "hicimos", "cerrando", "terminando", "ajustar", "moviendo"]))
         is_roadmap = positive_roadmap or (not is_minimal and any(k in low_query for k in ["bloque", "roadmap", "plan"]))
 
-        # 4. HARD SUPPRESSION (Decision Gate)
-        negation_markers = ["no me digas", "no menciones", "no repitas", "no agregues", "no incluyas", "sin decir", "sin leer", "sin mencionar", "sin incluir", "omite", "omití", "no me hagas", "no cambies", "sin reporte", "no reportes", "no reporte", "sin dump"]
+        # 4. HARD SUPPRESSION (Decision Gate via OutputPolicy)
         
         # Rule: In minimal mode, hide Sections A and B unless they are explicitly whitelisted.
         # Enforcement: Specific requests for 'vigente' or 'archivo' bypass general dump/report suppression.
         is_explicit_request = any(k in low_query for k in ["vigente", "archivo", "cerrada", "diferida", "sensible"])
         
-        hide_working = (is_minimal and not positive_discovery) or (not is_explicit_request and any(n in low_query for n in negation_markers) and ("haciendo" in low_query or "working" in low_query or "memoria" in low_query or "dump" in low_query))
-        hide_block = (is_minimal and not positive_roadmap) or (not is_explicit_request and any(n in low_query for n in negation_markers) and ("bloque" in low_query or "roadmap" in low_query or "reporte" in low_query))
+        hide_working = (is_minimal and not positive_discovery) or (not is_explicit_request and policy.suppress_runtime)
+        hide_block = (is_minimal and not positive_roadmap) or (not is_explicit_request and policy.suppress_block)
         
         should_omit = any(k in low_query for k in ["omitila", "omite", "omití"])
-        is_concrete = any(k in low_query for k in ["vigencia concreta", "exactamente qué", "exactamente que", "dime exactamente", "decime exactamente", "decime solo", "en una sola respuesta"])
+        is_concrete = any(k in low_query for k in ["vigencia concreta", "exactamente qué", "exactamente que", "dime exactamente", "decime exactamente", "decime solo", "en una sola respuesta"]) or policy.is_minimal
 
         msg_parts = []
 
@@ -132,7 +133,7 @@ class ExecutiveSynthesis:
                 msg_parts.append(text)
 
         # C. Proactive Redundancy Check (Validated Fixes Reasoning)
-        if (is_fixes or is_concrete) and not is_minimal:
+        if (is_fixes or is_concrete) and not is_minimal and not policy.is_brief:
             already_fixed = None
             if fixes:
                 forbidden_keywords = ["limpio", "sistema", "módulo", "archivo", "nuevo", "actual"]
@@ -181,9 +182,9 @@ class ExecutiveSynthesis:
         if not msg_parts:
             if should_omit or is_minimal: return ""
             if lang == "es":
-                return "Acá estoy, monitoreando el flujo. Todo coordinado dentro del bloque actual." if is_natural else "Sistema nominal. Todo coordinado dentro del Bloque actual. ¿Cómo procedemos?"
+                return "Acá estoy. ¿En qué puedo asistirte con el flujo actual?" if is_natural else "Sistema nominal. Aguardando instrucción para el flujo seleccionado."
             else:
-                return "I'm here, monitoring the flow. Everything is coordinated within the current block." if is_natural else "System nominal. Everything coordinated within the current Block. How shall we proceed?"
+                return "I'm here. How can I assist you with the current flow?" if is_natural else "System nominal. Awaiting instruction for the selected flow."
 
         final_msg = " ".join(msg_parts)
         if is_natural:

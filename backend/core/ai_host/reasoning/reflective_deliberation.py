@@ -49,7 +49,10 @@ class ReflectiveDeliberation:
         if claim.supporting_evidence:
             obs_key = claim.supporting_evidence[0].key
             observation = f"Anomalía primaria detectada en el componente `{obs_key}`." if "es" in message.lower() or "che" in message.lower() else f"Primary anomaly detected in `{obs_key}` component."
+        elif "localized operational anomaly" in claim.claim or "reported symptom" in claim.claim:
+            observation = "Las métricas actuales son nominales, pero se reconoce la anomalía local reportada." if "es" in message.lower() or "che" in message.lower() else "Metrics are nominal, but the localized anomaly is recognized."
         else:
+            # Only show global health if there is no specific evidence/claim/symptom
             observation = f"El sistema se encuentra en estado estable ({ws.system_health})." if "es" in message.lower() or "che" in message.lower() else f"The system is currently in {ws.system_health} state."
             
         # 5. Primary Hypothesis
@@ -109,15 +112,15 @@ class ReflectiveDeliberation:
     def _determine_next_action(self, claim: TechnicalClaim, history: List[Any], lang: str = "en") -> str:
         """Recommends the best next action based on claim and past results."""
         if claim.is_insufficient:
-            return "Aumentar prioridad de muestreo de métricas y revisar logs crudos del módulo." if lang == "es" else "Increase metric sampling priority and check raw module logs."
+            return "Aumentar prioridad de muestreo de métricas y entrar en Modo de Auditoría Profunda." if lang == "es" else "Increase metric sampling priority and enter Deep Audit Mode."
             
         recent_failures = [h for h in history[-5:] if h.outcome == "FAILED"]
         if len(recent_failures) > 2:
-            return "Realizar rollback de la última mutación y entrar en Modo de Diagnóstico Profundo." if lang == "es" else "Rollback last mutation and enter Deep Diagnostic Mode."
+            return "Realizar rollback de la última mutación e iniciar Diagnóstico OS-level." if lang == "es" else "Rollback last mutation and initiate OS-level Diagnostic."
             
-        if claim.confidence < 0.5:
-            return "Colectar más evidencia específica de la capa afectada antes de proceder con un parche." if lang == "es" else "Collect more specific evidence from the affected layer before proceeding with a patch."
+        if claim.confidence < 0.6:
+            return "Bajo nivel de evidencia - Se requiere Auditoría Profunda de la capa afectada." if lang == "es" else "Low evidence level - Deep Audit of the affected layer is required."
             
-        return "Iniciar Plan del Creador para la reparación dirigida de la capa identificada." if lang == "es" else "Initiate Creator Plan for targeted repair of the identified layer."
+        return "Iniciar Plan del Creador para la reparación dirigida de la anomalía detectada." if lang == "es" else "Initiate Creator Plan for targeted repair of the detected anomaly."
 
 reflective_deliberation = ReflectiveDeliberation()

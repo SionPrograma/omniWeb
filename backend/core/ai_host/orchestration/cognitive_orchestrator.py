@@ -1,10 +1,15 @@
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from backend.core.ai_host.processors.base import AICommandResponse
 from backend.core.system_state.engine import state_engine
 from backend.core.omni_runtime.runtime_controller import runtime_controller
 from backend.core.ai_host.brain_router import BrainRouter
 from backend.core.ai_host.memory.semantic_memory import semantic_memory
+from .output_policy import get_output_policy
+from .responses_api import ResponsesAPI, InternalStructuredOutput
+from backend.core.ai_host.observability.tracing_api import tracing_api
+from backend.core.ai_host.observability.self_correction import self_correction
+from backend.core.ai_host.orchestration.tool_definitions import tool_registry
 
 logger = logging.getLogger(__name__)
 
@@ -30,44 +35,190 @@ class CognitiveOrchestrator:
         context: Optional[Dict[str, Any]] = None,
         raw_response: Optional[AICommandResponse] = None
     ) -> AICommandResponse:
-        
+        """
+        Main response pipeline (6 modular steps + Observability + Self-Correction)
+        """
+        # 0. Tracing Initialization
+        trace_id = tracing_api.start_trace(message)
         session_id = str(context.get("user_id", "default_user")) if context else "default_user"
         
-        logger.info(f"[ORCHESTRATOR] Processing Response Pipeline | Intent: {understanding.get('intent_group', 'unknown')}")
+        # Populate initial trace metadata from understanding
+        trace = tracing_api.get_trace(trace_id)
+        if trace:
+            trace.detected_intent_group = understanding.get("intent_group")
+            trace.detected_specific_intent = understanding.get("specific_intent")
+            trace.response_mode = understanding.get("mode")
+        
+        try:
+            # 1. Pipeline Initialization
+            logger.info(f"[ORCHESTRATOR] START Pipeline | Intent: {understanding.get('intent_group', 'unknown')}")
 
-        # 1. State & Chip Awareness Integration
+            # 2. Build Context (PIPELINE 2)
+            tracing_api.start_observation(trace_id, "build_context")
+            system_state, runtime_ctx = await self.build_context()
+            tracing_api.end_observation(trace_id, "build_context")
+
+            # 3. Memory Retrieval (PIPELINE 3)
+            tracing_api.start_observation(trace_id, "retrieve_memory")
+            recent_context = await self.retrieve_memory(
+                session_id, 
+                intent_group=understanding.get("intent_group"),
+                specific_intent=understanding.get("specific_intent")
+            )
+            tracing_api.end_observation(trace_id, "retrieve_memory", output_data=recent_context)
+            
+            enhanced_understanding = dict(understanding)
+            enhanced_understanding["recent_conversation"] = recent_context
+            
+            # 4. Reasoning & Deliberation (PIPELINE 4)
+            tracing_api.start_observation(trace_id, "run_reasoning", input_data=enhanced_understanding.get("intent_group"))
+            brain_response = await self.run_reasoning(
+                message, context, enhanced_understanding, system_state, runtime_ctx, raw_response
+            )
+            tracing_api.end_observation(trace_id, "run_reasoning")
+            
+            # 5. Tool Selection & Processor Fallback (PIPELINE 5)
+            tracing_api.start_observation(trace_id, "select_tools")
+            
+            # Use Tool Registry to find candidate tools for current mode/intent
+            candidate_tools = tool_registry.get_candidates(
+                mode=understanding.get("mode", "natural_chat"),
+                intent=understanding.get("intent_group", "unknown")
+            )
+            
+            brain_response = await self.select_tools(message, context, brain_response, raw_response)
+            tracing_api.end_observation(trace_id, "select_tools", output_data=brain_response.intent, metadata={"candidates": candidate_tools})
+
+            # 6. Structured Trace & Intent Logic (ENHANCED BLOCK 4)
+            internal_out = ResponsesAPI.create_internal_structure(
+                intent=brain_response.intent,
+                confidence=enhanced_understanding.get("confidence", 0.0),
+                required_memory=[m[:20] + "..." for m in recent_context],
+                memory_sources_used=["semantic_history", "project_memory"] if "PROJECT_CONTEXT" in str(recent_context) else ["semantic_history"],
+                candidate_tools=candidate_tools,
+                selected_tool=brain_response.intent,
+                response_mode=understanding.get("mode", "direct_response"),
+                reasoning_trace=[f"Orchestrated via {brain_response.intent}"],
+                final_status="success"
+            )
+            logger.debug(f"[ORCHESTRATOR] Internal Trace: {internal_out.json()}")
+
+            # 7. Response Synthesis & Normalization (PIPELINE 6)
+            tracing_api.start_observation(trace_id, "synthesize_response")
+            final_response = await self.synthesize_response(
+                message=message,
+                brain_response=brain_response,
+                system_state=system_state,
+                understanding=enhanced_understanding,
+                recent_context=recent_context,
+                session_id=session_id,
+                context=context
+            )
+            tracing_api.end_observation(trace_id, "synthesize_response")
+            
+            # 8. Finalize Trace & Run Self-Correction (SILENT)
+            trace = tracing_api.finalize_trace(trace_id, final_response.message, final_status="success")
+            if trace:
+                trace.diagnostics = self_correction.diagnose(trace)
+                if trace.diagnostics:
+                    logger.info(f"[SELF_CORRECTION] Diagnostics: {trace.diagnostics}")
+            
+            return final_response
+            
+        except Exception as e:
+            logger.error(f"[ORCHESTRATOR] Critical Failure in pipeline: {e}")
+            tracing_api.finalize_trace(trace_id, str(e), final_status="error")
+            # Return stable fallback without crashing the user experience
+            return self.brain._generate_natural_fallback("es")
+
+    async def interpret_intent(self, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """PIPELINE 1: Intent Understanding (Normalizes interpretation)"""
+        logger.info("[PIPELINE 1] Interpreting intent...")
+        from backend.core.ai_host.intent_understanding.intent_engine import intent_engine
+        session_id = context.get("user_id", "default_user") if context else "default_user"
+        return await intent_engine.understand(message, session_id)
+
+    async def build_context(self) -> tuple:
+        """PIPELINE 2: Context Builder (State and Runtime Awareness)"""
+        logger.info("[PIPELINE 2] Building system context...")
         system_state = await state_engine.get_state()
         runtime_ctx = runtime_controller.state
+        return system_state, runtime_ctx
+
+    async def retrieve_memory(
+        self, 
+        session_id: str, 
+        intent_group: Optional[str] = None, 
+        specific_intent: Optional[str] = None
+    ) -> List[str]:
+        """PIPELINE 3: Memory Retrieval (Semantic, Project and Operational)"""
+        logger.info(f"[PIPELINE 3] Retrieving multi-layer memory for intent: {intent_group}...")
         
-        # 2. Context Integration (Recent conversation via semantic memory)
-        recent_context = []
+        from backend.core.ai_host.memory.system_memory import system_memory
+        
+        all_context = []
+        
         try:
+            # 1. LAYER: Conversational (Semantic Historial) - Always useful
             recent_interactions = semantic_memory.get_recent_interactions(session_id, limit=3)
-            recent_context = [f"User: {m.get('prompt', '')} | Omni: {m.get('response', '')}" for m in recent_interactions]
+            all_context.extend([f"Historial: User: {m.get('prompt', '')} | Omni: {m.get('response', '')}" for m in recent_interactions])
+            
+            # 2. LAYER: Project Memory (Explicit Facts / Roadmap)
+            # Threshold: Queries about project, roadmap, blocks, or decisions
+            project_keywords = ["roadmap", "bloque", "avance", "proyecto", "status", "arquitectura"]
+            is_project_query = intent_group == "MEMORY_INTENT" or specific_intent == "memory_project" or (isinstance(intent_group, str) and any(kw in intent_group.lower() for kw in project_keywords))
+            
+            if is_project_query:
+                logger.info("[PIPELINE 3] Injection: Project Memory context.")
+                project_ctx = system_memory.get_project_context()
+                if project_ctx:
+                    all_context.append(f"PROJECT_CONTEXT:\n{project_ctx}")
+
+            # 3. LAYER: Operational Memory (Working State / Chips / Last Operations)
+            # Threshold: Technical queries or system audit
+            is_system_query = intent_group in ["SYSTEM_AUDIT_INTENT", "EXPLORATION_INTENT", "REMEDIATION_INTENT"]
+            if is_system_query:
+                logger.info("[PIPELINE 3] Injection: Operational Working context.")
+                working_ctx = system_memory.get_working_context()
+                if working_ctx:
+                    all_context.append(working_ctx)
+
         except Exception as e:
-            logger.warning(f"[ORCHESTRATOR] Memory integration warning: {e}")
+            logger.warning(f"[ORCHESTRATOR] Memory layer retrieval failed: {e}")
             
-        enhanced_understanding = dict(understanding)
-        enhanced_understanding["recent_conversation"] = recent_context
-        
-        # 3. Deliberation Output (Connect to Brain or use Raw)
+        return all_context
+
+    async def run_reasoning(
+        self, message: str, context: Optional[Dict[str, Any]], 
+        understanding: Dict[str, Any], system_state: Any, 
+        runtime_ctx: Any, raw_response: Optional[AICommandResponse] = None
+    ) -> AICommandResponse:
+        """PIPELINE 4: Reasoning Layer (Brain Router / Raw Bypass)"""
+        logger.info("[PIPELINE 4] Running reasoning layer...")
         if raw_response:
-            brain_response = raw_response
-        else:
-            try:
-                brain_response = await self.brain.process(
-                    message=message,
-                    context=context,
-                    runtime_context=runtime_ctx,
-                    chip_registry=self.command_router.registry,
-                    system_state=system_state,
-                    understanding=enhanced_understanding
-                )
-            except Exception as e:
-                logger.error(f"[ORCHESTRATOR] Brain Deliberation Failed: {e}")
-                brain_response = None
+            return raw_response
             
-        # 3.1 Messaging Priority Fallback
+        try:
+            return await self.brain.process(
+                message=message,
+                context=context,
+                runtime_context=runtime_ctx,
+                chip_registry=self.command_router.registry,
+                system_state=system_state,
+                understanding=understanding
+            )
+        except Exception as e:
+            logger.error(f"[ORCHESTRATOR] Brain Deliberation Failed: {e}")
+            return AICommandResponse(intent="chat", status="success", message="")
+
+    async def select_tools(
+        self, message: str, context: Optional[Dict[str, Any]], 
+        brain_response: AICommandResponse, raw_response: Optional[AICommandResponse] = None
+    ) -> AICommandResponse:
+        """PIPELINE 5: Tool Selection (Processor Fallback logic)"""
+        logger.info("[PIPELINE 5] Selecting tools and processors...")
+        
+        # 5.1 Messaging Priority Fallback
         if not brain_response or (not raw_response and brain_response.intent == "chat"):
             comm_proc = self.command_router.registry.get_processor("communication")
             if comm_proc and await comm_proc.can_handle(message):
@@ -77,7 +228,7 @@ class CognitiveOrchestrator:
                 except Exception as e:
                     logger.error(f"[ORCHESTRATOR] Messaging processor error: {e}")
 
-        # 3.2 Other Processors Fallback
+        # 5.2 Other Processors Fallback
         if not brain_response or brain_response.intent == "chat":
             for name, proc in self.command_router.registry._processors.items():
                 if name in ["communication", "chat"]: continue 
@@ -90,82 +241,107 @@ class CognitiveOrchestrator:
                 except Exception as e:
                     logger.error(f"[ORCHESTRATOR] Processor '{name}' error: {e}")
 
-        # 4. Fallback Prevention
-        if not brain_response:
+        # 5.3 Fallback Prevention
+        if not brain_response or not brain_response.message:
             chat_proc = self.command_router.registry.get_processor("chat")
             if chat_proc:
-                brain_response = await chat_proc.process(message, context=context)
+                fallback_res = await chat_proc.process(message, context=context)
+                if fallback_res: brain_response = fallback_res
             
-            if not brain_response:
+            if not brain_response or not brain_response.message:
                 brain_response = AICommandResponse(
                     intent="orchestrator_fallback", 
                     status="success", 
-                    message="Error en la interfaz cognitiva" if system_state.health.value != "healthy" else "Fallo en la unificación de respuesta"
+                    message="Fallo en la unificación de respuesta"
                 )
+        return brain_response
 
-        # 5. Cognitive Unification: Weave context + state + mode into the response
+    async def synthesize_response(
+        self, message: str, brain_response: AICommandResponse, 
+        system_state: Any, understanding: Dict[str, Any], 
+        recent_context: List[str], session_id: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> AICommandResponse:
+        """PIPELINE 6: Response Synthesis (Unification, Naturalization, Audit)"""
+        logger.info("[PIPELINE 6] Synthesizing final response...")
+        
+        # 6.1 Cognitive Unification
         is_technical = (
             brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write", "system_memory_report", "operational_diagnostic"] or 
             understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM", "MEMORY_INTENT", "OPERATIONAL_DIAGNOSTIC"] or
             understanding.get("mode") in ["constrained_output", "operational_diagnostic"]
         )
         
-        # 5.5 Natural Chat Bypass (Phase 11: Conversational Balance)
         if understanding.get("mode") == "natural_chat" and not is_technical:
             # Bypass heavy cognitive layers for pure human conversation
             return brain_response
 
         if is_technical:
-            # HARD LOCK: No unification, but handle filtering for SOLO requests
+            msg_low = message.lower()
+            # Keep original technical filtering logic (OMNI requirement: don't touch stable modules unnecessarily)
             if understanding.get("mode") == "constrained_output":
-                msg_low = message.lower()
                 if "solo" in msg_low or "only" in msg_low:
                     import unicodedata
                     import re
-                    # Normalización canónica del prompt: quitar acentos y convertir espacios/guiones a underscores
                     norm_prompt = "".join(c for c in unicodedata.normalize('NFD', msg_low) if unicodedata.category(c) != 'Mn')
                     norm_prompt = re.sub(r'[\s\-]+', '_', norm_prompt)
-                    
                     fields = ["archivo_leido", "primera_linea", "resumen_real", "microfix_propuesto", "impacto_relacionado", "criterio_de_seguridad"]
-                    
-                    # Nueva lógica: Detectar posiciones para preservar el orden del usuario
                     requested_with_pos = []
                     for f in fields:
                         pos = norm_prompt.find(f)
-                        if pos != -1:
-                            requested_with_pos.append((pos, f.upper()))
-                    
-                    # Ordenar campos por su aparición en el prompt
+                        if pos != -1: requested_with_pos.append((pos, f.upper()))
                     requested_with_pos.sort()
                     requested_ordered = [item[1] for item in requested_with_pos]
                     
                     if requested_ordered:
                         lines = brain_response.message.splitlines()
                         output_lines = []
-                        
                         for req_f in requested_ordered:
                             line_content = None
                             for l in lines:
                                 if l.upper().strip().startswith(req_f):
                                     line_content = l
                                     break
-                            
                             if line_content:
-                                # Handle "exacto" for single-field requests
                                 if len(requested_ordered) == 1 and ("exacta" in msg_low or "exacto" in msg_low):
-                                    if ":" in line_content:
-                                        output_lines.append(line_content.split(":", 1)[1].strip())
-                                    else:
-                                        output_lines.append(line_content)
-                                else:
-                                    output_lines.append(line_content)
-                            else:
-                                # Requirement 5: Return NONE if missing
-                                output_lines.append(f"{req_f}: NONE")
-                        
+                                    if ":" in line_content: output_lines.append(line_content.split(":", 1)[1].strip())
+                                    else: output_lines.append(line_content)
+                                else: output_lines.append(line_content)
+                            else: output_lines.append(f"{req_f}: NONE")
                         brain_response.message = "\n".join(output_lines)
-            pass
-
+            # ENHANCED BLOCK 5.1, 7 & 8: NORMALIZATION + POLICY + TASK TREE
+            from backend.core.ai_host.synthesis.copilot_normalizer import copilot_normalizer
+            from backend.core.ai_host.orchestration.execution_policy import execution_policy
+            from backend.core.ai_host.orchestration.task_tree import task_tree_engine
+            
+            # Map Intent to Task Type for Policy
+            task_type = "audit_file"
+            if "fix" in msg_low or "arregla" in msg_low: task_type = "microfix_proposal"
+            elif "audit" in msg_low: task_type = "audit_file"
+            elif "roadmap" in msg_low or "BLOQUE" in msg_low: task_type = "memory_query"
+            
+            # Extract target file/path if available in message or understanding
+            target_path = ""
+            if "context" in understanding and hasattr(understanding["context"], "target_file"):
+                target_path = understanding["context"].target_file
+            
+            # Evaluate Policy & Task Tree Decomposition (BLOCK 8)
+            policy_result = execution_policy.evaluate(task_type, target_path)
+            task_tree = task_tree_engine.decompose(message, enhanced_understanding if 'enhanced_understanding' in locals() else understanding)
+            
+            lang = "es" # Default for now
+            brain_response.message = copilot_normalizer.normalize(
+                brain_response.message, 
+                enhanced_understanding if 'enhanced_understanding' in locals() else understanding, 
+                lang, 
+                policy_result=policy_result,
+                task_tree=task_tree
+            )
+            
+            # BLOCK 9: Inject into Payload for Pizarrón Vivo
+            if brain_response.payload is None: brain_response.payload = {}
+            brain_response.payload["policy_result"] = policy_result
+            brain_response.payload["task_tree"] = task_tree
         else:
             brain_response.message = self._unify_response(
                 text=brain_response.message,
@@ -174,49 +350,32 @@ class CognitiveOrchestrator:
                 recent_context=recent_context,
                 intent_group=understanding.get("intent_group", "CONVERSATIONAL_INTENT"),
                 session_id=session_id,
-                interpretation=understanding.get("context").interpretation if hasattr(understanding.get("context"), "interpretation") else {}
+                interpretation=understanding.get("context").interpretation if hasattr(understanding.get("context"), "interpretation") else {},
+                query=message
             )
         
-        # 6. Final Adaptation (Antimodal & Telemetry Integration)
+        # 6.2 Adaptation & Antimodal
         if not is_technical:
             from backend.core.antimodal.antimodal_controller import antimodal_controller
             brain_response.message = antimodal_controller.process_ai_response(brain_response.message)
         
-        # 7. Cognitive Audit (Observational Phase)
+        # 6.3 Audit & Registry
         try:
             from backend.core.ai_host.audit import cognitive_auditor
             audit_res = cognitive_auditor.audit_response(
                 response_text=brain_response.message,
                 intent_group=understanding.get("intent_group", "CONVERSATIONAL_INTENT"),
-                metadata={"lang": session_state.get_language(session_id) if 'session_state' in locals() else "es"}
+                metadata={"lang": "es"} # Default to es for now as per previous hack
             )
             brain_response.audit = audit_res.to_dict()
-            if not audit_res.passed:
-                logger.warning(f"[ORCHESTRATOR] Audit Failure Detected: {audit_res.failure_types} | Severity: {audit_res.severity}")
-        except Exception as e:
-            logger.error(f"[ORCHESTRATOR] Audit layer error: {e}")
-
-        # Log telemetry before returning
-        try:
-            from backend.core.usage.usage_tracker import usage_tracker
-            usage_tracker.log_event(
-                event_type="orchestrated_response",
-                chip_slug="ai-host",
-                metadata={
-                    "intent": brain_response.intent,
-                    "status": brain_response.status,
-                    "mode": understanding.get("mode"),
-                    "health": system_state.health.value if hasattr(system_state, 'health') else "unknown"
-                }
-            )
         except: pass
-        # 8. Persistent Memory Update (Centralized)
+
+        # 6.4 Persistent Memory Update
         if brain_response.status == "success":
             try:
                 from backend.core.ai_host.memory.semantic_memory import semantic_memory
                 semantic_memory.add_interaction(message, brain_response.message, brain_response.intent)
-            except Exception as e:
-                logger.error(f"[ORCHESTRATOR] Failed to persist memory interaction: {e}")
+            except: pass
                 
         return brain_response
 
@@ -524,7 +683,7 @@ class CognitiveOrchestrator:
 
         return cleaned.strip()
 
-    def _unify_response(self, text: str, system_state: Any, mode: str, recent_context: list, intent_group: str, session_id: str = "default", interpretation: dict = {}) -> str:
+    def _unify_response(self, text: str, system_state: Any, mode: str, recent_context: list, intent_group: str, session_id: str = "default", interpretation: dict = {}, query: str = "") -> str:
         """
         Cognitive Response Transformation Layer.
         """
@@ -532,8 +691,9 @@ class CognitiveOrchestrator:
         from backend.core.ai_host.sessions import session_state
         lang = session_state.get_language(session_id)
         
+        policy = get_output_policy(query)
         # 0. CONSTRAINED OUTPUT BYPASS (Phase 10 Polish)
-        if mode == "constrained_output" or intent_group == "SYSTEM_AUDIT_INTENT":
+        if mode == "constrained_output" or intent_group in ["SYSTEM_AUDIT_INTENT", "MEMORY_INTENT"] or policy.is_minimal:
             return text
             
         # 0. Context extraction
@@ -756,7 +916,14 @@ class CognitiveOrchestrator:
         # 4. INTUITION SYNTHESIS
         intuition = ""
         
-        if is_cognitive:
+        # Authority Check: Don't let intuition pools hijack technical or memory responses
+        is_direct_authority = intent_group in ["MEMORY_INTENT", "COGNITIVE_SYNTHESIS", "OPERATIONAL_DIAGNOSTIC", "RECOVERY", "system_memory_report", "project_status"]
+        
+        if is_direct_authority:
+            # IA Host Authority: Direct response preferred
+            intuition = text.strip()
+            text = ""
+        elif is_cognitive:
             # Bypass uncertainty, use only decisive tone pool
             intuition = random.choice(choices["decisive"])
         elif is_anomaly:

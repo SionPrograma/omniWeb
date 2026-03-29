@@ -11,6 +11,7 @@ from backend.core.chips.chip_orchestrator import chip_orchestrator
 from .reasoning.evidence_engine import evidence_engine
 from .reasoning.runtime_truth import runtime_truth
 from .reasoning.reflective_deliberation import reflective_deliberation
+from .orchestration.output_policy import get_output_policy
 from .deliberation.deliberation_engine import deliberation_engine
 
 logger = logging.getLogger(__name__)
@@ -52,12 +53,13 @@ class BrainRouter:
             from .intent_understanding.intent_engine import intent_engine
             understanding = await intent_engine.understand(msg_clean, session_id)
         
-        intent = understanding["intent_group"]
+        intent_group = understanding["intent_group"]
+        specific_intent = understanding.get("specific_intent")
         mode_override = understanding["mode"]
         
         # 1. ASSEMBLE DELIBERATION CONTEXT (Protected Pipeline Entry)
         try:
-            delib_context = await deliberation_engine.assemble_context(msg_clean, intent, session_id)
+            delib_context = await deliberation_engine.assemble_context(msg_clean, intent_group, session_id)
         except Exception as e:
             logger.error(f"[PIPELINE_ERROR] Deliberation context assembly failed: {e}. Bypassing to default.")
             # Simple fallback context
@@ -73,7 +75,7 @@ class BrainRouter:
         elif mode in ["conversational", "diagnostic"] and mode_override != "conversational":
             mode = mode_override
             
-        logger.info(f"[POWER_BRAIN] Mode: {mode} | Intent: {intent}")
+        logger.info(f"[POWER_BRAIN] Mode: {mode} | Intent: {intent_group}")
 
         # 2. CONTEXTUAL CONTINUITY (Follow-up handling)
         if self._is_short_followup(msg_clean) and delib_context.recent_topic:
@@ -84,7 +86,7 @@ class BrainRouter:
             if mode == "constrained_output":
                  # Bypasses reflective templates and generic naturalization.
                  # Uses direct processors but preserves clean output.
-                 if intent == "copilot_proposal":
+                 if specific_intent == "copilot_proposal" or intent_group == "COPILOT_PROPOSAL_INTENT":
                      res = await self.command_router._handle_proposal(msg_clean, context=context)
                  else:
                      chat_proc = self.command_router.registry.get_processor("chat")
@@ -103,12 +105,12 @@ class BrainRouter:
                      res = self._generate_natural_fallback(lang)
             elif mode == "action_execution":
                  # Route to appropriate action handler based on intent group
-                 if intent in ["BUILD_INTENT"] or "crea" in msg_clean or "build" in msg_clean:
+                 if intent_group in ["BUILD_INTENT"] or "crea" in msg_clean or "build" in msg_clean:
                      res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
-                 elif intent in ["REMEDIATION_INTENT"] or "fix" in msg_clean or "arregla" in msg_clean:
+                 elif intent_group in ["REMEDIATION_INTENT"] or "fix" in msg_clean or "arregla" in msg_clean:
                      res = await self._handle_remediation(msg_clean, delib_context, lang)
-                 elif intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
-                     res = await self._handle_chip_action(msg_clean, intent, delib_context, lang)
+                 elif intent_group in ["EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"] or specific_intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
+                     res = await self._handle_chip_action(msg_clean, specific_intent or intent_group, delib_context, lang)
                  else:
                      # Generic action acknowledgment
                      chat_proc = self.command_router.registry.get_processor("chat")
@@ -136,10 +138,10 @@ class BrainRouter:
                      res = self._format_remediation_response(remediation, lang)
                  else:
                      # Standard analysis with plan
-                     plan = task_planner.create_plan(msg_clean, intent, lang)
+                     plan = task_planner.create_plan(msg_clean, specific_intent or intent_group, lang)
                      res = await self._process_analysis(msg_clean, lang, system_state, plan, evidence=delib_context.relevant_evidence)
-            elif intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
-                 res = await self._handle_chip_action(msg_clean, intent, delib_context, lang)
+            elif intent_group in ["EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"] or specific_intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
+                 res = await self._handle_chip_action(msg_clean, specific_intent or intent_group, delib_context, lang)
             else:
                  # Default Conversational
                  chat_proc = self.command_router.registry.get_processor("chat")
@@ -158,7 +160,7 @@ class BrainRouter:
 
         # 4. POST-PROCESS & MEMORY
         if res:
-            semantic_memory.add_interaction(msg, res.message, intent)
+            semantic_memory.add_interaction(msg, res.message, specific_intent or intent_group)
             return res
 
         return None
@@ -233,34 +235,48 @@ class BrainRouter:
         obs = analysis.observation
         action = analysis.recommended_action
         
+        # 3. Assemble response body with constraint filters
+        policy = get_output_policy(msg)
+        show_telemetry = policy.show_telemetry and not policy.suppress_runtime
+        show_action = policy.show_action
+        is_minimal_diag = policy.is_minimal
+        show_header = policy.show_header
+        
+        footer = ""
+        if (analysis.confidence_level < 0.7 or not target_chip or target_chip == "unknown") and not policy.suppress_audit:
+             footer = "\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?" if lang == "es" else "\n\n---\nShall I initiate a deep audit on this layer?"
+
         if lang == "es":
-            body = (
-                f"**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n"
-                f"- **PROBLEMA**: {symptom}.\n"
-                f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
-                f"- **CAPA PROBABLE**: {layer}\n"
-                f"- **CONFIANZA**: {analysis.confidence_level}\n\n"
-                f"**OBSERVACIÓN**\n"
-                f"{obs}\n\n"
-                f"**SIGUIENTE PASO**\n"
-                f"{action}\n\n"
-                f"---\n"
-                f"¿Deseas iniciar una auditoría profunda sobre esta capa?"
-            )
+            body = f"**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n" if show_header else ""
+            body += f"- **PROBLEMA**: {symptom}.\n"
+            body += f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
+            body += f"- **CAPA PROBABLE**: {layer}\n"
+            if not is_minimal_diag:
+                body += f"- **CONFIANZA**: {analysis.confidence_level}\n\n"
+            else:
+                body += "\n"
+            
+            if show_telemetry:
+                body += f"**OBSERVACIÓN**\n{obs}\n\n"
+            
+            if show_action:
+                body += f"**SIGUIENTE PASO**\n{action}"
+            
+            body += footer
         else:
-            body = (
-                f"**TECHNICAL DIAGNOSTIC**\n"
-                f"- **PROBLEM**: {symptom}.\n"
-                f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
-                f"- **LIKELY LAYER**: {layer}\n"
-                f"- **CONFIDENCE**: {analysis.confidence_level}\n\n"
-                f"**OBSERVATION**\n"
-                f"{obs}\n\n"
-                f"**NEXT STEP**\n"
-                f"{action}\n\n"
-                f"---\n"
-                f"Shall I initiate a deep audit on this layer?"
-            )
+            body = f"**TECHNICAL DIAGNOSTIC**\n" if show_header else ""
+            body += f"- **PROBLEM**: {symptom}.\n"
+            body += f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
+            body += f"- **LIKELY LAYER**: {layer}\n"
+            body += f"- **CONFIDENCE**: {analysis.confidence_level}\n\n"
+            
+            if show_telemetry:
+                body += f"**OBSERVATION**\n{obs}\n\n"
+            
+            if show_action:
+                body += f"**NEXT STEP**\n{action}"
+                
+            body += footer
             
         return AICommandResponse(
             intent="operational_diagnostic",
@@ -407,11 +423,11 @@ class BrainRouter:
         return await self.command_router.intents[intent](msg)
 
         # C. Memory Logic
-        if intent in ["idea_captured", "log_entry", "search_knowledge"]:
-             return await self.command_router.intents[intent](msg)
+        if specific_intent in ["idea_captured", "log_entry", "search_knowledge"]:
+             return await self.command_router.intents[specific_intent](msg)
 
         # D. Conversational Logic (Using Memory for Better Replies)
-        if mode == "conversational" or intent in ["acknowledgment", "greeting", "identity", "status_check", "chat", "unknown"]:
+        if mode == "conversational" or intent_group == "NATURAL_CHAT" or specific_intent in ["acknowledgment", "greeting", "identity", "status_check", "chat", "unknown"]:
              if is_followup and last_topic:
                  import random
                  if lang == "es":

@@ -34,7 +34,7 @@ class AuditShadow(ShadowAgent):
             "integrity": "verified", 
             "score": 0.98, 
             "conflicts_detected": 0, 
-            "risk_assessment": "low",
+            "risk_assessment": "LOW",
             "alignment_verified": True
         }
 

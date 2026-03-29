@@ -1,44 +1,31 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
     // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
-    // Rule: Eliminate all cache/SW interference to ensure single-source-of-truth.
-    const CACHE_RESET_ID = "omni_v2_unified";
+    const CACHE_RESET_ID = "omni_v3_lan_reset";
     try {
         if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
-            // Fixed by Jetski Subagent
-            console.warn("[SAFE_MODE] Cache inconsistency detected. Purging SW and Caches...");
-
-            // 1. Unregister all service workers
-            if (navigator.serviceWorker) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                    for (let registration of registrations) {
-                        registration.unregister().then(() => {
-                            console.log("[SAFE_MODE] SW Unregistered.");
-                        });
-                    }
-                });
+            if (sessionStorage.getItem("omni_reset_attempted")) {
+                console.warn("[SAFE_MODE] Persistent storage failed. Aborting reset loop.");
+            } else {
+                sessionStorage.setItem("omni_reset_attempted", "true");
+                console.warn("[SAFE_MODE] Cache inconsistency detected. Purging...");
+                if (navigator.serviceWorker) {
+                    navigator.serviceWorker.getRegistrations().then(regs => {
+                        for (let r of regs) r.unregister();
+                    });
+                }
+                if (window.caches) {
+                    caches.keys().then(names => {
+                        for (let n of names) caches.delete(n);
+                    });
+                }
+                localStorage.setItem("omni_cache_reset", CACHE_RESET_ID);
+                console.warn("[SAFE_MODE] Reset complete. Reloading...");
+                setTimeout(() => window.location.reload(true), 500);
+                return;
             }
-
-            // 2. Delete all caches
-            if (window.caches) {
-                caches.keys().then(names => {
-                    for (let name of names) {
-                        caches.delete(name).then(() => {
-                            console.log("[SAFE_MODE] Cache Purged:", name);
-                        });
-                    }
-                });
-            }
-
-            // 3. Mark as reset and reload once
-            localStorage.setItem("omni_cache_reset", CACHE_RESET_ID);
-            console.warn("[SAFE_MODE] Reset complete. Reloading for fresh state.");
-            setTimeout(() => {
-                window.location.reload(true);
-            }, 500);
-            return; // Halt this execution
         }
     } catch (e) {
-        console.warn("[SAFE_MODE] Reset guard failed - likely storage restriction.");
+        console.warn("[SAFE_MODE] Reset guard failed.", e);
     }
 
     // DOM Elements
@@ -62,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const voiceBtn = document.getElementById('voice-command');
     const chatLog = document.getElementById('chat-log');
     const closeContextBtn = document.getElementById('close-context');
+    const loadPlaceholder = document.getElementById('js-load-placeholder');
+    if (loadPlaceholder) loadPlaceholder.remove();
 
     if (shellInput) {
         shellInput.addEventListener('input', () => {
@@ -81,69 +70,60 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeView = 'chat';
 
     // --- Onboarding Greeting ---
-    async function initGreeting() {
-        const fallback = "Hola, soy Omni. ¿En qué te ayudo hoy?";
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const inviteToken = urlParams.get('invite') || urlParams.get('beta');
-            const browser_lang = navigator.language.split('-')[0] || 'es';
+    function initGreeting() {
+        const fallback = "Hola, soy Omni. Â¿En quÃ© te ayudo hoy?";
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteToken = urlParams.get('invite') || urlParams.get('beta');
+        const browser_lang = navigator.language.split('-')[0] || 'es';
 
-            // Still call API to trigger system state/audit if necessary, but we override greeting text for UX consistency
-            const res = await fetch('/api/v1/onboarding/greeting', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: "Hola Omni",
-                    browser_lang: browser_lang,
-                    invite_token: inviteToken
-                })
-            });
+        // IMMEDIATE UI FEEDBACK: Show greeting first
+        addMessage(fallback, 'ai');
 
-            if (res.ok) {
-                const data = await res.json();
-                if (window.creatorEnv && data.audit) {
+        // Background sync: Trigger system state/audit
+        fetch('/api/v1/onboarding/greeting', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: "Hola Omni",
+                browser_lang: browser_lang,
+                invite_token: inviteToken
+            })
+        }).then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (window.creatorEnv && data && data.audit) {
                     window.creatorEnv.updateAuditResult(data.audit);
                 }
-            }
-        } catch (err) {
-            console.warn("Greeting API background error:", err);
-        } finally {
-            // UNIFIED: One message, one language (ES), one source for text+voice
-            addMessage(fallback, 'ai');
+            }).catch(err => console.warn("Greeting API background error:", err));
 
-            // --- ADVANCED GREETING UNLOCK (Best effort + Deferred) ---
-            let greetingPlayed = false;
-            const playGreeting = (event) => {
-                if (greetingPlayed || !window.voice) return;
-                window.voice.speak(fallback);
-                greetingPlayed = true;
+        // --- ADVANCED GREETING UNLOCK ---
+        let greetingPlayed = false;
+        const playGreeting = (event) => {
+            if (greetingPlayed || !window.voice) return;
+            window.voice.speak(fallback);
+            greetingPlayed = true;
 
-                // Cleanup listeners. Use verbose removal for maximum mobile compatibility
-                ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
-                    document.removeEventListener(evt, playGreeting)
-                );
-            };
-
-            // 1. Initial attempt (Best effort autoplay after delay)
-            setTimeout(() => {
-                if (!greetingPlayed) playGreeting();
-            }, 800);
-
-            // 2. Fallback: Unlock on first user interaction if blocked
+            // Cleanup
             ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
-                document.addEventListener(evt, playGreeting, { once: true, passive: true })
+                document.removeEventListener(evt, playGreeting)
             );
+        };
 
-            // Refresh Capabilities after initial setup
-            if (window.updateCapabilities) window.updateCapabilities();
-        }
+        // 1. Initial attempt
+        setTimeout(() => { if (!greetingPlayed) playGreeting(); }, 800);
+
+        // 2. Interaction fallback
+        ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
+            document.addEventListener(evt, playGreeting, { once: true, passive: true })
+        );
+
+        if (window.updateCapabilities) window.updateCapabilities();
     }
+
     // --- Persistent History Rehydration ---
     const historyFound = loadHistory();
     if (!historyFound) {
         initGreeting();
     } else {
-        // Still call capabilities refresh
         if (window.updateCapabilities) window.updateCapabilities();
     }
 
@@ -158,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.creatorEnv.switchView('mission');
                 if (tab) {
                     window.creatorEnv.currentTab = tab;
-                    // Update tab UI
                     document.querySelectorAll('.cockpit-tab').forEach(t => {
                         t.classList.toggle('active', t.dataset.tab === tab);
                     });
@@ -169,7 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    setTimeout(handleDeepLink, 1000); // Wait for other components to init
+    setTimeout(handleDeepLink, 1000);
+
     function setLauncherActive(active) {
         const isActive = active !== undefined ? active : !launcherOverlay.classList.contains('active');
         launcherOverlay.classList.toggle('active', isActive);
@@ -349,7 +329,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sender === 'ai') {
             const speechText = text.replace(/[*#`]/g, '').trim();
-            const shareText = speechText.length > 100 ? speechText.substring(0, 100) + '...' : speechText;
+            // Sanitize for attribute usage (sanitize both single and double quotes)
+            const shareText = (speechText.length > 100 ? speechText.substring(0, 100) + '...' : speechText)
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '&quot;');
 
             innerHTML += `
             <div class="msg-actions top">
@@ -360,12 +343,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </svg>
                 </button>
                 <div class="msg-feedback">
-                    <button class="action-btn" title="Útil" onclick="this.classList.toggle('active')">
+                    <button class="action-btn" title="Ãštil" onclick="this.classList.toggle('active')">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
                         </svg>
                     </button>
-                    <button class="action-btn" title="No útil" onclick="this.classList.toggle('active')">
+                    <button class="action-btn" title="No Ãºtil" onclick="this.classList.toggle('active')">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
                         </svg>
@@ -526,13 +509,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("[VOICE_ERROR_DIAGNOSTIC]", error);
             let msg = "Error de voz.";
             if (error === 'not-allowed' || error === 'denied') {
-                msg = "Acceso a micrófono denegado.";
+                msg = "Acceso a micrÃ³fono denegado.";
             } else if (error === 'browser-unsupported' || error === 'unsupported') {
                 msg = "Navegador no soporta voz.";
             } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
                 msg = "Requiere HTTPS para voz.";
             }
-            addMessage(`⚠️ ${msg}`, 'ai');
+            addMessage(`âš ï¸ ${msg}`, 'ai');
         },
         onSpeechStart: () => {
             const orb = document.querySelector('.ai-orb');
@@ -621,18 +604,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Workspace / Creator Bridge (Phase 10 Hardening)
+            if (window.creatorEnv) {
+                window.creatorEnv.lastCopilotResponse = data;
+            }
+
             // Visual Payload Handling (Step 6)
-            if (data.payload?.visual) {
+            if (data.payload && data.payload.visual) {
                 handleVisualResponse(data.payload.visual);
             } else if (data.display_data) {
                 // SuperCommand display data
+                const p = data.payload || {};
                 handleVisualResponse({
                     type: 'task-report',
-                    title: data.display_data.task_title || 'Ejecución de Tarea',
+                    title: data.display_data.task_title || 'EjecuciÃ³n de Tarea',
                     data: {
-                        status: data.payload.status,
-                        actions: data.payload.actions,
-                        issues: data.payload.issues
+                        status: p.status,
+                        actions: p.actions,
+                        issues: p.issues
                     }
                 });
             }
@@ -640,8 +629,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Intent Handling
             if (data.intent === 'confirmation_required') {
                 const confirmed = await window.creatorEnv.askPermission(
-                    "Confirmación del Sistema",
-                    data.message || "¿Deseas proceder con esta operación?"
+                    "ConfirmaciÃ³n del Sistema",
+                    data.message || "Â¿Deseas proceder con esta operaciÃ³n?"
                 );
                 if (confirmed) {
                     shellInput.value = `confirm ${cmd}`;
@@ -653,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Close launcher if user manually types a command
             setLauncherActive(false);
 
-            if (data.intent === 'open_chip' && data.payload?.target) {
+            if (data.intent === 'open_chip' && data.payload && data.payload.target) {
                 const target = data.payload.target;
                 // Visually highlight in launcher if open
                 const launcherItem = document.querySelector(`.chip-launcher-item[data-chip="${target}"]`);
@@ -666,20 +655,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => launchChip(url, target), 600);
             }
 
-            if (data.intent === 'inspect_chip' && data.payload?.target) {
+            if (data.intent === 'inspect_chip' && data.payload && data.payload.target) {
                 if (window.creatorEnv && window.creatorEnv.inspectChip) {
                     window.creatorEnv.inspectChip(data.payload.target);
                 }
             }
 
-            if (data.intent === 'navigate_to' && data.payload?.ui_instruction?.view) {
+            if (data.intent === 'navigate_to' && data.payload && data.payload.ui_instruction && data.payload.ui_instruction.view) {
                 const view = data.payload.ui_instruction.view;
                 if (window.creatorEnv && window.creatorEnv.switchView) {
                     window.creatorEnv.switchView(view);
                 }
             }
 
-            if (data.intent === 'focus_chip_runtime' && data.payload?.target) {
+            if (data.intent === 'focus_chip_runtime' && data.payload && data.payload.target) {
                 const url = `/${data.payload.target}/`;
                 launchChip(url, data.payload.target);
             }
@@ -694,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- Builder Execution Handling ---
-            if (data.intent === 'approve_roadmap' && data.payload?.task_id) {
+            if (data.intent === 'approve_roadmap' && data.payload && data.payload.task_id) {
                 // Show console immediately or wait for start?
                 // User requirement: "UI feedback on current module..."
                 // I'll show it as soon as it's approved.
@@ -703,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (data.intent === 'start_execution' && data.payload?.task_id) {
+            if (data.intent === 'start_execution' && data.payload && data.payload.task_id) {
                 if (window.builderUI) {
                     window.builderUI.show(data.payload.task_id);
                 }
@@ -712,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('AI Host Error:', error);
             typingDiv.remove();
-            addMessage("Tengo problemas para conectar con el sistema central. Por favor, verifica la conexión.", 'ai');
+            addMessage("Tengo problemas para conectar con el sistema central. Por favor, verifica la conexiÃ³n.", 'ai');
         }
     }
 
@@ -721,8 +710,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Skip empty task reports
         if (visual.type === 'task-report') {
-            const hasActions = visual.data?.actions && visual.data.actions.length > 0;
-            const hasIssues = visual.data?.issues && visual.data.issues.length > 0;
+            const hasActions = visual.data && visual.data.actions && visual.data.actions.length > 0;
+            const hasIssues = visual.data && visual.data.issues && visual.data.issues.length > 0;
             if (!hasActions && !hasIssues) {
                 console.info("[UI_STABILIZATION] Ghost Task Execution panel suppressed.");
                 return;
@@ -734,14 +723,14 @@ document.addEventListener('DOMContentLoaded', () => {
         msgDiv.className = `message ai-visual type-${visual.type}`;
 
         let content = `<div class="visual-card">
-            <h4>${visual.title || 'Actualización del Sistema'}</h4>`;
+            <h4>${visual.title || 'ActualizaciÃ³n del Sistema'}</h4>`;
 
         if (visual.type === 'task-report') {
-            const actions = visual.data.actions || [];
+            const actions = (visual.data && visual.data.actions) || [];
             content += `<ul style="font-size: 0.8rem; margin-top: 5px; list-style: none; padding: 0;">
-                ${actions.map(a => `<li style="color: #32ff96;">✓ ${a}</li>`).join('')}
+                ${actions.map(a => `<li style="color: #32ff96;">âœ“ ${a}</li>`).join('')}
             </ul>`;
-            if (visual.data.issues?.length > 0) {
+            if (visual.data && visual.data.issues && visual.data.issues.length > 0) {
                 content += `<p style="color: #ff5050; font-size: 0.7rem; margin-top: 5px;">! ${visual.data.issues[0]}</p>`;
             }
         } else if (visual.type === 'chip-modification-success') {
@@ -759,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (visual.type === 'file-list') {
             const files = visual.data.files || [];
             content += `<div style="font-size: 0.8rem; margin-top: 8px;">
-                ${files.map(f => `<div style="color: var(--text-dim); margin-bottom: 2px; font-family: monospace; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0;">📄 ${f}</div>`).join('')}
+                ${files.map(f => `<div style="color: var(--text-dim); margin-bottom: 2px; font-family: monospace; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0;">ðŸ“„ ${f}</div>`).join('')}
             </div>`;
         } else {
             content += `<pre style="font-size: 0.7rem; color: var(--text-dim); overflow: auto;">${JSON.stringify(visual.data, null, 2)}</pre>`;
@@ -863,7 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    editorSaveBtn.innerText = 'Saved ✓';
+                    editorSaveBtn.innerText = 'Saved âœ“';
                     addMessage(`File updated: **${path}**`, 'ai');
                 } else {
                     alert("Error saving file: " + (data.detail || data.error || "Unknown error"));

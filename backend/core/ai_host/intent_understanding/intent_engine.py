@@ -43,7 +43,7 @@ class IntentEngine:
             detected_group = "COPILOT_PROPOSAL_INTENT"
         elif detected_group == "OPERATIONAL_DIAGNOSTIC":
             specific_intent = "operational_failure_report"
-        elif specific_intent in ["memory_continuity", "memory_project"]:
+        elif specific_intent in ["memory_continuity", "memory_project"] and detected_group not in ["OPERATIONAL_DIAGNOSTIC", "REMEDIATION_INTENT"]:
             detected_group = "MEMORY_INTENT"
 
         # 3. RECONSTRUCT INCOMPLETE PROMPTS (Context-Awareness)
@@ -100,8 +100,11 @@ class IntentEngine:
             return "constrained_output"
         
         # 3. IF input is command -> action_execution
-        if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "SYSTEM_AUDIT_INTENT"]:
+        if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"]:
             return "action_execution"
+            
+        if group == "SYSTEM_AUDIT_INTENT":
+            return "reflective_analysis"
             
         # 4. IF input is clearly conversational -> natural_chat
         if group == "NATURAL_CHAT":
@@ -109,7 +112,7 @@ class IntentEngine:
 
         # 5. IF input is simple or synthesis/memory request -> direct_response  
         # This covers both short messages and synthesis/memory requests regardless of length
-        if group in ["COGNITIVE_SYNTHESIS", "MEMORY_INTENT"] or (words <= 4 and group not in ["ANALYSIS_INTENT"]):
+        if group in ["COGNITIVE_SYNTHESIS", "MEMORY_INTENT"] or (words <= 4 and group not in ["ANALYSIS_INTENT", "OPERATIONAL_DIAGNOSTIC"]):
             # For memory intent, check if it's conversational
             if group == "MEMORY_INTENT":
                 conv_keywords = ["che", "andabamos", "andábamos", "haciendo", "que tal", "qué tal", "omni", "andabas", "hicimos"]

@@ -59,10 +59,15 @@ app = FastAPI(
 
 # --- Middleware ---
 if settings.BACKEND_CORS_ORIGINS:
+    # Rule: Browser rejects "*" with credentials. We explicitly list common dev origins or use '*' without credentials.
+    # Given Omni's shell uses Bearer tokens (headers) and not cookies, we can disable allow_credentials if using wildcard.
+    origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS]
+    allow_all = "*" in origins
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
+        allow_origins=origins if not allow_all else ["*"],
+        allow_credentials=not allow_all, # False if using wildcard to comply with browser security
         allow_methods=["*"],
         allow_headers=["*"],
     )

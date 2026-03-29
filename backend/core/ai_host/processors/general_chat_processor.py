@@ -17,7 +17,8 @@ class GeneralChatProcessor(CommandProcessor):
         "haciendo", "que estábamos", "qué estábamos", "qué estabamos", "que estabamos",
         "andábamos", "andabamos", "qué veníamos", "que veniamos", "continuidad",
         "qué hicimos", "que hicimos", "recién", "lo último", "lo ultimo", "hicimos recién",
-        "en qué estábamos", "en que estabamos", "retomemos", "anterior", "veníamos mirando", "veníamos analizando"
+        "en qué estábamos", "en que estabamos", "retomemos", "anterior", "veníamos mirando", "veníamos analizando",
+        "ajustar", "terminando", "tocar", "hilo", "veníamos haciendo"
     ]
     
     MEMORY_QUERY_KEYWORDS = [
@@ -119,14 +120,14 @@ class GeneralChatProcessor(CommandProcessor):
 
         # 5. Fallback conversational reply
         tone = context.get("tone") if context else None
-        if tone == "natural_chatbot" or any(w in cmd for w in ["raro", "entiendes", "pasa", "confuso", "weird", "wrong"]):
+        if tone == "natural_chatbot" or any(w in cmd for w in ["raro", "entiendes", "confuso", "weird", "wrong"]):
              if lang == "es":
                   msg_out = "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?"
              else:
                   msg_out = "I'm here, maybe I got a bit too rigid reviewing the modules. Everything okay? What's on your mind?"
         elif lang == "es":
-            msg_out = f"No detecté un comando operativo específico, pero acá estoy. Si querés que analice algo técnico, decime el chip o el problema. Si no, ¡podemos seguir charlando!"
+            msg_out = f"No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el chip o el incidente. Si no, ¡podemos seguir charlando!"
         else:
-            msg_out = f"I didn't detect an operational command, but I'm here. Let me know if you want a technical audit or just want to chat."
+            msg_out = f"I didn't detect an operational command, but I'm here. Let me know if you want a technical check or just want to chat."
             
         return AICommandResponse(intent="general_chat", status="success", message=msg_out)

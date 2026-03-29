@@ -42,8 +42,8 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "retomemos lo anterior", "retomemos", "anterior", "lo otro"
     ],
     "EXPLORATION_INTENT": [
-        "muéstrame", "show me", "explora", "explore", "inspecciona", 
-        "inspect", "ver detalles", "view details", "qué hay de"
+        "muéstrame", "show me", "explora", "explore", "inspecciona", "inspeccioná",
+        "inspect", "ver detalles", "view details", "qué hay de", "que hay de"
     ],
     "VOICE_COMMAND_INTENT": [
         "hazlo", "do it", "vale", "ok", "listo", "perfecto", "claro", 
@@ -79,16 +79,20 @@ INTENT_GROUPS: Dict[str, List[str]] = {
         "forced choice", "decisión binaria", "A vs B"
     ],
     "SYSTEM_AUDIT_INTENT": [
-        "auditá", "audita", "audit", "inspecciona el sistema", "system audit", 
+        "auditá", "audita", "audit", "inspecciona el sistema", "inspeccioná el sistema", "inspeccioná", "inspecciona", "system audit", 
         "qué está fallando", "qué falla", "diagnóstica", "diagnostica", 
         "revisa el sistema", "qué capa falla", "qué modulo falla", 
-        "sospechás", "prioridad de arreglo", "saludable", "warning", "evidencia real", "respondé none"
+        "sospechás", "prioridad de arreglo", "saludable", "warning", "evidencia real", "respondé none",
+        "a fondo", "deep audit", "profunda", "escalá el análisis", "escalar el análisis"
     ],
     "COPILOT_PROPOSAL_INTENT": [
         "analizá este archivo", "proponé un fix", "detectá el error", "mostrame un diff", 
         "proponé una mejora", "analiza el código", "qué le falta", "cómo lo ves", 
         "propuesta de fix", "fix mínimo", "detecta el problema",
         "analizá el archivo abierto", "analiza el archivo abierto", "open file", "archivo en el editor"
+    ],
+    "MEMORY_INTENT": [
+        "qué estamos", "qué hacemos", "que estamos", "que hacemos", "venimos", "hacemos", "hicimos", "viendo", "mirando", "cerrando", "terminando", "ajustar", "tocar", "hilo", "acordás", "acordas", "anterior", "seguimos", "lo último", "lo ultimo", "con qué", "con que", "en qué", "en que"
     ],
     "NATURAL_CHAT": [
         "hola", "buen día", "todo bien", "qué tal", "cómo va", "cómo estás", 

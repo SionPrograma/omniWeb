@@ -31,9 +31,11 @@ class VoiceInterface {
         }
 
         // Secure Context Check (Critical for mobile)
+        console.log(`[VOICE_INIT] SecureContext: ${window.isSecureContext}, Host: ${window.location.hostname}`);
         if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-            this.permissionStatus = 'unsecure';
-            console.warn("DIAGNOSTIC: Voice requires HTTPS for mobile access.");
+            console.warn("[VOICE_BLOCK] Secure context required for Web Speech API on this origin.");
+            this.onErrorCallback('browser-unsupported');
+            return;
         }
 
         this.recognition = new SpeechRecognition();
