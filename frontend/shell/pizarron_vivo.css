@@ -27,6 +27,15 @@
     animation: fadeInPizarron 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.pizarron-dashboard-panel {
+    background: rgba(10, 10, 20, 0.4);
+    border-radius: 12px;
+    padding: 15px;
+    height: 100%;
+    overflow-y: auto;
+    border: 1px solid var(--pizarron-border);
+}
+
 @keyframes fadeInPizarron {
     from {
         opacity: 0;
@@ -357,4 +366,17 @@
     color: #fff;
     border-color: #55ccff;
     animation: pizarron-pulse 1.5s infinite;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .pizarron-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .pizarron-card[style*="span 2"] {
+        grid-column: span 1 !important;
+        grid-row: span 1 !important;
+    }
 }

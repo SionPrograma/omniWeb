@@ -146,16 +146,19 @@
         const chipContainer = document.getElementById('chip-status-container');
         if (chipContainer) {
             chipContainer.innerHTML = state.chips.map(chip => {
-                const healthClass = chip.health === 'healthy' ? 'online' : (chip.health === 'warning' ? 'warning' : 'offline');
+                let healthClass = 'offline';
+                if (chip.health === 'healthy') healthClass = 'online';
+                else if (chip.health === 'warning') healthClass = 'warning';
+                else if (chip.health === 'unverified') healthClass = 'neutral';
                 return `
                 <div class="chip-status-card" onclick="creatorEnv.inspectChip('${chip.slug}')">
                     <div class="chip-status-info">
                         <h4>${chip.name}</h4>
-                        <p>${chip.status} | <span style="opacity: 0.6">Last act: ${chip.last_execution || 'never'}</span></p>
+                        <p>${chip.status.toUpperCase()} | <span style="opacity: 0.6">Last act: ${chip.last_execution || 'never'}</span></p>
                     </div>
                     <div class="chip-health-indicator">
                         <span class="status-dot ${healthClass}"></span>
-                        <span class="health-label" style="color: var(--${healthClass}-color, inherit)">${chip.health}</span>
+                        <span class="health-label" style="color: var(--${healthClass}-color, inherit)">${chip.health.toUpperCase()}</span>
                     </div>
                 </div>
             `}).join('');
@@ -165,6 +168,15 @@
         const wsView = document.getElementById('creator-workspace-view');
         if (wsView && wsView.classList.contains('active')) {
             this.updateWorkspaceMonitor(state);
+            this.renderWorkspaceMissionDashboard(state);
+        }
+    }
+
+    renderWorkspaceMissionDashboard(state) {
+        const mount = document.getElementById('ws-mission-mount');
+        const panel = document.getElementById('ws-panel-mission');
+        if (mount && panel && panel.classList.contains('active') && window.pizarronUI) {
+            window.pizarronUI.renderInto(mount, { active_mission: state.active_mission });
         }
     }
 
@@ -183,6 +195,7 @@
                 document.querySelectorAll('.cockpit-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 this.currentTab = tab.dataset.tab;
+                console.log("[CREATOR] Switching Cockpit Tab to:", this.currentTab);
                 this.renderCockpit();
             };
         });
@@ -198,6 +211,55 @@
     }
 
     switchView(viewName) {
+        // --- GLOBAL VISUAL STATE MACHINE ---
+        console.log("[OMNI_NAV] Switching to view:", viewName);
+
+        // 1. Context Drawer (Overlay) Toggle Logic
+        if (viewName === 'context') {
+            if (window.omniShell && window.omniShell.toggleContext) {
+                // Determine if it should be toggled open
+                const panel = document.getElementById('context-panel');
+                const isCurrentlyActive = panel && panel.classList.contains('active');
+                window.omniShell.toggleContext(!isCurrentlyActive);
+            }
+            // Keep the underlying active nav items and main views untouched
+            const navBtn = document.querySelector('[data-view="context"]');
+            if (navBtn) {
+                const panel = document.getElementById('context-panel');
+                navBtn.classList.toggle('active', panel && panel.classList.contains('active'));
+            }
+            return;
+        }
+
+        // 2. Launcher (Overlay) Toggle Logic
+        if (viewName === 'launcher') {
+            if (window.omniShell && window.omniShell.setLauncherActive) window.omniShell.setLauncherActive();
+            return;
+        }
+
+        // 3. Clear all Overlays when switching to a Primary View
+        if (window.omniShell) {
+            if (window.omniShell.closeLauncher) window.omniShell.closeLauncher();
+            if (window.omniShell.toggleContext) window.omniShell.toggleContext(false);
+        }
+
+        // Manage Input Bar Visibility
+        const inputBar = document.querySelector('.input-bar');
+        if (inputBar) inputBar.style.display = (viewName === 'chat') ? 'flex' : 'none';
+
+        // 4. Handle Iframe Chip View (Overlay)
+        const chipView = document.getElementById('active-chip-view');
+        if (viewName === 'chip-view-active') {
+            // Leave it to main.js to actually launch it, we just clean the others
+            document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.body.classList.remove('workspace-active');
+            return;
+        } else if (chipView) {
+            chipView.classList.remove('active'); // Close if we navigate to a Primary View
+        }
+
+        // 5. Normal Primary Views
         document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.body.classList.remove('workspace-active');
@@ -213,6 +275,7 @@
         } else if (viewName === 'workspace') {
             document.getElementById('creator-workspace-view').classList.add('active');
             document.body.classList.add('workspace-active');
+            if (inputBar) inputBar.style.display = 'none'; // Ensured by CSS too
         }
     }
 
@@ -397,7 +460,7 @@
         // Initialize all panels as active ONLY if opening for the first time
         if (!this.workspaceHasBeenOpenedBefore) {
             this.workspaceHasBeenOpenedBefore = true;
-            ['editor', 'copilot', 'changes', 'backend'].forEach(pId => {
+            ['editor', 'copilot', 'changes', 'backend', 'mission'].forEach(pId => {
                 const panel = document.getElementById(`ws-panel-${pId}`);
                 const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
                 if (panel) panel.classList.add('active');
@@ -436,32 +499,23 @@
 
         // Update backend state panel when workspace is active
         this.updateWorkspaceBackendState();
+        this.renderWorkspaceMissionDashboard(this.systemState);
 
         this.updateGridLayout();
     }
 
     openPizarron() {
-        // Find mission data in lastCopilotResponse
-        if (this.lastCopilotResponse && this.lastCopilotResponse.payload) {
-            if (window.pizarronUI) {
-                window.pizarronUI.show(this.lastCopilotResponse.payload);
-            } else {
-                console.error("PizarronUI not initialized.");
-            }
-        } else {
-            alert("No hay una misiÃ³n tÃ©cnica activa para visualizar en el pizarrÃ³n. Proporcione una instrucciÃ³n al Copilot primero.");
-        }
+        this.openWorkspace('mission');
     }
 
     updateGridLayout() {
         const grid = document.getElementById('creator-grid');
         const activePanels = document.querySelectorAll('.ws-panel.active').length;
 
-        // Simple grid adjustment via classes
+        // Reset classes
         grid.className = 'workspace-grid';
-        if (activePanels === 1) {
-            const only = document.querySelector('.ws-panel.active').dataset.panel;
-            grid.classList.add(`solo-${only}`);
+        if (activePanels > 0) {
+            grid.classList.add(`panels-${activePanels}`);
         }
     }
 
@@ -621,6 +675,21 @@
                     </div>
                 </div>
             `;
+        } else if (this.currentTab === 'operations') {
+            // --- PIZARRON VIVO INTEGRATION ---
+            const missionData = {
+                active_mission: this.systemState.active_mission
+            };
+
+            // Re-use Pizarrón Logic as an embedded Dashboard
+            if (window.pizarronUI) {
+                // Ensure panel has base structure for Pizarrón
+                panel.innerHTML = `<div id="pizarron-dashboard-mount" class="pizarron-dashboard-panel"></div>`;
+                const mount = document.getElementById('pizarron-dashboard-mount');
+                window.pizarronUI.renderInto(mount, missionData);
+            } else {
+                panel.innerHTML = `<div class="error-msg">Pizarrón Module not initialized.</div>`;
+            }
         } else if (this.currentTab === 'evidence') {
             const sessionMedia = this.sessionMedia || [];
             const annotations = this.sessionMediaAnnotations || [];
@@ -1349,7 +1418,7 @@
                         <div class="scheduler-form">
                             <select id="inject-chip-slug" class="cockpit-select">
                                 <option value="core">Core Optimizer</option>
-                                <option value="lingua">Lingua Transcriber</option>
+                                <option value="none">Core Analyzer</option>
                                 <option value="finanzas">Finance Auditor</option>
                             </select>
                             <button class="btn-apply" onclick="creatorEnv.submitWorkloadTask()">Dispatch Cluster Task</button>

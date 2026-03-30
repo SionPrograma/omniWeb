@@ -689,11 +689,10 @@ class CognitiveOrchestrator:
         """
         import random
         from backend.core.ai_host.sessions import session_state
+        # Silent Director: Bypass total si es chat natural o mínima
         lang = session_state.get_language(session_id)
-        
         policy = get_output_policy(query)
-        # 0. CONSTRAINED OUTPUT BYPASS (Phase 10 Polish)
-        if mode == "constrained_output" or intent_group in ["SYSTEM_AUDIT_INTENT", "MEMORY_INTENT"] or policy.is_minimal:
+        if mode == "constrained_output" or intent_group in ["SYSTEM_AUDIT_INTENT", "MEMORY_INTENT", "NATURAL_CHAT", "GREETING"] or policy.is_minimal:
             return text
             
         # 0. Context extraction
@@ -812,42 +811,9 @@ class CognitiveOrchestrator:
         main_signal = signals[0] if signals else "el flujo actual" if lang == "es" else "the current flow"
         user_intent = interpretation.get("intent", "neutral_query") if interpretation else "neutral_query"
         
-        # DEBUG MODE REFINEMENT
-        if user_intent == "debug" or intent_group == "REMEDIATION_INTENT":
-            if lang == "es":
-                intro = f"Para mí que el tema viene por {main_signal}, probablemente por saturación o un choque en el historial de señales."
-                decision = f"Voy a priorizar limpiar la memoria temporal de {main_signal} y descartar por ahora un fallo estructural pesado."
-                steps = [
-                    f"Probá esto rápido: limpiale el caché a {main_signal} y recargá.",
-                    "Mandame una frase corta para ver si reacciona bien.",
-                    "Si sigue igual, pasame el log de los últimos 20 segundos y lo líquido."
-                ]
-                return f"{intro} {decision} {steps[0]} {steps[1]} {steps[2]}"
-            else:
-                intro = f"I suspect the issue is in {main_signal}, likely due to saturation or a signal history conflict."
-                decision = f"I'm prioritizing clearing {main_signal} temporary memory and ignoring any deep structural failure for now."
-                steps = [
-                    f"Try this real quick: clear {main_signal} cache and reload.",
-                    "Send me a short phrase to see how it responds.",
-                    "If it persists, send me the last 20 seconds of the log and I'll settle it."
-                ]
-                return f"{intro} {decision} {steps[0]} {steps[1]} {steps[2]}"
-        else:
-            # Generic Conversational Action
-            if lang == "es":
-                decision = f"Me voy a centrar en que {main_signal} funcione ya mismo, dejando de lado los detalles visuales por el momento."
-                steps = [
-                    f"Chequeá {main_signal} con un comando básico.",
-                    "Si camina, dale para adelante con el siguiente módulo."
-                ]
-                return f"{decision} {steps[0]} {steps[1]}"
-            else:
-                decision = f"I'm focusing on getting {main_signal} working right now, putting aside any aesthetic tweaks for the moment."
-                steps = [
-                    f"Check {main_signal} with a basic command.",
-                    "If it works, move ahead with the next module."
-                ]
-                return f"{decision} {steps[0]} {steps[1]}"
+        # Silent Director: Apagado por defecto para el chat principal. 
+        # Solo emite si es explícitamente requerido en un modo de debug profundo.
+        return "" 
 
         # IMPERFECTION LAYER DISABLED PER OMNI DIRECTIVE
         return text

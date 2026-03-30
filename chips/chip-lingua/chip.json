@@ -9,7 +9,7 @@
     "has_backend": true,
     "entry_frontend": "frontend/index.html",
     "dashboard_visible": true,
-    "active": true,
+    "active": false,
     "permissions": [
         "audio_input",
         "audio_output",

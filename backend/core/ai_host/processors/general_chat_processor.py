@@ -48,42 +48,55 @@ class GeneralChatProcessor(CommandProcessor):
         if context:
             lang = context.get("language", "es")
 
-        # 1. Memory Continuity & Project Scope (Primary Balance)
-        # If the user asks what we were doing or details about the work
+        # 1. Jokes / Fun (Silent Director: Prioridad absoluta para evitar falsos positivos)
+        if any(w in cmd for w in ["chiste", "joke", "reite", "reí"]):
+             if lang == "es":
+                  chistes = [
+                      "¿Qué le dice un bit a otro? ... Nos vemos en el bus.",
+                      "A un programador le dicen: 'Andá al súper y traé una leche. Si hay huevos, traé seis'. El tipo volvió con seis leches.",
+                      "¿Por qué los programadores confunden Halloween con Navidad? Porque Oct 31 == Dec 25."
+                  ]
+                  msg_joke = f"¡Ja! Ahí va uno: {random.choice(chistes)}"
+             else:
+                  jokes = [
+                      "Why do programmers always mix up Christmas and Halloween? Because Oct 31 equals Dec 25.",
+                      "A SQL query walks into a bar, walks up to two tables, and asks... 'Can I join you?'",
+                      "How many programmers does it take to change a light bulb? None, that's a hardware problem."
+                  ]
+                  msg_joke = f"Haha! Here is one: {random.choice(jokes)}"
+             return AICommandResponse(intent="joke", status="success", message=msg_joke)
+
+        # 2. Memory Continuity & Project Scope (Primary Balance)
         if any(kw in cmd for kw in self.CONTINUITY_KEYWORDS) or \
            any(kw in cmd for kw in self.MEMORY_QUERY_KEYWORDS):
              
-             # Use the global AI Host memory via the synthesis engine
-             # Note: orchestration usually passes system_memory but if not, use default
              from backend.core.ai_host.memory.system_memory import system_memory
              w = system_memory.get_working()
              p = system_memory.get_project()
              
-             # Centralized synthesize call (Unified across processors)
              tone = context.get("tone") if context else None
              msg_out = executive_synthesis.synthesize(w, p, msg, lang=lang, tone=tone)
              
-             # Specific Intent logic for fixes list if specifically asked
              if ("fix" in cmd or "cerrado" in cmd) and len(cmd.split()) < 6:
                  return AICommandResponse(intent="project_status", status="success", message=msg_out)
              
              return AICommandResponse(intent="system_memory_report", status="success", message=msg_out)
 
-        # 2. Greetings & Acknowledgments
+        # 3. Greetings & Acknowledgments
         if any(w in words or w in cmd for w in self.GREETINGS):
             if lang == "es":
                 responses = [
-                    "¡Hola! ¿Todo bien por ahí? Decime en qué puedo ayudarte hoy.",
-                    "¡Buenas! Acá reportándome. ¿Qué tenemos para hoy?",
-                    "¡Hola! Listos para seguir. Vos dirás qué paso damos.",
-                    "¡Buenas! ¿En qué andamos?"
+                    "¡Hola! Todo bien por acá. ¿En qué puedo ayudarte?",
+                    "¡Buenas! ¿Cómo va todo? Vos dirás por dónde seguimos.",
+                    "¡Hola! Un gusto saludarte. ¿Qué tenemos en mente para hoy?",
+                    "¡Buenas! Reportándome. ¿En qué andamos?"
                 ]
             else:
                 responses = [
-                    "Hello! Everything okay there? Let me know how I can help today.",
-                    "Hey! Reporting in. What's on the agenda?",
-                    "Hi! Ready to go. You tell me what step we take.",
-                    "Hello! What are we working on?"
+                    "Hello! All good here. How can I help you?",
+                    "Hey! How's it going? You tell me where we go next.",
+                    "Hi! Great to see you. What's on your mind today?",
+                    "Hello! Reporting in. What are we working on?"
                 ]
             return AICommandResponse(intent="greeting", status="success", message=random.choice(responses))
 
@@ -106,19 +119,39 @@ class GeneralChatProcessor(CommandProcessor):
         if any(w in words or w in cmd for w in self.HOW_ARE_YOU):
             if lang == "es":
                 responses = [
-                    "¡Todo impecable! Los procesos están estables y el cerebro funcionando a pleno. ¿Y vos?",
-                    "Por ahora todo en orden por acá. Me siento listo para cualquier reto técnico hoy.",
-                    "Sistema al 100%. ¿Cómo va tu día? ¿En qué nos enfocamos ahora?"
+                    "¡Todo impecable! Sistema estable y listo para la acción. ¿Y vos, cómo va eso?",
+                    "Por ahora todo en orden por acá. Me siento con energía para cualquier reto técnico.",
+                    "Sistema al 100%. ¿Cómo viene tu día? ¿En qué nos enfocamos ahora?",
+                    "¡Muy bien! Procesando ideas y esperando tus órdenes. ¿Qué contás vos?"
                 ]
             else:
                 responses = [
-                    "Everything is great! Processes are stable and the brain is running at full capacity. And you?",
-                    "All good over here for now. Feeling ready for any technical challenge today.",
-                    "System at 100%. How's your day going? What are we focusing on now?"
+                    "Everything is impeccable! System stable and ready for action. And you, how's it going?",
+                    "All good over here for now. Feeling energetic for any technical challenge.",
+                    "System at 100%. How's your day? What are we focusing on now?",
+                    "Doing great! Processing ideas and waiting for your commands. What's up with you?"
                 ]
             return AICommandResponse(intent="status_check", status="success", message=random.choice(responses))
 
-        # 5. Fallback conversational reply
+        # 5. Jokes / Fun
+        if any(w in cmd for w in ["chiste", "joke"]):
+             if lang == "es":
+                  chistes = [
+                      "¿Qué le dice un bit a otro? ... Nos vemos en el bus.",
+                      "A un programador le dicen: 'Andá al súper y traé una leche. Si hay huevos, traé seis'. El tipo volvió con seis leches.",
+                      "¿Por qué los programadores confunden Halloween con Navidad? Porque Oct 31 == Dec 25."
+                  ]
+                  msg_out = f"¡Ja! Ahí va uno: {random.choice(chistes)}"
+             else:
+                  jokes = [
+                      "Why do programmers always mix up Christmas and Halloween? Because Oct 31 equals Dec 25.",
+                      "A SQL query walks into a bar, walks up to two tables, and asks... 'Can I join you?'",
+                      "How many programmers does it take to change a light bulb? None, that's a hardware problem."
+                  ]
+                  msg_out = f"Haha! Here is one: {random.choice(jokes)}"
+             return AICommandResponse(intent="joke", status="success", message=msg_out)
+
+        # 6. Fallback conversational reply
         tone = context.get("tone") if context else None
         if tone == "natural_chatbot" or any(w in cmd for w in ["raro", "entiendes", "confuso", "weird", "wrong"]):
              if lang == "es":

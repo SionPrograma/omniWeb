@@ -3,6 +3,7 @@ import logging
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from ..planner.task_planner import TaskPlan, TaskStep
+from ..memory.mission_manager import mission_manager
 
 logger = logging.getLogger(__name__)
 
@@ -14,15 +15,31 @@ class ExecutionStatus(Enum):
     FAILED = "FAILED"
 
 class ExecutionState:
-    def __init__(self, plan: TaskPlan):
+    def __init__(self, plan: TaskPlan, steps_already_completed: List[str] = None):
         self.plan_id = str(uuid.uuid4())
         self.plan = plan
+        self.steps_completed = steps_already_completed or []
+        
+        # Calculate start index based on already completed steps
         self.current_step_index = 0
+        if self.steps_completed:
+            # Find the first step that is NOT completed
+            completed_set = set([str(s) for s in self.steps_completed])
+            for i, step in enumerate(self.plan.steps):
+                if str(step.id) not in completed_set:
+                    self.current_step_index = i
+                    break
+            else:
+                # All steps completed
+                self.current_step_index = len(self.plan.steps)
+
         self.status = ExecutionStatus.PENDING
-        self.steps_completed = []
         self.awaiting_creator_confirmation = False
         self.execution_log = []
         self.shared_context = {}
+        
+        if self.steps_completed:
+            self.execution_log.append(f"Reanudando plan con {len(self.steps_completed)} pasos ya registrados.")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -46,11 +63,11 @@ class ExecutionController:
     def __init__(self):
         self.active_executions: Dict[str, ExecutionState] = {}
 
-    async def run(self, plan: TaskPlan, evidence: Optional[List[Any]] = None, hypothesis_id: Optional[str] = None, snapshot_id: Optional[str] = None) -> Dict[str, Any]:
+    async def run(self, plan: TaskPlan, evidence: Optional[List[Any]] = None, hypothesis_id: Optional[str] = None, snapshot_id: Optional[str] = None, steps_already_completed: List[str] = None) -> Dict[str, Any]:
         """
         Main entry point for starting a plan execution.
         """
-        state = ExecutionState(plan)
+        state = ExecutionState(plan, steps_already_completed)
         self.active_executions[state.plan_id] = state
         
         logger.info(f"[EXECUTION_START] Starting plan: {plan.goal} (ID: {state.plan_id})")
@@ -97,8 +114,12 @@ class ExecutionController:
                  return await self._process_next_steps(state)
 
         # 2. Advance to next step
-        state.steps_completed.append(state.plan.steps[state.current_step_index].id)
+        step_id = state.plan.steps[state.current_step_index].id
+        state.steps_completed.append(step_id)
         state.current_step_index += 1
+        
+        # Sync with Persistent Mission State
+        mission_manager.update_mission_step(str(step_id))
         
         return await self._process_next_steps(state)
 
@@ -129,6 +150,9 @@ class ExecutionController:
             await self._execute_step(state, step, evidence)
             state.current_step_index += 1
             state.steps_completed.append(step.id)
+            
+            # Sync with Persistent Mission State
+            mission_manager.update_mission_step(str(step.id))
 
         if state.current_step_index >= len(state.plan.steps):
             state.status = ExecutionStatus.COMPLETED

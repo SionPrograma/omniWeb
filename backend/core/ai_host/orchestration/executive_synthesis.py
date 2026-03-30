@@ -1,10 +1,16 @@
 import logging
 import random
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from .output_policy import get_output_policy
 
+# Structured imports for type hinting
+from ..reasoning.runtime_truth import StructuredDiagnosis
+from ..planner.task_planner import TaskPlan
+from ..reasoning.verification_layer import VerificationResult
+
 logger = logging.getLogger(__name__)
+
 
 class ExecutiveSynthesis:
     """
@@ -196,4 +202,147 @@ class ExecutiveSynthesis:
         
         return final_msg
 
+    def synthesize_analysis(self, 
+                            diagnosis: StructuredDiagnosis, 
+                            plan: TaskPlan, 
+                            verification: VerificationResult, 
+                            execution_result: Dict[str, Any],
+                            chip_report: str = "",
+                            lang: str = "es",
+                            query: str = "") -> str:
+        """
+        Grounded synthesis of technical logic.
+        Communicates Diagnosis, Planning, and Verification state clearly.
+        """
+        policy = get_output_policy(query)
+        is_es = lang == "es"
+        
+        # 1. DIAGNOSIS BLOCK
+        if diagnosis:
+            diag_title = "**ANÁLISIS DE RUNTIME (L1/L2)**" if is_es else "**RUNTIME ANALYSIS (L1/L2)**"
+            diag_status = f"Estado: `{diagnosis.diagnosis_type.upper()}` (Confianza: {int(diagnosis.confidence_score * 100)}%)"
+            
+            anomalies_list = []
+            for a in diagnosis.detected_anomalies:
+                anomalies_list.append(f"- `{a['type'].upper()}` detectado en `{a['source']}`: {a['value']}")
+            
+            anomalies_body = "\n".join(anomalies_list) if anomalies_list else ("- Parámetros nominales." if is_es else "- Nominal parameters.")
+            diagnosis_section = f"{diag_title}\n{diag_status}\n{anomalies_body}"
+        else:
+            diagnosis_section = ""
+
+        # 2. OPERATIVE PLAN BLOCK
+        plan_title = f"**PLAN OPERATIVO: {plan.goal}**"
+        task_lines = []
+        for t in plan.tasks:
+            # Determine icon based on execution state
+            icon = "⚪" # Pending
+            if t.id in execution_result.get("steps_completed", []):
+                icon = "✅"
+            elif execution_result["status"] == "WAITING_CONFIRMATION" and t.id == execution_result.get("current_step"):
+                icon = "⚠"
+            elif execution_result["status"] == "BLOCKED":
+                icon = "🚫"
+            elif execution_result["status"] == "RUNNING":
+                icon = "⚙️"
+            
+            task_lines.append(f"{icon} {t.id}. {t.description}")
+        
+        plan_body = "\n".join(task_lines)
+        plan_section = f"{plan_title}\n{plan_body}"
+
+        # 3. VERIFICATION & SECURITY BLOCK
+        if verification:
+            verif_title = "**AUDITORÍA DE SEGURIDAD (VERIFICATION LAYER)**" if is_es else "**SECURITY AUDIT (VERIFICATION LAYER)**"
+            verif_status = f"Resultado: `{verification.verification_mode.upper()}`"
+        
+            verif_notes = []
+            if verification.global_notes:
+                for n in verification.global_notes:
+                    verif_notes.append(f"- {n}")
+            
+            # Cross-reference individual task rejections
+            for tv in verification.task_verifications:
+                if not tv.is_valid:
+                    verif_notes.append(f"- Tarea {tv.task_id} RECHAZADA: {tv.reject_reason}")
+
+            verif_body = "\n".join(verif_notes) if verif_notes else ("- Plan validado sin conflictos." if is_es else "- Plan validated without conflicts.")
+            verif_section = f"{verif_title}\n{verif_status}\n{verif_body}"
+        else:
+            verif_section = ""
+
+        # 4. CHIP ECOSYSTEM STATUS
+        chip_section = f"**ESTADO DE MÓDULOS (CHIPS)**\n{chip_report}" if chip_report else ""
+
+        # 5. EXECUTIVE CONCLUSION
+        conclusion_title = "**CONCLUSIÓN EJECUTIVA**" if is_es else "**EXECUTIVE CONCLUSION**"
+        
+        mode = verification.verification_mode if verification else "nominal"
+        if mode == "blocked":
+            conclusion = "Se ha bloqueado la ejecución por inconsistencia de datos o target inexistente." if is_es else "Execution blocked due to data inconsistency or missing target."
+        elif mode == "clarification":
+            conclusion = "Se requiere aclaración del usuario para resolver ambigüedad entre intención y telemetría." if is_es else "User clarification required to resolve ambiguity between intent and telemetry."
+        elif mode == "approval_required":
+            conclusion = "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas." if is_es else "Plan verified. Awaiting manual approval for dangerous actions."
+        elif mode == "nominal":
+            conclusion = "Continuando con la ejecución de los pasos pendientes de la misión." if is_es else "Continuing with the execution of the pending mission steps."
+        else:
+            conclusion = "Plan verificado y ejecución segura iniciada exitosamente." if is_es else "Plan verified and safe execution started successfully."
+
+        # Combine Final Response (SOLO VOZ OFICIAL LIMPIA POR DEFECTO)
+        
+        # Determine if we should show the full breakdown
+        # Show breakdown only if explicitly requested or in high-confidence executive mode
+        show_breakdown = (not policy.is_minimal and not policy.suppress_runtime and policy.is_report_mode and 
+                          any(k in query.lower() for k in ["reporte", "detalle", "análisis", "analisis", "pasos", "plan", "por qué", "por que"]))
+
+        if not show_breakdown:
+             # VOICE CLEANUP: Solo conclusión + Misión si aplica
+             final_msg = conclusion
+             
+             # Append brief mission status if open (SILENT DIRECTOR: Only if relevant to query)
+             try:
+                 # SILENT DIRECTOR: Solo inyectamos estado de misión si parece una consulta operativa real
+                 # Usamos palabras completas para evitar falsos positivos (como 'que' dentro de otras palabras)
+                 work_keywords = [r"\bseguí\b", r"\bdale\b", r"\bqué\b", r"\bhaciendo\b", r"\bplan\b", r"\bmisión\b", r"\bmision\b", r"\bestado\b", r"\bwork\b", r"\bmission\b"]
+                 is_work_related = any(re.search(kw, query.lower()) for kw in work_keywords)
+                 if is_work_related:
+                      from ..memory.mission_manager import mission_manager
+                      mission = mission_manager.get_active_mission()
+                      if mission:
+                          status_icon = "⚙️" if mission.status.value == "OPEN" else "⏸️"
+                          final_msg += f"\n\n{status_icon} **MISIÓN ACTIVA:** {mission.active_goal} ({len(mission.completed_steps)}/{len(mission.completed_steps) + len(mission.pending_steps)} pasos)"
+             except:
+                 pass
+             
+             return final_msg
+
+        # Full Technical Report (Executive Mode - Only when requested)
+        response_parts = [diagnosis_section, plan_section, verif_section]
+        
+        # 6. MISSION CONTINUITY (Persistence Anchor)
+        try:
+             from ..memory.mission_manager import mission_manager
+             mission = mission_manager.get_active_mission()
+             if mission:
+                 mission_title = "**ESTADO DE MISIÓN (PERSISTENTE)**" if is_es else "**MISSION STATUS (PERSISTENT)**"
+                 mission_info = (
+                     f"- Objetivo: {mission.active_goal}\n"
+                     f"- Estado: `{mission.status.value}`\n"
+                     f"- Sincronización: Activa en `database`"
+                 ) if is_es else (
+                     f"- Goal: {mission.active_goal}\n"
+                     f"- Status: `{mission.status.value}`\n"
+                     f"- Sync: Active in `database`"
+                 )
+                 response_parts.append(f"{mission_title}\n{mission_info}")
+        except Exception as e:
+             logger.warning(f"[SYNTHESIS] Could not append mission info: {e}")
+
+        if chip_section: response_parts.append(chip_section)
+        response_parts.append(conclusion_section)
+
+        return "\n\n".join(response_parts)
+
 executive_synthesis = ExecutiveSynthesis()
+

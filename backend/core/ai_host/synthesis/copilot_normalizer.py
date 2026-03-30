@@ -63,6 +63,9 @@ class CopilotNormalizer:
                         break
 
         # print(f"[DEBUG] CopilotNormalizer data: {data.keys()}")
+        # 1. Resolve Policy & Blocks Status
+        show_heavy_blocks = policy_result.get("is_report_mode", True) if policy_result else True
+
         if not data and not policy_result:
             return text 
         
@@ -93,12 +96,14 @@ class CopilotNormalizer:
         # 3. Construct Unified Grammar Narrative
         labels = self.SEC_LABELS[lang]
         
-        narrative = f"{title}\n"
+        # Silent Director: No inyectamos títulos NUNCA en el chat principal. 
+        # El título queda implícito o reservado para payloads técnicos.
+        narrative = "" # Títulos Markdown eliminados del canal de voz principal.
         narrative += f"{labels['context']} `{file_path}`.\n\n"
         narrative += f"{labels['finding']} {summary}\n\n"
         narrative += f"{labels['safety']} {safety} | {labels['impact']} {impact}\n"
         
-        if "CORE" in str(impact).upper() or "ALTO" in str(safety).upper():
+        if show_heavy_blocks and ("CORE" in str(impact).upper() or "ALTO" in str(safety).upper()):
             caution = "Dado que afecta a módulos centrales o críticos, se recomienda extrema precaución." if lang == "es" else "As this affects core or critical modules, extreme caution is recommended."
             narrative += f"> [!IMPORTANT]\n> {caution}\n"
             
@@ -167,6 +172,11 @@ class CopilotNormalizer:
             if "+" in last_part or "-" in last_part or "archivo_leido" in last_part.lower():
                 diff_part = "\n---\n" + last_part.strip()
 
-        return f"{narrative}{policy_block}{tree_block}{footer}{orch_report}{diff_part}".strip()
+        if not show_heavy_blocks:
+            return narrative.strip()
+
+        # Silent Director: No inyectamos bloques de política o árbol en el string de retorno. 
+        # Estos datos ya están en el payload para el Audit Drawer.
+        return f"{narrative}{footer}{orch_report}{diff_part}".strip()
 
 copilot_normalizer = CopilotNormalizer()

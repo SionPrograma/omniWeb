@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniweb-shell-v1';
+const CACHE_NAME = 'omniweb-shell-v2';
 const ASSETS = [
     '/shell/',
     '/shell/index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
@@ -31,11 +32,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Strategy: Cache First, then Network
+    // Strategy: Network First, fallback to Cache
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request).catch(() => {
-                // If it's a page navigation and offline, return cached shell
+        fetch(event.request).catch(() => {
+            return caches.match(event.request).then((response) => {
+                if (response) return response;
                 if (event.request.mode === 'navigate') {
                     return caches.match('/shell/index.html');
                 }

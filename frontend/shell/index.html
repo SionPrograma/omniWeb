@@ -10,24 +10,24 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@200;400;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/shell/style.css?v=v3_unified">
-    <link rel="stylesheet" href="/shell/logbook.css">
-    <link rel="stylesheet" href="/shell/creator.css">
-    <link rel="stylesheet" href="/shell/cluster.css">
-    <link rel="stylesheet" href="/shell/workload.css">
-    <link rel="stylesheet" href="/shell/mesh.css">
-    <link rel="stylesheet" href="/shell/offline.css">
-    <link rel="stylesheet" href="/shell/runtime.css">
-    <link rel="stylesheet" href="/shell/storage.css">
-    <link rel="stylesheet" href="/shell/human_dev.css">
-    <link rel="stylesheet" href="/shell/ecosystem_collab.css">
-    <link rel="stylesheet" href="/shell/scaling_beta.css">
-    <link rel="stylesheet" href="/shell/creator_theme.css?v=v3_unified">
-    <link rel="stylesheet" href="/shell/builder.css">
-    <link rel="stylesheet" href="/shell/editor.css">
-    <link rel="stylesheet" href="/shell/workspace.css">
-    <link rel="stylesheet" href="/shell/audit_drawer.css">
-    <link rel="stylesheet" href="/shell/pizarron_vivo.css">
+    <link rel="stylesheet" href="/shell/style.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/logbook.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/creator.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/cluster.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/workload.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/mesh.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/offline.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/runtime.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/storage.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/human_dev.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/ecosystem_collab.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/scaling_beta.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/creator_theme.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/builder.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/editor.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/workspace.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/audit_drawer.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/pizarron_vivo.css?v=v5_chrome_hotfix">
     <link rel="manifest" href="/shell/manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -124,7 +124,7 @@
                     </svg>
                     <span style="margin-left: 8px; font-size: 0.8rem; font-weight: 600;">BACK</span>
                 </button>
-                <span id="active-chip-title">Chip Activo: Lingua</span>
+                <span id="active-chip-title">Chip Activo: OmniCore</span>
                 <div class="chip-options">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="1" />
@@ -142,6 +142,7 @@
                 <h1>Mission Control</h1>
                 <div class="cockpit-tabs">
                     <button class="cockpit-tab active" data-tab="health">General Health</button>
+                    <button class="cockpit-tab" data-tab="operations">Operations (Misiones)</button>
                     <button class="cockpit-tab" data-tab="map">Galaxy Map</button>
                     <button class="cockpit-tab" data-tab="fixes">Auto-Healing</button>
                     <button class="cockpit-tab" data-tab="insights">Insights</button>
@@ -232,6 +233,13 @@
                         </svg>
                         <span>BACKEND</span>
                     </button>
+                    <button class="ws-toggle active" data-panel="mission" title="Toggle Mission">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                        <span>MISSION</span>
+                    </button>
                     <div class="ws-divider"></div>
                     <button class="ws-nav-btn" id="ws-nav-preview" title="Exit to Preview Shell"
                         onclick="creatorEnv.closeWorkspaceAndGoToMain()"
@@ -246,15 +254,15 @@
                         </svg>
                         <span style="vertical-align: middle;">PREVIEW</span>
                     </button>
-                    <button class="ws-nav-btn" id="ws-nav-pizarron" title="Open Pizarrón Vivo"
-                        onclick="window.creatorEnv.openPizarron()"
-                        style="background: transparent; border: 1px solid rgba(212, 175, 55, 0.4); color: var(--creator-gold); padding: 5px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-right: 8px;">
+                    <button class="ws-nav-btn" id="ws-nav-pizarron" title="Mission Dashboard"
+                        onclick="creatorEnv.openWorkspace('mission')"
+                        style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.4); color: var(--creator-gold); padding: 5px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-right: 8px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <line x1="9" y1="3" x2="9" y2="21"></line>
                         </svg>
-                        <span style="vertical-align: middle;">PIZARRÓN</span>
+                        <span style="vertical-align: middle;">MISSION</span>
                     </button>
                     <button class="ws-close-btn" id="close-workspace" title="Exit Workspace">✕</button>
                 </div>
@@ -332,6 +340,15 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Panel 5: MISSION DASHBOARD (New, Toggleable) -->
+                <section class="ws-panel" id="ws-panel-mission" data-panel="mission">
+                    <div class="panel-label">MISSION DASHBOARD</div>
+                    <div class="ws-panel-content mission-inner" id="ws-mission-mount"
+                        style="background: rgba(10, 10, 20, 0.3); overflow-y: auto;">
+                        <div class="loading-indicator">Cargando dashboard cognitivo...</div>
+                    </div>
+                </section>
             </div>
         </main>
 
@@ -396,14 +413,14 @@
                 <span>Chat</span>
             </button>
 
-            <button class="nav-item" onclick="window.location.href='/dashboard'">
+            <button class="nav-item" data-view="workspace">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="7" height="7" />
                     <rect x="14" y="3" width="7" height="7" />
                     <rect x="14" y="14" width="7" height="7" />
                     <rect x="3" y="14" width="7" height="7" />
                 </svg>
-                <span>Dashboard</span>
+                <span>Creator</span>
             </button>
 
             <button class="nav-item shell-launcher" id="open-launcher">
@@ -503,9 +520,10 @@
                     </div>
                     <span class="chip-label">AI Copilot</span>
                 </div>
-                <div class="chip-launcher-item active" data-chip="lingua" data-url="/lingua/">
-                    <div class="chip-icon lingua">L</div>
-                    <span class="chip-label">Lingua</span>
+                <div class="chip-launcher-item disabled" data-chip="lingua"
+                    title="Módulo desactivado (Aislamiento framework conflictivo)">
+                    <div class="chip-icon lingua" style="opacity: 0.5;">L</div>
+                    <span class="chip-label" style="opacity: 0.5;">Lingua (Off)</span>
                 </div>
                 <div class="chip-launcher-item" data-chip="finanzas" data-url="/finanzas/">
                     <div class="chip-icon finanzas">F</div>
@@ -610,14 +628,14 @@
         </div>
     </div>
 
-    <script src="/shell/voice.js"></script>
-    <script src="/shell/builder.js"></script>
-    <script src="/shell/galaxy.js"></script>
-    <script src="/shell/creator.js?v=v2_propose_patch"></script>
-    <script src="/shell/editor.js?v=v2_propose_patch"></script>
-    <script src="/shell/logbook.js"></script>
-    <script src="/shell/pizarron_vivo.js"></script>
-    <script src="/shell/main.js"></script>
+    <script src="/shell/voice.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/builder.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/galaxy.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/creator.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/editor.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/logbook.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/pizarron_vivo.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/main.js?v=v5_chrome_hotfix"></script>
 
 </body>
 

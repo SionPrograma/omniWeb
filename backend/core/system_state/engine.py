@@ -12,6 +12,7 @@ from backend.core.master_logbook.models import EntryType, MasterLogbookFilter
 from backend.core.permissions import set_chip_context
 from backend.core.creator_control.manager import creator_control_manager
 from backend.core.cluster.manager import cluster_manager
+from backend.core.ai_host.memory.mission_manager import mission_manager
 from .models import SystemState, SystemHealth, ChipState, SystemMode
 
 logger = logging.getLogger(__name__)
@@ -62,8 +63,8 @@ class SystemStateEngine:
                 reg_info = module_registry.get_module_data(slug)
                 
                 # Default values from metadata
-                health_val = c.get("health", "healthy")
-                status_val = "active" if c.get("active") else "disabled"
+                health_val = c.get("health", "unverified")
+                status_val = "registered" if c.get("active") else "disabled"
                 
                 # Override with runtime truth if registered
                 if reg_info:
@@ -178,6 +179,15 @@ class SystemStateEngine:
                 }
             }
 
+            # 6b. Active Mission (MissionState Integration)
+            active_mission = None
+            try:
+                mission = mission_manager.get_active_mission()
+                if mission:
+                    active_mission = mission.model_dump()
+            except:
+                pass
+
             # 7. Build Unified State
             self._state = SystemState(
                 version=settings.VERSION,
@@ -204,6 +214,7 @@ class SystemStateEngine:
                 flow_data=flow_data,
                 cluster=cluster_info,
                 sync_status=self._get_sync_info(user_id) if user_id else None,
+                active_mission=active_mission,
                 timestamp=time.time(),
                 uptime_seconds=time.time() - self._start_time
             )

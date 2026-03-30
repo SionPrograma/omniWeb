@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     background: var(--creator-bg, #0A0A0F);
-    z-index: 8000;
+    z-index: 150;
     display: none;
     flex-direction: column;
     color: #fff;
@@ -116,23 +116,44 @@ body.workspace-active #shell-container {
 .workspace-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-rows: auto auto;
     gap: 1px;
     background: var(--creator-border);
     overflow: hidden;
 }
 
 /* Logical Grid Adjustment */
-.workspace-grid.solo-editor {
+.workspace-grid.panels-1 {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
 }
 
-.workspace-grid.solo-editor #ws-panel-copilot,
-.workspace-grid.solo-editor #ws-panel-backend,
-.workspace-grid.solo-editor #ws-panel-changes {
-    display: none;
+.workspace-grid.panels-2 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+}
+
+.workspace-grid.panels-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+}
+
+.workspace-grid.panels-4 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+.workspace-grid.panels-5,
+.workspace-grid.panels-6 {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+/* Desktop override for small active panels */
+.workspace-grid.solo-editor {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
 }
 
 .ws-panel {
@@ -140,6 +161,8 @@ body.workspace-active #shell-container {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.2);
 }
 
 .ws-panel:not(.active) {
@@ -347,11 +370,57 @@ body.workspace-active #shell-container {
     }
 
     .workspace-header {
-        padding: 0 10px;
+        width: 100%;
+        max-width: 100vw;
+        box-sizing: border-box;
+        padding: 0;
+        overflow: hidden;
+        /* Force header bounds to viewport */
     }
 
-    .workspace-title h2 {
+    .workspace-title {
+        display: none !important;
+        /* Free up all width for the carrusel */
+    }
+
+    .workspace-controls {
+        width: 100vw;
+        /* Take full viewport width */
+        max-width: 100vw;
+        display: flex;
+        align-items: center;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x !important;
+        scroll-snap-type: x mandatory;
+        padding: 0 15px;
+        /* Inner padding for safe scroll area */
+        gap: 0;
+        /* Better handling of scroll math in older webkits */
+        scrollbar-width: none;
+    }
+
+    .workspace-controls::-webkit-scrollbar {
         display: none;
+    }
+
+    .ws-toggle,
+    .ws-nav-btn,
+    .ws-close-btn {
+        flex: 0 0 auto !important;
+        /* Iron-clad width protection */
+        scroll-snap-align: start;
+        margin-right: 12px;
+        /* Replaces gap for safer overflow calculation */
+    }
+
+    /* Target the close button at the end to have extra margin to clear screen edge */
+    .ws-close-btn {
+        margin-right: 30px;
     }
 }
 

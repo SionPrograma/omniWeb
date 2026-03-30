@@ -1,0 +1,236 @@
+commit 119d349d9f3fd5ac1647fd1337a6fbdf6c77050d
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 29 18:14:13 2026 +0200
+
+    checkpoint: estado roto antes de rollback shell movil LAN
+
+ backend/core/ai_host/brain_router.py               |  98 +++---
+ backend/core/ai_host/evals/base_eval_suite.py      |  97 ++++++
+ .../core/ai_host/evals/pilot_execution_report.py   |  62 ++++
+ backend/core/ai_host/evals/test_block5_output.py   |  90 ++++++
+ backend/core/ai_host/evals/test_block7_policy.py   |  63 ++++
+ .../core/ai_host/evals/test_block8_task_tree.py    |  50 +++
+ .../ai_host/intent_understanding/intent_engine.py  |   9 +-
+ .../intent_understanding/intent_patterns.py        |  12 +-
+ .../core/ai_host/observability/self_correction.py  |  38 +++
+ backend/core/ai_host/observability/tracing_api.py  | 127 ++++++++
+ .../orchestration/cognitive_orchestrator.py        | 343 +++++++++++++++-----
+ .../core/ai_host/orchestration/execution_policy.py |  86 +++++
+ .../ai_host/orchestration/executive_synthesis.py   |  25 +-
+ .../core/ai_host/orchestration/output_policy.py    |  70 ++++
+ .../core/ai_host/orchestration/responses_api.py    |  49 +++
+ backend/core/ai_host/orchestration/task_tree.py    |  86 +++++
+ .../core/ai_host/orchestration/tool_definitions.py |  51 +++
+ .../ai_host/processors/general_chat_processor.py   |   9 +-
+ .../ai_host/reasoning/reflective_deliberation.py   |  13 +-
+ backend/core/ai_host/shadow_swarm/apply_loop.py    | 130 ++++++++
+ backend/core/ai_host/shadow_swarm/approval_gate.py | 107 ++++++
+ .../core/ai_host/shadow_swarm/execution_swarm.py   |   2 +-
+ .../core/ai_host/shadow_swarm/shadow_auditor.py    |  88 +++++
+ .../ai_host/shadow_swarm/shadow_constructor.py     | 106 ++++++
+ .../ai_host/shadow_swarm/shadow_orchestrator.py    |  71 +++-
+ .../core/ai_host/synthesis/copilot_normalizer.py   | 172 ++++++++++
+ backend/data/chat_memory.json                      | 346 +++++++++++++-------
+ backend/data/omniweb.db                            | Bin 3956736 -> 4034560 bytes
+ backend/data/system/memory.json                    |  10 +-
+ backend/main.py                                    |   9 +-
+ check_lan.py                                       |  37 +++
+ frontend/shell/creator.js                          | 103 +++---
+ frontend/shell/index.html                          |  16 +
+ frontend/shell/main.js                             | 217 ++++++-------
+ frontend/shell/pizarron_vivo.css                   | 360 +++++++++++++++++++++
+ frontend/shell/pizarron_vivo.js                    | 210 ++++++++++++
+ frontend/shell/voice.js                            |   6 +-
+ test_runtime_core.py                               | 115 +++++++
+ tmp/audit_blocks_10_13.py                          |  51 +++
+ tmp/audit_payload.py                               |  67 ++++
+ verify_block1_final.py                             |  79 +++++
+ 41 files changed, 3230 insertions(+), 450 deletions(-)
+
+commit 460f94318f3334eaf772f63eb02b6e078f381a3f
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 22 21:38:08 2026 +0100
+
+    feat(ai-host): stabilize conversational memory, scroll history, and technical chip detection
+
+ backend/core/ai_host/brain_router.py               |  10 ----
+ .../ai_host/intent_understanding/intent_engine.py  |  19 ++++----
+ .../intent_understanding/intent_patterns.py        |   3 +-
+ .../ai_host/orchestration/executive_synthesis.py   |   4 +-
+ .../ai_host/processors/general_chat_processor.py   |   5 +-
+ .../ai_host/reasoning/reflective_deliberation.py   |  25 +++++-----
+ backend/data/chat_memory.json                      |  54 +++++++++++++++++++++
+ backend/data/omniweb.db                            | Bin 3952640 -> 3956736 bytes
+ 8 files changed, 82 insertions(+), 38 deletions(-)
+
+commit 66aa05acf7147a3e1208d45412be56a5840b517e
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 22 21:21:25 2026 +0100
+
+    fix(mobile-chat): restore full upward scroll access to rehydrated conversation history
+
+ backend/core/ai_host/brain_router.py               |   5 +-
+ backend/core/ai_host/memory/semantic_memory.py     |  48 +++++--
+ .../orchestration/cognitive_orchestrator.py        |   9 +-
+ backend/data/chat_memory.json                      | 152 +++++++++++++++++++++
+ backend/data/omniweb.db                            | Bin 3936256 -> 3952640 bytes
+ frontend/shell/main.js                             |  45 +++++-
+ frontend/shell/style.css                           |   6 +-
+ 7 files changed, 247 insertions(+), 18 deletions(-)
+
+commit faec5f8779a1ea821965ab2620ff7fe45e8975ef
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 22 20:41:48 2026 +0100
+
+    fix(ai-host): stabilize conversational balance and semantic robustness
+
+ backend/core/ai_host/brain_router.py               |  95 +++++++++++-
+ .../ai_host/intent_understanding/intent_engine.py  |  30 +++-
+ .../intent_understanding/intent_patterns.py        |  13 ++
+ .../orchestration/cognitive_orchestrator.py        |  11 +-
+ .../ai_host/orchestration/executive_synthesis.py   |  27 +++-
+ .../ai_host/processors/general_chat_processor.py   | 167 ++++++++++-----------
+ .../ai_host/reasoning/reflective_deliberation.py   |   6 +-
+ backend/core/ai_host/reasoning/runtime_truth.py    |  16 +-
+ backend/core/ai_host/routing/command_router.py     |   4 +-
+ backend/core/ai_host/routing/utils.py              |  71 ++++-----
+ backend/data/omniweb.db                            | Bin 3919872 -> 3936256 bytes
+ frontend/shell/main.js                             |  10 +-
+ frontend/shell/style.css                           |  15 +-
+ frontend/shell/workspace.css                       |   2 +-
+ 14 files changed, 297 insertions(+), 170 deletions(-)
+
+commit 0b1b652aab29ae19803af5b551dc357b34550f7d
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 22 18:28:40 2026 +0100
+
+    fix(ai-host): complete memory synthesis for active closed deferred and sensitive context
+
+ .../ai_host/orchestration/executive_synthesis.py   |  76 +++++---
+ backend/data/omniweb.db                            | Bin 3907584 -> 3919872 bytes
+ frontend/shell/index.html                          |  27 ++-
+ frontend/shell/main.js                             | 155 ++++++++++++++--
+ frontend/shell/style.css                           | 199 +++++++++++++++++++++
+ 5 files changed, 405 insertions(+), 52 deletions(-)
+
+commit 6abba632de35de80a1b0d84c6111d81a5efa4718
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 22 10:57:00 2026 +0100
+
+    fix(chat): validate minimal response suppression for sensitive module answers
+
+ .../human_input_interpreter.py                     |  17 +++-
+ .../ai_host/orchestration/executive_synthesis.py   |  91 +++++++++++++++------
+ .../core/ai_host/processors/proposal_processor.py  |   8 +-
+ backend/data/omniweb.db                            | Bin 3899392 -> 3907584 bytes
+ regression_audit.py                                |  67 +++++++++++++++
+ 5 files changed, 154 insertions(+), 29 deletions(-)
+
+commit 0f38bbf795326a3a3168079e89e92a71895aa5e8
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sun Mar 22 02:19:50 2026 +0100
+
+    fix(memory): stabilize composed memory responses with remaining verbalization edge cases
+
+ backend/core/ai_host/brain_router.py               |   6 +-
+ .../human_input_interpreter.py                     |  40 ++++++-
+ .../ai_host/intent_understanding/intent_engine.py  |  15 ++-
+ backend/core/ai_host/interface_adapter.py          |  63 ++++++++++-
+ backend/core/ai_host/memory/system_memory.py       |   3 +
+ .../orchestration/cognitive_orchestrator.py        |   4 +-
+ .../ai_host/orchestration/executive_synthesis.py   | 124 +++++++++++++++++++++
+ .../ai_host/orchestration/mission_orchestrator.py  |  28 ++++-
+ .../ai_host/processors/general_chat_processor.py   |  47 +++++++-
+ .../core/ai_host/processors/proposal_processor.py  |  14 ++-
+ backend/core/ai_host/routing/intent_classifier.py  |   1 +
+ backend/core/ai_host/routing/patterns.py           |  13 +++
+ backend/core/multimodal/voice_interface.py         |  20 ++--
+ backend/data/omniweb.db                            | Bin 3862528 -> 3899392 bytes
+ chips/chip-lingua/core/services/tts_generator.py   |  43 +++++++
+ frontend/shell/main.js                             |   4 +-
+ 16 files changed, 384 insertions(+), 41 deletions(-)
+
+commit 720004b12371beb69be684667932c299c6cdb3aa
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 23:10:08 2026 +0100
+
+    feat(external-context): close block 7 external node orchestration with safe boundaries
+
+ .../core/ai_host/processors/proposal_processor.py  |  59 +++++++++++++--------
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ 2 files changed, 37 insertions(+), 22 deletions(-)
+
+commit 0518ca3923264befff685e8dbddbd9f9d57f4bf4
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 22:55:13 2026 +0100
+
+    feat(external-nodes): validate safe inspection of connected external surfaces
+
+ .../core/ai_host/processors/proposal_processor.py  |  55 ++++++++++++++++-----
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ 2 files changed, 42 insertions(+), 13 deletions(-)
+
+commit da64b8fa5d1816d6fe6117ed45753f73cfffc926
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 22:36:36 2026 +0100
+
+    feat(external-nodes): validate external links and surfaces as structured nodes
+
+ .../core/ai_host/processors/proposal_processor.py  |  38 ++++++++++++++++++++-
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ 2 files changed, 37 insertions(+), 1 deletion(-)
+
+commit 1fbca47d91fe30f43e6aa27b9df1283a0c93cb70
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 22:15:11 2026 +0100
+
+    feat(orchestration): validate phased technical mission orchestration
+
+ .../ai_host/orchestration/mission_orchestrator.py  |  68 +++++++++++++++++++++
+ .../core/ai_host/processors/proposal_processor.py  |  59 +++++++++---------
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ 3 files changed, 99 insertions(+), 28 deletions(-)
+
+commit 4675b4bfed97be0cf3cae0342f2347a1c126a570
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 21:34:02 2026 +0100
+
+    feat(memory): make system memory actively influence proposal behavior
+
+ backend/core/ai_host/memory/system_memory.py       |  46 ++++++++++++++++++---
+ .../core/ai_host/processors/proposal_processor.py  |  43 ++++++++++++++++++-
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ backend/data/system/memory.json                    |  21 ++++++++--
+ 4 files changed, 98 insertions(+), 12 deletions(-)
+
+commit 7775638622666e1da3fb40c56900a55a23a4f44b
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 21:23:11 2026 +0100
+
+    feat(memory): validate working context recovery and operational continuity
+
+ backend/core/ai_host/memory/system_memory.py       | 109 +++++++++++++++++++++
+ .../core/ai_host/processors/proposal_processor.py  |  26 ++++-
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ backend/data/system/memory.json                    |  24 +++++
+ 4 files changed, 157 insertions(+), 2 deletions(-)
+
+commit 9881ff5d72d5e45af5a88e7dc77f941c63110a72
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 21:09:02 2026 +0100
+
+    feat(copilot): close block 4 controlled project-wide system awareness
+
+ .../core/ai_host/processors/proposal_processor.py  |  86 +++++++++++++++++++--
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ 2 files changed, 79 insertions(+), 7 deletions(-)
+
+commit afa161cc4f422bbfd2df0e7111150fe98f25df9f
+Author: NikoDev <ordoneznicolasalejandro1994@gmail.com>
+Date:   Sat Mar 21 20:49:01 2026 +0100
+
+    feat(copilot): validate controlled hierarchical scope handling
+
+ .../core/ai_host/processors/proposal_processor.py  |  36 ++++++++++++++-------
+ backend/data/omniweb.db                            | Bin 3862528 -> 3862528 bytes
+ 2 files changed, 24 insertions(+), 12 deletions(-)

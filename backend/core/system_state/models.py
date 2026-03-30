@@ -42,3 +42,4 @@ class SystemState(BaseModel):
     uptime_seconds: float
     sync_status: Optional[Dict[str, Any]] = None
     cluster: Optional[Dict[str, Any]] = None
+    active_mission: Optional[Dict[str, Any]] = None

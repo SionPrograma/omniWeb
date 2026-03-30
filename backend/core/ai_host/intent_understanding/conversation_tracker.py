@@ -21,6 +21,32 @@ class ConversationTracker:
     """
     def __init__(self):
         self.sessions: Dict[str, SessionContext] = {}
+        self._hydrate_from_semantic_memory()
+
+    def _hydrate_from_semantic_memory(self):
+        """Restores working memory thread from persistent semantic disk buffer on server reboot."""
+        try:
+            from ..memory.semantic_memory import semantic_memory
+            if semantic_memory.buffer:
+                ctx = SessionContext()
+                
+                # Retrieve last explicit intent and topic
+                ctx.last_intent = semantic_memory.get_last_intent()
+                ctx.last_topic = semantic_memory.get_last_topic()
+                
+                # Recover recent dialog buffer for 'Working Memory'
+                for item in list(semantic_memory.buffer)[-10:]:
+                    if 'prompt' in item:
+                        ctx.recent_messages.append(item['prompt'])
+                
+                # Reconstruct 'Mission Context' if the last interaction was an executive command
+                if ctx.last_intent in ["BUILD_INTENT", "REMEDIATION_INTENT", "SYSTEM_AUDIT_INTENT"]:
+                    ctx.last_mission_goal = ctx.last_topic
+                    
+                self.sessions["default_user"] = ctx
+                logger.info("[TRACKER] Working Memory successfully hydrated from persistent layer.")
+        except Exception as e:
+            logger.warning(f"[TRACKER] Could not hydrate from persistent memory: {e}")
 
     def get_context(self, session_id: str) -> SessionContext:
         if session_id not in self.sessions:

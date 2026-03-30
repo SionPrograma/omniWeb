@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     # Cors configuration
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
-    # Active modules list
-    ACTIVE_MODULES: list[str] = ["idiomas-ia", "lingua", "reparto", "finanzas", "programacion", "musica"]
+    # Active modules list (Lingua & Idiomas-IA desactivados por aislamiento de dependencias ML)
+    ACTIVE_MODULES: list[str] = ["reparto", "finanzas", "programacion", "musica"]
     
     # System Mode: creator (full access) or user (simplified)
     OMNIWEB_MODE: str = os.getenv("OMNIWEB_MODE", "creator")
@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     DATA_DIR: str = "backend/data"
     DATABASE_NAME: str = "omniweb.db"
     ADMIN_TOKEN: str = os.getenv("OMNIWEB_ADMIN_TOKEN", "omniweb-dev-secret-token")
+
+    # Cognitive Bridge (L2 Deep Reasoning)
+    COGNITIVE_PROVIDER: str = os.getenv("COGNITIVE_PROVIDER", "groq")
+    COGNITIVE_API_KEY: str = os.getenv("COGNITIVE_API_KEY", "")
+    COGNITIVE_MODEL: str = os.getenv("COGNITIVE_MODEL", "llama3-8b-8192")
+    COGNITIVE_TIMEOUT_MS: int = int(os.getenv("COGNITIVE_TIMEOUT_MS", "3500"))
+
 
     # OAuth Settings (Phase 15)
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "mock_id")

@@ -1,26 +1,37 @@
 ﻿document.addEventListener('DOMContentLoaded', () => {
     // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
-    const CACHE_RESET_ID = "omni_v3_lan_reset";
+    const CACHE_RESET_ID = "omni_v5_chrome_fix";
     try {
         if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
             if (sessionStorage.getItem("omni_reset_attempted")) {
                 console.warn("[SAFE_MODE] Persistent storage failed. Aborting reset loop.");
             } else {
                 sessionStorage.setItem("omni_reset_attempted", "true");
-                console.warn("[SAFE_MODE] Cache inconsistency detected. Purging...");
+                console.warn("[SAFE_MODE] Cache/Storage inconsistency detected. Purging...");
+
+                // Clear Service Workers
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.getRegistrations().then(regs => {
                         for (let r of regs) r.unregister();
                     });
                 }
+
+                // Clear Cache API
                 if (window.caches) {
                     caches.keys().then(names => {
                         for (let n of names) caches.delete(n);
                     });
                 }
+
+                // Clear Chat history if corrupt or just to ensure clean state
+                localStorage.removeItem("omni_chat_history_v1");
+
                 localStorage.setItem("omni_cache_reset", CACHE_RESET_ID);
-                console.warn("[SAFE_MODE] Reset complete. Reloading...");
-                setTimeout(() => window.location.reload(true), 500);
+                console.warn("[SAFE_MODE] Reset complete. Forcing clean reload...");
+                setTimeout(() => {
+                    // Force cache bypass reload
+                    window.location.search = `?reset_v=${Date.now()}`;
+                }, 500);
                 return;
             }
         }
@@ -71,52 +82,20 @@
 
     // --- Onboarding Greeting ---
     function initGreeting() {
-        const fallback = "Hola, soy Omni. Â¿En quÃ© te ayudo hoy?";
+        const fallback = "¿En qué puedo ayudarte hoy?";
         const urlParams = new URLSearchParams(window.location.search);
         const inviteToken = urlParams.get('invite') || urlParams.get('beta');
         const browser_lang = navigator.language.split('-')[0] || 'es';
 
-        // IMMEDIATE UI FEEDBACK: Show greeting first
+        // Una sola voz: Greeting oficial
         addMessage(fallback, 'ai');
 
-        // Background sync: Trigger system state/audit
+        // Background check (Solo si el usuario interactúa, para no "contaminar" el arranque)
         fetch('/api/v1/onboarding/greeting', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                text: "Hola Omni",
-                browser_lang: browser_lang,
-                invite_token: inviteToken
-            })
-        }).then(res => res.ok ? res.json() : null)
-            .then(data => {
-                if (window.creatorEnv && data && data.audit) {
-                    window.creatorEnv.updateAuditResult(data.audit);
-                }
-            }).catch(err => console.warn("Greeting API background error:", err));
-
-        // --- ADVANCED GREETING UNLOCK ---
-        let greetingPlayed = false;
-        const playGreeting = (event) => {
-            if (greetingPlayed || !window.voice) return;
-            window.voice.speak(fallback);
-            greetingPlayed = true;
-
-            // Cleanup
-            ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
-                document.removeEventListener(evt, playGreeting)
-            );
-        };
-
-        // 1. Initial attempt
-        setTimeout(() => { if (!greetingPlayed) playGreeting(); }, 800);
-
-        // 2. Interaction fallback
-        ['mousedown', 'touchstart', 'keydown'].forEach(evt =>
-            document.addEventListener(evt, playGreeting, { once: true, passive: true })
-        );
-
-        if (window.updateCapabilities) window.updateCapabilities();
+            body: JSON.stringify({ text: "Hola", browser_lang, invite_token: inviteToken })
+        }).catch(err => console.debug("Greeting background check deferred."));
     }
 
     // --- Persistent History Rehydration ---
@@ -159,11 +138,17 @@
     }
 
     window.omniShell = {
-        closeLauncher: () => setLauncherActive(false)
+        closeLauncher: () => setLauncherActive(false),
+        toggleContext: toggleContext,
+        setLauncherActive: setLauncherActive
     };
 
     openLauncherBtn.addEventListener('click', () => {
-        setLauncherActive();
+        if (window.creatorEnv) {
+            window.creatorEnv.switchView('launcher');
+        } else {
+            setLauncherActive();
+        }
     });
 
     if (closeLauncherBtn) {
@@ -188,33 +173,44 @@
         console.log(`Launching chip: ${title} at ${url}`);
         chipTitle.innerText = `Chip: ${title.charAt(0).toUpperCase() + title.slice(1)}`;
         chipFrame.src = url;
-        chipView.classList.add('active');
 
-        // Minimize AI Host
-        aiHostView.classList.remove('active');
+        // Use Global State Machine to close competing views
+        if (window.creatorEnv) {
+            window.creatorEnv.switchView('chip-view-active');
+        } else {
+            chipView.classList.add('active');
+            aiHostView.classList.remove('active');
+        }
+        chipView.classList.add('active'); // Ensure it stays active
     }
 
     closeChipBtn.addEventListener('click', () => {
         chipView.classList.remove('active');
-        aiHostView.classList.add('active');
+        if (window.creatorEnv) {
+            window.creatorEnv.switchView('chat');
+        } else {
+            aiHostView.classList.add('active');
+        }
         setTimeout(() => {
             chipFrame.src = ''; // Clear iframe after transition
         }, 400);
     });
 
-    // --- Navigation Logic ---
+    // --- Navigation Logic (Unified) ---
     navItems.forEach(nav => {
         nav.addEventListener('click', () => {
             const view = nav.getAttribute('data-view');
             if (!view) return;
 
-            navItems.forEach(n => n.classList.remove('active'));
-            nav.classList.add('active');
-
-            if (view === 'context') {
-                toggleContext(true);
+            // Route everything through the Global State Machine if available
+            if (window.creatorEnv && typeof window.creatorEnv.switchView === 'function') {
+                window.creatorEnv.switchView(view);
             } else {
-                toggleContext(false);
+                // Fallback basic logic
+                navItems.forEach(n => n.classList.remove('active'));
+                nav.classList.add('active');
+                if (view === 'context') toggleContext(true);
+                else toggleContext(false);
             }
         });
     });
@@ -226,7 +222,6 @@
             activeView = 'context';
         } else {
             contextPanel.classList.remove('active');
-            activeView = 'chat';
         }
     }
 
@@ -343,12 +338,12 @@
                     </svg>
                 </button>
                 <div class="msg-feedback">
-                    <button class="action-btn" title="Ãštil" onclick="this.classList.toggle('active')">
+                    <button class="action-btn" title="Útil" onclick="this.classList.toggle('active')">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
                         </svg>
                     </button>
-                    <button class="action-btn" title="No Ãºtil" onclick="this.classList.toggle('active')">
+                    <button class="action-btn" title="No útil" onclick="this.classList.toggle('active')">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
                         </svg>
@@ -464,6 +459,20 @@
         processCommand();
     };
 
+    // --- TOAST NOTIFICATIONS (Phase 30 Saneamiento) ---
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `omni-toast ${type}`;
+        toast.innerText = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('visible'), 10);
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 500);
+        }, 3500);
+    }
+    window.showToast = showToast;
+
     if (shellForm) {
         shellForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -509,13 +518,13 @@
             console.error("[VOICE_ERROR_DIAGNOSTIC]", error);
             let msg = "Error de voz.";
             if (error === 'not-allowed' || error === 'denied') {
-                msg = "Acceso a micrÃ³fono denegado.";
+                msg = "Acceso a micrófono denegado.";
             } else if (error === 'browser-unsupported' || error === 'unsupported') {
                 msg = "Navegador no soporta voz.";
             } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
                 msg = "Requiere HTTPS para voz.";
             }
-            addMessage(`âš ï¸ ${msg}`, 'ai');
+            showToast(msg, 'warning');
         },
         onSpeechStart: () => {
             const orb = document.querySelector('.ai-orb');
@@ -617,7 +626,7 @@
                 const p = data.payload || {};
                 handleVisualResponse({
                     type: 'task-report',
-                    title: data.display_data.task_title || 'EjecuciÃ³n de Tarea',
+                    title: data.display_data.task_title || 'Ejecución de Tarea',
                     data: {
                         status: p.status,
                         actions: p.actions,
@@ -629,8 +638,8 @@
             // Intent Handling
             if (data.intent === 'confirmation_required') {
                 const confirmed = await window.creatorEnv.askPermission(
-                    "ConfirmaciÃ³n del Sistema",
-                    data.message || "Â¿Deseas proceder con esta operaciÃ³n?"
+                    "Confirmación del Sistema",
+                    data.message || "¿Deseas proceder con esta operación?"
                 );
                 if (confirmed) {
                     shellInput.value = `confirm ${cmd}`;

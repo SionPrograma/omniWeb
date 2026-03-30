@@ -604,7 +604,7 @@
     background: rgba(12, 12, 20, 0.85);
     backdrop-filter: blur(25px) saturate(180%);
     -webkit-backdrop-filter: blur(25px) saturate(180%);
-    z-index: 1000;
+    z-index: 5100;
     pointer-events: none;
     /* Phase 1 Repair: Do not block touch when hidden */
     transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
@@ -1487,6 +1487,11 @@ body.creator-authenticated #creator-toolbar {
 }
 
 @media screen and (max-width: 768px) {
+    #mission-control-view {
+        padding-bottom: 95px;
+        /* Ensures scrolling clears the bottom nav on mobile */
+    }
+
     .creator-overlay-panel {
         width: 100vw;
         height: 100vh;

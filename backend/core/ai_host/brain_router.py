@@ -10,9 +10,9 @@ from .execution.execution_controller import execution_controller
 from backend.core.chips.chip_orchestrator import chip_orchestrator
 from .reasoning.evidence_engine import evidence_engine
 from .reasoning.runtime_truth import runtime_truth
-from .reasoning.reflective_deliberation import reflective_deliberation
 from .orchestration.output_policy import get_output_policy
 from .deliberation.deliberation_engine import deliberation_engine
+from .memory.mission_manager import mission_manager, MissionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +55,13 @@ class BrainRouter:
         
         intent_group = understanding["intent_group"]
         specific_intent = understanding.get("specific_intent")
-        mode_override = understanding["mode"]
+        mode_hint = understanding["mode"]
         
+        # 0.5 MISSION CONTINUITY GUARD
+        active_mission = mission_manager.get_active_mission()
+        if active_mission and intent_group == "NATURAL_CHAT" and active_mission.status == MissionStatus.OPEN:
+             mission_manager.set_status(MissionStatus.PAUSED, reason="Interrupción por charla casual.")
+
         # 1. ASSEMBLE DELIBERATION CONTEXT (Protected Pipeline Entry)
         try:
             delib_context = await deliberation_engine.assemble_context(msg_clean, intent_group, session_id)
@@ -68,133 +73,124 @@ class BrainRouter:
                 return await chat_proc.process(msg_clean, context=context)
             return self._generate_natural_fallback(lang)
             
-        # Preferred Mode Logic: Specific overrides (from IntentEngine) take precedence for targeted tasks.
-        mode = delib_context.reasoning_mode
-        if mode_override in ["operational_diagnostic", "natural_chat", "constrained_output", "action_execution"]:
-            mode = mode_override
-        elif mode in ["conversational", "diagnostic"] and mode_override != "conversational":
-            mode = mode_override
-            
-        logger.info(f"[POWER_BRAIN] Mode: {mode} | Intent: {intent_group}")
+        logger.info(f"[DIRECTOR] Mode: {mode_hint} | Intent: {intent_group}")
 
-        # 2. CONTEXTUAL CONTINUITY (Follow-up handling)
-        if self._is_short_followup(msg_clean) and delib_context.recent_topic:
-             return await self._handle_short_prompt(msg_clean, delib_context, lang)
 
-        # 3. ROUTE BY MODE (With Bypass Safety for broken layers)
+        # 4. REASONING (The Director Logic)
         try:
-            if mode == "constrained_output":
-                 # Bypasses reflective templates and generic naturalization.
-                 # Uses direct processors but preserves clean output.
-                 if specific_intent == "copilot_proposal" or intent_group == "COPILOT_PROPOSAL_INTENT":
-                     res = await self.command_router._handle_proposal(msg_clean, context=context)
-                 else:
-                     chat_proc = self.command_router.registry.get_processor("chat")
-                     if chat_proc:
-                         res = await chat_proc.process(msg_clean, context={**(context or {}), "source": source})
-                     else:
-                         res = self._generate_natural_fallback(lang)
-            elif mode == "reflective" or mode == "reflective_analysis":
-                 res = await self._handle_reflective_reasoning(msg_clean, lang)
-            elif mode == "direct_response":
-                 # Simple conversational response via chat processor
-                 chat_proc = self.command_router.registry.get_processor("chat")
-                 if chat_proc and await chat_proc.can_handle(msg_clean):
-                     res = await chat_proc.process(msg_clean, context=context)
-                 else:
-                     res = self._generate_natural_fallback(lang)
-            elif mode == "action_execution":
-                 # Route to appropriate action handler based on intent group
-                 if intent_group in ["BUILD_INTENT"] or "crea" in msg_clean or "build" in msg_clean:
-                     res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
-                 elif intent_group in ["REMEDIATION_INTENT"] or "fix" in msg_clean or "arregla" in msg_clean:
-                     res = await self._handle_remediation(msg_clean, delib_context, lang)
-                 elif intent_group in ["EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"] or specific_intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
-                     res = await self._handle_chip_action(msg_clean, specific_intent or intent_group, delib_context, lang)
-                 else:
-                     # Generic action acknowledgment
-                     chat_proc = self.command_router.registry.get_processor("chat")
-                     if chat_proc and await chat_proc.can_handle(msg_clean):
-                         res = await chat_proc.process(msg_clean, context=context)
-                     else:
-                         res = self._generate_natural_fallback(lang)
-            elif mode == "natural_chat":
-                 # Focus on fluid, human conversation bypasses heavy templates
-                 res = await self._handle_natural_chat(msg_clean, delib_context, lang)
-            elif mode == "operational_diagnostic":
-                 res = await self._handle_operational_diagnostic(msg_clean, delib_context, lang)
-            elif mode == "remediation":
-                 res = await self._handle_remediation(msg_clean, delib_context, lang)
-            elif mode == "swarm_orchestration":
-                 res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
-            elif mode == "patch_proposal":
-                 res = await self._handle_patch_proposal(msg_clean, delib_context, lang)
-            elif mode == "limitation":
-                 res = await self._handle_limitation(msg_clean, delib_context, lang)
-            elif mode == "diagnostic":
-                 # Check for Remediation Intelligence (Historical matching)
-                 remediation = self._check_remediation_history(msg_clean, delib_context)
-                 if remediation:
-                     res = self._format_remediation_response(remediation, lang)
-                 else:
-                     # Standard analysis with plan
-                     plan = task_planner.create_plan(msg_clean, specific_intent or intent_group, lang)
-                     res = await self._process_analysis(msg_clean, lang, system_state, plan, evidence=delib_context.relevant_evidence)
-            elif intent_group in ["EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"] or specific_intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
-                 res = await self._handle_chip_action(msg_clean, specific_intent or intent_group, delib_context, lang)
-            else:
-                 # Default Conversational
-                 chat_proc = self.command_router.registry.get_processor("chat")
-                 if chat_proc and await chat_proc.can_handle(msg_clean):
-                     res = await chat_proc.process(msg_clean, context=context)
-                 else:
-                     res = self._generate_natural_fallback(lang)
-        except Exception as e:
-            logger.error(f"[PIPELINE_ERROR] Reasoning layer '{mode}' failed: {e}. Bypassing to stable response.")
-            # Final Bypass to ensure communication doesn't break
-            chat_proc = self.command_router.registry.get_processor("chat")
-            if chat_proc:
-                res = await chat_proc.process(msg_clean, context=context)
-            else:
-                res = self._generate_natural_fallback(lang)
+            # A. FAST-PATH (Heurística de respuesta inmediata para comandos directos)
+            fast_intents = ["open_chip", "show_logbook", "log_entry", "acknowledgment", "greeting", "status_check"]
+            if specific_intent in fast_intents or intent_group == "GREETING":
+                 res = await self._handle_direct_command(specific_intent or intent_group, msg_clean, context)
+                 # Si el comando directo falla o no resuelve, dejamos que siga el flujo.
+                 if res: return await self._finalize_interaction(msg_clean, res, specific_intent or intent_group)
 
-        # 4. POST-PROCESS & MEMORY
-        if res:
-            semantic_memory.add_interaction(msg, res.message, specific_intent or intent_group)
-            return res
+            # B. CONTEXTUAL CONTINUITY (Seguimientos cortos como "y ahora?" o "por qué?")
+            if self._is_short_followup(msg_clean) and delib_context.recent_topic:
+                 res = await self._handle_short_prompt(msg_clean, delib_context, lang, system_state)
+                 return await self._finalize_interaction(msg_clean, res, "follow_up")
+
+            # C. DEEP COGNITIVE PATH (El Cerebro Estructurado de OmniWeb)
+            # Prioridad 1: Puente L2 (Groq) si es habilitado y complejo.
+            from .cognition.cognitive_bridge import cognitive_bridge
+            if cognitive_bridge.enabled and self._is_complex_request(msg_clean, specific_intent):
+                 try:
+                      bridge_payload = await cognitive_bridge.analyze_context(f"'{msg_clean}' | Ctx: {delib_context.json()}")
+                      if bridge_payload and bridge_payload.confidence_score > 0.7:
+                           res = await self._handle_l2_cognitive_response(bridge_payload, msg_clean, delib_context, lang)
+                           return await self._finalize_interaction(msg_clean, res, bridge_payload.decision_mode)
+                 except Exception as bridge_err:
+                      logger.warning(f"[BRIDGE_FAIL] {bridge_err}. Falling back to Local Brain.")
+
+            # Prioridad 2: Motor Local L1 (Verdad -> Plan -> Verficar -> Síntesis)
+            # Se activa en diagnósticos, errores o peticiones de sistema.
+            is_technical = mode_hint in ["diagnostic", "operational_diagnostic", "remediation", "action_execution"]
+            if is_technical or self._is_complex_request(msg_clean, specific_intent):
+                 # Este es el flujo local que refactorizamos recientemente
+                 res = await self._process_analysis(
+                     msg=msg_clean, 
+                     lang=lang, 
+                     system_state=system_state, 
+                     plan=None, 
+                     evidence_bundle=delib_context.evidence_bundle
+                 )
+
+                 return await self._finalize_interaction(msg_clean, res, "technical_analysis")
+
+            # D. CONVERSATIONAL PATH (Fallback Natural para charla orgánica)
+            res = await self._handle_natural_chat(msg_clean, delib_context, lang)
+            return await self._finalize_interaction(msg_clean, res, intent_group)
+
+        except Exception as route_err:
+            logger.error(f"[ROUTER_FAULT] Error in Director flow: {route_err}")
+            return self._generate_natural_fallback(lang)
+
+
+    async def _finalize_interaction(self, msg: str, res: AICommandResponse, intent: str) -> AICommandResponse:
+        """Centralized post-processing and semantic memory logging."""
+        if res and res.message:
+            semantic_memory.add_interaction(msg, res.message, intent)
+        return res
+
+    async def _handle_direct_command(self, intent: str, msg: str, context: Optional[Dict[str, Any]]) -> Optional[AICommandResponse]:
+        """Fast-path for simple commands via CommandRouter."""
+        try:
+            # 1. Check if intent exists in registry
+            # Silent Director: No interceptamos saludos aquí para dejar que GeneralChatProcessor hable.
+            
+            # 2. Chips / Operational
+            if intent in ["open_chip", "inspect_chip", "focus_chip_runtime"]:
+                 # Importación tardía para orquestador
+                 from .routing.utils import extract_chip_target
+                 target = extract_chip_target(msg)
+                 if target:
+                      await chip_orchestrator.activate_chip(target)
+                 
+            # 3. Direct processor call
+            proc = self.command_router.registry.get_processor(intent)
+            if proc and await proc.can_handle(msg):
+                 return await proc.process(msg, context=context)
+        except Exception as e:
+            logger.warning(f"[FAST_PATH_FAIL] {e}")
+        return None
+
 
         return None
 
-    async def _handle_remediation(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
-        from .remediation.remediation_engine import remediation_engine
-        proposal = await remediation_engine.analyze_and_propose(ctx)
-        if not proposal:
-            return self._generate_natural_fallback(lang)
-            
-        if lang == "es":
-            body = (
-                f"**OBSERVACIÓN**\n{proposal.observation}\n\n"
-                f"**CAUSAS PROBABLES**\n" + "\n".join([f"- {c}" for c in proposal.likely_causes]) + "\n\n"
-                f"**OPCIONES DE SOLUCIÓN**\n" + "\n".join([f"- {o.name}: {o.description} (Riesgo: {o.risk})" for o in proposal.solution_options]) + "\n\n"
-                f"**SOLUCIÓN RECOMENDADA**\n{proposal.recommended_solution}\n\n"
-                f"**PLAN DE IMPLEMENTACIÓN**\n" + "\n".join([f"- {p}" for p in proposal.implementation_plan]) + "\n\n"
-                f"**CONFIANZA**: {proposal.confidence_level}"
-            )
-        else:
-            body = (
-                f"**OBSERVATION**\n{proposal.observation}\n\n"
-                f"**LIKELY CAUSES**\n" + "\n".join([f"- {c}" for c in proposal.likely_causes]) + "\n\n"
-                f"**SOLUTION OPTIONS**\n" + "\n".join([f"- {o.name}: {o.description} (Risk: {o.risk})" for o in proposal.solution_options]) + "\n\n"
-                f"**RECOMMENDED SOLUTION**\n{proposal.recommended_solution}\n\n"
-                f"**IMPLEMENTATION PLAN**\n" + "\n".join([f"- {p}" for p in proposal.implementation_plan]) + "\n\n"
-                f"**CONFIDENCE**: {proposal.confidence_level}"
-            )
 
+    async def _handle_l2_cognitive_response(self, bridge_payload: Any, msg_clean: str, delib_context: Any, lang: str) -> AICommandResponse:
+        """Omni's final authority format for the L2 JSON output."""
+        policy = get_output_policy(msg_clean)
+        
+        # 1. Fallback a chat natural si requiere clarificación o si L2 dictamina que es sólo charla
+        if bridge_payload.requires_clarification or bridge_payload.decision_mode == "clarification":
+            # Usar L1 para chatear, añadiendo el análisis técnico como insight
+            target = bridge_payload.semantic_target
+            fallback_msg = f"Detecto la intención sobre: '{target}'. Pero requiero más precisión." if lang == "es" else f"I detect the intent regarding: '{target}'. But I need more precision."
+            
+            chat_proc = self.command_router.registry.get_processor("chat")
+            if chat_proc:
+                res = await chat_proc.process(msg_clean, context={"extra_insight": fallback_msg})
+                if res: return res
+            return AICommandResponse(intent="chat", status="success", message=fallback_msg)
+            
+        # 2. Mapeo a salida técnica Omni (Executive Synthesis Pattern)
+        chips_str = ", ".join(bridge_payload.actionable_chips) if bridge_payload.actionable_chips else "None"
+        constraints_str = ", ".join(bridge_payload.constraints) if bridge_payload.constraints else "None"
+        
+        # Silent Director: No construimos body visible, solo datos
+        body = bridge_payload.technical_hypothesis
+
+        # Dispara orquestación si de verdad hay chips
+        if bridge_payload.actionable_chips and bridge_payload.decision_mode == "action_execution":
+            for c in bridge_payload.actionable_chips:
+                await chip_orchestrator.activate_chip(c.replace("chip-", ""))
+                
         return AICommandResponse(
-            intent="remediation_proposal",
+            intent=bridge_payload.decision_mode,
             status="success",
             message=body,
-            payload={"proposal": proposal.dict()}
+            payload=bridge_payload.dict()
         )
 
     async def _handle_natural_chat(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
@@ -206,84 +202,6 @@ class BrainRouter:
              return res
         return self._generate_natural_fallback(lang)
 
-    async def _handle_operational_diagnostic(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
-        from .routing.utils import extract_chip_target, extract_component_from_target
-        target_chip = extract_chip_target(msg)
-        component = extract_component_from_target(msg)
-        
-        # Inference logic for technical layers
-        layer = "Core System (Kernel)"
-        symptom = "Anomalía funcional"
-        
-        low_msg = msg.lower()
-        if any(w in low_msg for w in ["ve", "visual", "interfaz", "botón", "pantalla", "render", "mapa"]):
-            layer = "Frontend / UI Layer"
-            symptom = "Fallo de representación visual"
-        elif any(w in low_msg for w in ["responde", "carga", "tarda", "latencia", "api", "backend"]):
-            layer = "Backend / Módulo Bus"
-            symptom = "Fallo de respuesta o latencia"
-        elif any(w in low_msg for w in ["memoria", "recorda", "olvida", "persiste"]):
-            layer = "Memory / Persistence Layer"
-            symptom = "Fallo de persistencia de datos"
-        elif any(w in low_msg for w in ["entiende", "chat", "intención", "dijo"]):
-            layer = "Cognition / Intent Layer"
-            symptom = "Fallo de interpretación semántica"
-        
-        # Consult Reflective Deliberation for technical depth
-        analysis = await reflective_deliberation.analyze(msg)
-        
-        obs = analysis.observation
-        action = analysis.recommended_action
-        
-        # 3. Assemble response body with constraint filters
-        policy = get_output_policy(msg)
-        show_telemetry = policy.show_telemetry and not policy.suppress_runtime
-        show_action = policy.show_action
-        is_minimal_diag = policy.is_minimal
-        show_header = policy.show_header
-        
-        footer = ""
-        if (analysis.confidence_level < 0.7 or not target_chip or target_chip == "unknown") and not policy.suppress_audit:
-             footer = "\n\n---\n¿Deseas iniciar una auditoría profunda sobre esta capa?" if lang == "es" else "\n\n---\nShall I initiate a deep audit on this layer?"
-
-        if lang == "es":
-            body = f"**OPERACIÓN: DIAGNÓSTICO TÉCNICO**\n" if show_header else ""
-            body += f"- **PROBLEMA**: {symptom}.\n"
-            body += f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
-            body += f"- **CAPA PROBABLE**: {layer}\n"
-            if not is_minimal_diag:
-                body += f"- **CONFIANZA**: {analysis.confidence_level}\n\n"
-            else:
-                body += "\n"
-            
-            if show_telemetry:
-                body += f"**OBSERVACIÓN**\n{obs}\n\n"
-            
-            if show_action:
-                body += f"**SIGUIENTE PASO**\n{action}"
-            
-            body += footer
-        else:
-            body = f"**TECHNICAL DIAGNOSTIC**\n" if show_header else ""
-            body += f"- **PROBLEM**: {symptom}.\n"
-            body += f"- **CHIP**: `{target_chip.upper()}`" + (f" (Componente: `{component}`)" if component else "") + "\n"
-            body += f"- **LIKELY LAYER**: {layer}\n"
-            body += f"- **CONFIDENCE**: {analysis.confidence_level}\n\n"
-            
-            if show_telemetry:
-                body += f"**OBSERVATION**\n{obs}\n\n"
-            
-            if show_action:
-                body += f"**NEXT STEP**\n{action}"
-                
-            body += footer
-            
-        return AICommandResponse(
-            intent="operational_diagnostic",
-            status="success",
-            message=body,
-            payload={"chip": target_chip, "layer": layer, "analysis": analysis.__dict__}
-        )
 
     async def _handle_swarm_orchestration(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
         from .command_reasoning.command_interpreter import command_interpreter
@@ -309,32 +227,8 @@ class BrainRouter:
         res_list = mission_result.get("execution_details", {}).get("results", {})
         jobs_count = mission_result.get("execution_details", {}).get("jobs_executed", 0)
         
-        if lang == "es":
-            body = (
-                f"**MISIÓN DISPUESTA: {refined_plan.title}**\n"
-                f"Escala: {refined_plan.scale.upper()}\n"
-                f"Estado: Misión validada y ejecutada.\n\n"
-                f"**REQUERIMIENTOS Y RESTRICCIONES**\n" + 
-                ("\n".join([f"- {c}" for c in refined_plan.constraints]) or "- Ninguna") + "\n\n"
-                f"**EJECUCIÓN ESTRATÉGICA**\n"
-                f"- Tareas procesadas: {jobs_count}\n"
-                f"- Auditoría de factibilidad: {'Aprobada' if is_safe else 'Refinada (Riesgos mitigados)'}\n\n"
-                f"**RESULTADO**\n"
-                f"Omni ha coordinado el Shadow Swarm para cumplir con la instrucción del Creador. Los hallazgos han sido sincronizados en el Cognitive Core."
-            )
-        else:
-            body = (
-                f"**MISSION DISPATCHED: {refined_plan.title}**\n"
-                f"Scale: {refined_plan.scale.upper()}\n"
-                f"Status: Mission validated and executed.\n\n"
-                f"**REQUIREMENTS & CONSTRAINTS**\n" + 
-                ("\n".join([f"- {c}" for c in refined_plan.constraints]) or "- None") + "\n\n"
-                f"**STRATEGIC EXECUTION**\n"
-                f"- Microtasks processed: {jobs_count}\n"
-                f"- Feasibility Audit: {'Passed' if is_safe else 'Refined (Risks mitigated)'}\n\n"
-                f"**OUTCOME**\n"
-                f"Omni has coordinated the Shadow Swarm to fulfill the Creator's instruction. All findings have been synchronized back to the Cognitive Core."
-            )
+        # Silent Director: Misión en el payload, no en el mensaje visible principal
+        body = "Misión validada y ejecutada exitosamente." if lang == "es" else "Mission validated and executed successfully."
             
         return AICommandResponse(
             intent="swarm_orchestration",
@@ -351,16 +245,46 @@ class BrainRouter:
         return msg.strip()
 
     def _is_short_followup(self, msg: str) -> bool:
-        short_prompts = ["perfecto", "seguimos", "y ahora?", "vale", "ok", "dale", "continuemos", "perfect", "keep going", "and now?", "go on", "por qué?", "por que?", "why?"]
+        greetings = ["hola", "hello", "hi", "hey", "buenos dias", "buenas noches", "buenos días", "buenas tardes", "todo bien", "todo ok", "buenas"]
+        if any(g in msg for g in greetings):
+            return False
+            
+        short_prompts = ["perfecto", "seguimos", "y ahora?", "vale", "ok", "dale", "seguí", "continuemos", "perfect", "keep going", "and now?", "go on", "por qué?", "por que?", "why?"]
         return msg in short_prompts or len(msg.split()) < 3
 
-    async def _handle_short_prompt(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
+    async def _handle_short_prompt(self, msg: str, ctx: Any, lang: str, system_state: Optional[Any] = None) -> AICommandResponse:
+        mission = mission_manager.get_active_mission()
+        
+        # Continuity Recovery Logic
+        if mission and mission.pending_steps:
+             # SILENT DIRECTOR: Rehidratamos la misión operativa. 
+             # No creamos respuesta genérica; volvemos a entrar al pipeline de análisis operativo
+             logger.info(f"[RESUME] Resuming mission {mission.mission_id} for goal: {mission.active_goal}")
+             
+             # Aseguramos que la misión vuelva a estar OPEN
+             mission_manager.set_status(MissionStatus.OPEN)
+             
+             # Re-inject the mission goal as a detailed request 
+             # and rehydrate the plan from persistence
+             from .planner.task_planner import TaskPlan
+             plan_raw = mission.context_snap.get("plan_data")
+             plan = None
+             if plan_raw:
+                 try:
+                     plan = TaskPlan.model_validate(plan_raw)
+                 except:
+                     plan = None
+             
+             msg_to_retry = f"Continúa con la misión: {mission.active_goal}"
+             completed_steps = mission.completed_steps
+             return await self._process_analysis(msg_to_retry, lang, system_state, plan, completed_steps=completed_steps)
+
         topic = ctx.recent_topic
         import random
         if lang == "es":
-            msg_res = f"Continuando con '{topic}'. ¿Qué paso sigue o qué más quieres analizar?"
+            msg_res = f"Continuando con '{topic or 'nuestra charla'}'. ¿Qué paso sigue o qué más quieres analizar?"
         else:
-            msg_res = f"Continuing with '{topic}'. What's the next step or detail to analyze?"
+            msg_res = f"Continuing with '{topic or 'our conversation'}'. What's the next step or detail to analyze?"
         
         return AICommandResponse(intent="chat", status="success", message=msg_res)
 
@@ -526,61 +450,90 @@ class BrainRouter:
             payload={"evidence": bundle.items, "confidence": claim.confidence}
         )
 
-    async def _process_analysis(self, msg: str, lang: str, system_state: Any, plan: Any, evidence_bundle: Optional[Any] = None) -> AICommandResponse:
+    async def _process_analysis(self, msg: str, lang: str, system_state: Any, plan: Any, evidence_bundle: Optional[Any] = None, completed_steps: Optional[List[str]] = None) -> AICommandResponse:
         """
         Structured Reasoning using actual system state and detailed plan.
         """
-        # Step 1: ANALYSIS (Grounded via Runtime Truth if evidence exists)
+        # Step 1: ANALYSIS & RE-PLANNING (Now based on MATHEMATICAL TRUTH)
+        diagnosis = None
         hypothesis_id = None
-        evidence_items = evidence_bundle.items if evidence_bundle else None
         snapshot_id = evidence_bundle.snapshot_id if evidence_bundle else None
+        evidence_items = evidence_bundle.items if evidence_bundle else None
         
         if evidence_bundle:
-             claim = runtime_truth.evaluate(evidence_bundle)
-             analysis_body = claim.claim
-             hypothesis_id = claim.hypothesis_id
+             # Disparamos la Verdad Local
+             from .reasoning.runtime_truth import runtime_truth
+             diagnosis = runtime_truth.evaluate(evidence_bundle, request_msg=msg)
+             analysis_body = diagnosis.claim
+             hypothesis_id = diagnosis.hypothesis_id
              
-             # --- STAGE 12: Confidence Refinement ---
-             # We could adjust the displayed confidence based on historical accuracy here
+             # RE-PLAN (Overriding the initial generic plan with a real operative one)
+             from .planner.task_planner import task_planner
+             plan = task_planner.create_plan_from_diagnosis(diagnosis, lang)
+             
+             # Sync with Persistent Mission State
+             active_mission = mission_manager.get_active_mission()
+             if not active_mission or active_mission.active_goal != plan.goal:
+                 mission_manager.create_mission(
+                     goal=plan.goal,
+                     plan_id=diagnosis.hypothesis_id,
+                     pending_steps=[str(s.id) for s in plan.steps],
+                     plan=plan
+                 )
+             else:
+                 # Si ya existe y es compatible, nos aseguramos que esté OPEN
+                 mission_manager.set_status(MissionStatus.OPEN)
+             
+             # VERIFY (The new local guard)
+             from .reasoning.verification_layer import verification_layer
+             verification = verification_layer.verify(diagnosis, plan)
+             
+             if not verification.is_overall_valid:
+                 analysis_body += f"\n\n**VERIFICATION FAILED**: {', '.join(verification.global_notes)}"
+             
+             # Usar la evidencia refinada del diagnóstico para la ejecución
+             evidence_items = diagnosis.supporting_evidence
         else:
              analysis_body = self._conduct_analysis(msg, lang, system_state)
+
         
-        # Step 2: PLAN (Use the generated task plan object)
+        # Step 2: PLAN & ACTION STATUS (Grounded)
+        if not plan:
+            return AICommandResponse(intent="chat", status="success", message="No tengo un plan cargado para esta operación.")
+            
         plan_body = "\n".join([f"{s.id}. {s.description}" for s in plan.steps])
         
         # Step 3: EXECUTION (Stage 8: Controlled Execution Layer)
-        execution_result = await execution_controller.run(
-            plan, 
-            evidence=evidence_items, 
-            hypothesis_id=hypothesis_id, 
-            snapshot_id=snapshot_id
-        )
-        
-        # Format Execution Status for UI
-        status_lines = []
-        for step in plan.steps:
-            if step.id in execution_result["steps_completed"]:
-                status_lines.append(f"Step {step.id} completed")
-            elif execution_result["status"] == "WAITING_CONFIRMATION" and step.id == execution_result["current_step"]:
-                status_lines.append(f"Step {step.id} awaiting Creator confirmation")
-            else:
-                status_lines.append(f"Step {step.id} pending")
-        
-        exec_status_body = "\n".join(status_lines)
-        
-        # Step 4: VERIFY
-        verify_body = "\n".join([f"- {v}" for v in plan.verification]) if plan.verification else self._define_verification(msg, lang)
+        # Solo ejecutamos si la verificación no bloqueó el plan
+        execution_result = {"status": "BLOCKED", "steps_completed": [], "current_step": 0}
+        if evidence_bundle and verification.verification_mode != "blocked":
+            execution_result = await execution_controller.run(
+                plan, 
+                evidence=evidence_items, 
+                hypothesis_id=hypothesis_id, 
+                snapshot_id=snapshot_id
+            )
+        elif not evidence_bundle:
+            # Fallback for manual analysis or continuation
+            execution_result = await execution_controller.run(plan, steps_already_completed=completed_steps)
 
-        # Step 5: CHIP STATUS (Stage 9: Orchestrator Layer)
+        
+        # Step 4: CHIP STATUS (Stage 9: Orchestrator Layer)
         chip_statuses = chip_orchestrator.get_all_chips_status()
         chip_report = "\n".join([f"{c['chip_id']}: {c['status']}" for c in chip_statuses[:5]]) # Limit to 5 for UI
 
-        response_text = (
-            f"**ANALYSIS**\n{analysis_body}\n\n"
-            f"**PLAN: {plan.goal}**\n{plan_body}\n\n"
-            f"**EXECUTION STATUS**\n{exec_status_body}\n\n"
-            f"**CHIP STATUS**\n{chip_report}\n\n"
-            f"**VERIFY**\n{verify_body}"
+        # Step 5: FINAL SYNTHESIS (The official mouth of OmniWeb)
+        # Delegamos la construcción técnica a la capa de síntesis especializada
+        from .orchestration.executive_synthesis import executive_synthesis
+        
+        response_text = executive_synthesis.synthesize_analysis(
+            diagnosis=diagnosis if evidence_bundle else None,
+            plan=plan,
+            verification=verification if evidence_bundle else None,
+            execution_result=execution_result,
+            chip_report=chip_report,
+            lang=lang,
+            query=msg
         )
 
         return AICommandResponse(
@@ -594,6 +547,7 @@ class BrainRouter:
                 "health_applied": getattr(system_state, 'health', 'unknown') if system_state else 'unknown'
             }
         )
+
 
     def _conduct_analysis(self, msg: str, lang: str, system_state: Any) -> str:
         health_obj = getattr(system_state, 'health', None)
@@ -838,37 +792,3 @@ class BrainRouter:
         
         return "conversational"
 
-    def _detect_reflective_reasoning(self, msg: str) -> bool:
-        """Triggers for Part 1: Reflective Reasoning."""
-        keywords = ["why", "por qué", "qué podría estar mal", "what could be wrong", "qué nos falta", "what might we be missing", "analiza el sistema", "analyze the system"]
-        return any(k in msg for k in keywords)
-
-    async def _handle_reflective_reasoning(self, msg: str, lang: str) -> AICommandResponse:
-        """Handles deep reflective analysis mission."""
-        analysis = await reflective_deliberation.analyze(msg)
-        
-        if lang == "es":
-            body = (
-                f"**OBSERVACIÓN**\n{analysis.observation}\n\n"
-                f"**HIPÓTESIS PRIMARIA**\n{analysis.primary_hypothesis}\n\n"
-                f"**EXPLICACIÓN ALTERNATIVA**\n{analysis.alternative_hypothesis}\n\n"
-                f"**NIVEL DE CONFIANZA**\n{analysis.confidence_level}\n\n"
-                f"**EVIDENCIA FALTANTE**\n" + ("\n".join([f"- {m}" for m in analysis.missing_evidence]) or "Ninguna") + "\n\n"
-                f"**ACCIÓN RECOMENDADA**\n{analysis.recommended_action}"
-            )
-        else:
-            body = (
-                f"**OBSERVATION**\n{analysis.observation}\n\n"
-                f"**PRIMARY HYPOTHESIS**\n{analysis.primary_hypothesis}\n\n"
-                f"**ALTERNATIVE EXPLANATION**\n{analysis.alternative_hypothesis}\n\n"
-                f"**CONFIDENCE LEVEL**\n{analysis.confidence_level}\n\n"
-                f"**MISSING EVIDENCE**\n" + ("\n".join([f"- {m}" for m in analysis.missing_evidence]) or "None") + "\n\n"
-                f"**RECOMMENDED NEXT STEP**\n{analysis.recommended_action}"
-            )
-            
-        return AICommandResponse(
-            intent="reflective_analysis",
-            status="success",
-            message=body,
-            payload={"analysis": analysis.__dict__}
-        )

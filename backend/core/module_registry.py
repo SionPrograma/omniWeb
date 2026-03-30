@@ -168,7 +168,7 @@ class ModuleRegistry:
             "slug": module_name,
             "prefix": final_prefix,
             "status": "active" if final_prefix else ("unloaded_backend" if metadata.get("has_backend") else "frontend-only"),
-            "health": "healthy",
+            "health": "unverified",
             "last_execution": None,
             "metadata": metadata
         }

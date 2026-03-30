@@ -19,6 +19,9 @@ class DeliberationContext(BaseModel):
     relevant_chip_context: List[str] = []
     uncertainty_level: float = 0.0
     reasoning_mode: str = "conversational"
+    evidence_bundle: Optional[Any] = None # Preservar el objeto original para el router
+    active_mission: Optional[Dict[str, Any]] = None # Persistence Anchor
+
 
 class DeliberationEngine:
     """
@@ -33,6 +36,8 @@ class DeliberationEngine:
         # 1. Gather World State & Evidence
         ws = cognitive_core.world_state
         evidence_bundle = await evidence_engine.collect_evidence()
+        from ..memory.mission_manager import mission_manager
+        active_mission = mission_manager.get_active_mission()
         
         # 2. Pull Learning & Engineering History
         learning_report = adaptive_learning.get_reliability_report()
@@ -66,8 +71,11 @@ class DeliberationEngine:
             learning_signals=learning_report.get("top_patterns", {}),
             relevant_chip_context=ws.active_chips,
             uncertainty_level=uncertainty,
-            reasoning_mode=self._select_mode(intent, uncertainty, {"relevant_evidence": evidence_list, "request": normalized_request})
+            reasoning_mode=self._select_mode(intent, uncertainty, {"relevant_evidence": evidence_list, "request": normalized_request}),
+            evidence_bundle=evidence_bundle,
+            active_mission=active_mission.model_dump() if (active_mission and hasattr(active_mission, 'model_dump')) else (vars(active_mission) if active_mission else None)
         )
+
 
     def get_active_hypotheses_raw(self):
         """Helper to get raw hypotheses for internal calculation."""
