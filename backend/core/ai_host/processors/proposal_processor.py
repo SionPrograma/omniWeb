@@ -331,6 +331,15 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
             last_operation_summary=all_proposals[0].get("change") if all_proposals else "Auditoría del sistema (Solo Lectura).",
             workspace_state="analyzing" if is_global else "proposing"
         )
+        
+        # --- PHASE 4: Mission Tracker Integration ---
+        from ..memory.mission_manager import mission_manager
+        mission_manager.create_mission(
+            goal=f"Editar/Auditar {os.path.basename(raw_target)}",
+            plan_id=preview_id,
+            pending_steps=[p.name for p in mission_plan if p.status != "COMPLETADO"]
+        )
+
         if "bloque" in msg.lower() and re.search(r"bloque\s+(\d+)", msg.lower()):
             new_block = re.search(r"bloque\s+(\d+)", msg.lower()).group(0)
             system_memory.set_roadmap_block(new_block.capitalize())

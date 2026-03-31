@@ -1,5 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () // Final test
-=> {
+﻿document.addEventListener('DOMContentLoaded', () => {
     // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
     const CACHE_RESET_ID = "omni_v5_chrome_fix";
     try {
@@ -986,8 +985,3 @@
     setInterval(updateCapabilities, 8000); // Polling status
 
 });
-
-function logout() {
-    console.log("Sesion cerrada");
-    console.log("FINAL LOGOUT");
-}

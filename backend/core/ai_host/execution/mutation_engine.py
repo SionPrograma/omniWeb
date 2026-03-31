@@ -172,11 +172,16 @@ class FileMutationEngine:
             # --- Phase 3: Hot Reload System - Evidence Capture ---
             from backend.core.master_logbook.manager import master_logbook_manager
             from backend.core.master_logbook.models import MasterLogbookEntry, EntryType, Priority, EntryStatus
+            from backend.core.ai_host.memory.mission_manager import mission_manager
             
             files_str = ", ".join([os.path.basename(op.path) for op in batch.operations])
             log_content = f"Mutación aplicada ({status}): {files_str}"
             if error:
                 log_content += f" | Error: {error}"
+            
+            # --- PHASE 4: Mission Loop Integration ---
+            if status == "SUCCESS" and batch.task_id:
+                 mission_manager.update_mission_step(f"Aplicar cambio en {files_str}")
                 
             entry = MasterLogbookEntry(
                 type=EntryType.AUTO_FIX if batch.origin == "Copilot" else EntryType.SYSTEM_EVENT,

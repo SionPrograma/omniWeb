@@ -186,10 +186,11 @@ async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser
         preview = await patch_preview_engine.get_preview(preview_id)
         if not preview:
             raise HTTPException(status_code=404, detail="Preview not found")
-        results = None
+        reloaded_list = []
+        res_bool = False
         if approved:
             # Apply mutation
-            results = await mutation_engine.execute_batch(preview.batch)
+            res_bool, reloaded_list = await mutation_engine.execute_batch(preview.batch)
             
             # Update task/module status
             task = await builder_execution_engine.get_task(preview.task_id)
@@ -198,7 +199,7 @@ async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser
                 if module:
                     module.status = BuilderStatus.COMPLETED
                     module.progress = 100.0
-                    module.result = {"success": True, "hot_reload": results}
+                    module.result = {"success": res_bool, "hot_reload": reloaded_list}
                     await builder_execution_engine._persist_module(module)
                     
                     # Continue execution loop
@@ -214,7 +215,7 @@ async def decide_preview(preview_id: str, approved: bool, current_user: OmniUser
             intent="preview_decide",
             status="success",
             message="Patch applied successfully" if approved else "Patch rejected",
-            payload={"approved": approved, "reload_results": results if approved else None}
+            payload={"approved": approved, "reload_results": reloaded_list if approved else None}
         )
         
         unified = await orchestrator.orchestrate(

@@ -153,6 +153,14 @@ async def propose_edit(
     
     preview = patch_preview_engine.generate_preview(task.id, module.id, batch)
     
+    # --- PHASE 4: Mission Tracker Integration ---
+    from backend.core.ai_host.memory.mission_manager import mission_manager
+    mission_manager.create_mission(
+        goal=f"Edición Manual: {os.path.basename(path)}",
+        plan_id=preview.id,
+        pending_steps=[module.title, verify_module.title]
+    )
+
     # Update module result to point to preview
     module.result = {"preview_id": preview.id, "type": "patch_preview"}
     await builder_execution_engine._persist_module(module)

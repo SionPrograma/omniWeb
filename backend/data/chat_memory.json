@@ -1,101 +1,5 @@
 [
   {
-    "timestamp": "2026-03-31T01:47:33.393215",
-    "prompt": "seguí",
-    "response": "Continuando con 'da536047-8c61-4041-a394-68e10adc3ad2'. ¿Qué paso sigue o qué más quieres analizar?",
-    "intent": "follow_up"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:33.532388",
-    "prompt": "arreglalo (Referencia: chip-finanzas)",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:33.690751",
-    "prompt": "inspecciona el context-panel",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:33.711340",
-    "prompt": "y ahora?",
-    "response": "Continuando con 'e05fa5a9-68c0-4148-b187-facef4691f30'. ¿Qué paso sigue o qué más quieres analizar?",
-    "intent": "follow_up"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:33.730310",
-    "prompt": "retomá",
-    "response": "Continuando con 'e05fa5a9-68c0-4148-b187-facef4691f30'. ¿Qué paso sigue o qué más quieres analizar?",
-    "intent": "follow_up"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:54.779511",
-    "prompt": "auditá el chip-finanzas",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:54.813340",
-    "prompt": "seguí",
-    "response": "Continuando con 'bf919bd3-f075-4e15-97c9-7d3a87980c28'. ¿Qué paso sigue o qué más quieres analizar?",
-    "intent": "follow_up"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:54.957501",
-    "prompt": "arreglalo (Referencia: chip-finanzas)",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:55.107763",
-    "prompt": "inspecciona el context-panel",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:55.132895",
-    "prompt": "y ahora?",
-    "response": "Continuando con '19297514-5c08-4f97-b28a-a578b5174e9d'. ¿Qué paso sigue o qué más quieres analizar?",
-    "intent": "follow_up"
-  },
-  {
-    "timestamp": "2026-03-31T01:47:55.151483",
-    "prompt": "retomá",
-    "response": "Continuando con '19297514-5c08-4f97-b28a-a578b5174e9d'. ¿Qué paso sigue o qué más quieres analizar?",
-    "intent": "follow_up"
-  },
-  {
-    "timestamp": "2026-03-31T02:06:21.764850",
-    "prompt": "Hola",
-    "response": "Revisando el estado, good evening. Initializing your OmniWeb knowledge environment.",
-    "intent": "onboarding_greeting"
-  },
-  {
-    "timestamp": "2026-03-31T02:06:33.557120",
-    "prompt": "audit",
-    "response": "He analizado el contexto de `Módulo del sistema`.\n\n**Hallazgo:** No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el chip o el incidente. Si no, ¡podemos seguir charlando!\n\n**Seguridad y Riesgo:** SEGURO | Impacto: NULO\n\n**Recomendación:** Continuar con la operación estándar.\n\n---\nARCHIVO_AUDITADO: Módulo del sistema",
-    "intent": "general_chat"
-  },
-  {
-    "timestamp": "2026-03-31T02:07:42.487509",
-    "prompt": "por qué",
-    "response": "He estado dándole vueltas a lo de 'audit' y No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el módulo o el incidente. Si no, ¡podemos seguir charlando!",
-    "intent": "general_chat"
-  },
-  {
-    "timestamp": "2026-03-31T02:07:57.599606",
-    "prompt": "seguí",
-    "response": "No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el módulo o el incidente. Si no, ¡podemos seguir charlando!",
-    "intent": "general_chat"
-  },
-  {
-    "timestamp": "2026-03-31T02:08:05.834710",
-    "prompt": "arreglalo",
-    "response": "No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el módulo o el incidente. Si no, ¡podemos seguir charlando!",
-    "intent": "general_chat"
-  },
-  {
     "timestamp": "2026-03-31T02:08:26.811367",
     "prompt": "estado",
     "response": "No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el módulo o el incidente. Si no, ¡podemos seguir charlando!",
@@ -297,6 +201,102 @@
     "timestamp": "2026-03-31T04:02:21.152308",
     "prompt": "approve preview 504a3cc8-0a11-418f-a985-a6b91d6870a5",
     "response": "De acuerdo a los datos, el informa estado nominal Patch applied successfully.",
+    "intent": "preview_decide"
+  },
+  {
+    "timestamp": "2026-03-31T04:20:24.041108",
+    "prompt": "analiza este archivo y propone agregar un console.log al final \nde logout()",
+    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T04:20:37.831152",
+    "prompt": "analiza este archivo y propone agregar un console.log al final de logout()",
+    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T04:21:12.960314",
+    "prompt": "mejor si, aplica el log al logout()",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T04:21:20.881772",
+    "prompt": "¿en que archivo esta la funcion logout?",
+    "response": "Acá estoy. ¿En qué puedo asistirte con el flujo actual?",
+    "intent": "MEMORY_INTENT"
+  },
+  {
+    "timestamp": "2026-03-31T04:21:20.883844",
+    "prompt": "¿en que archivo esta la funcion logout?",
+    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
+    "intent": "system_memory_report"
+  },
+  {
+    "timestamp": "2026-03-31T04:21:33.706164",
+    "prompt": "analiza este archivo y propone agregar un console.log al final de logout()",
+    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T04:21:41.880056",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T04:22:02.876376",
+    "prompt": "reject preview ddc2363a-7c41-44b5-87e1-09aadcd9c0e4",
+    "response": "Rejected.",
+    "intent": "preview_decide"
+  },
+  {
+    "timestamp": "2026-03-31T04:22:10.428114",
+    "prompt": "mejor si, aplica el log al logout()",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T04:22:29.792720",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Revisando el estado, generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T04:22:43.679070",
+    "prompt": "reject preview 0036d857-432c-451f-9e7b-f25b8acc328d",
+    "response": "Actualmente, rejected.",
+    "intent": "preview_decide"
+  },
+  {
+    "timestamp": "2026-03-31T04:23:15.265954",
+    "prompt": "mejor si, aplica el log al logout()",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T04:23:21.034478",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T04:23:30.462906",
+    "prompt": "approve preview 5716260b-50a0-4db3-a7d5-2c3afab67315",
+    "response": "Procesos estables y activos Patch applied successfully.",
+    "intent": "preview_decide"
+  },
+  {
+    "timestamp": "2026-03-31T04:25:35.539437",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T04:26:29.811791",
+    "prompt": "approve preview b9315dcd-1c3e-4075-ab64-d45d013e6e4e",
+    "response": "Procesos estables y activos Patch applied successfully.",
     "intent": "preview_decide"
   }
 ]

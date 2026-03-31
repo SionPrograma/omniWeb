@@ -159,17 +159,27 @@ class BuilderUI {
                 <div class="step-info">
                     <div class="step-title">${mod.title}</div>
                     <div class="step-status">${mod.status} - ${Math.round(mod.progress)}%</div>
-                    ${mod.result && mod.result.hot_reload ? `
-                        <div class="reload-info" style="font-size: 0.65rem; color: var(--accent); margin-top: 4px; font-family: monospace;">
-                            ${mod.result.hot_reload.map(r => {
+                    ${mod.result && (mod.result.hot_reload || mod.result.verification) ? `
+                        <div class="verification-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px; margin-top: 8px;">
+                            <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--creator-gold); margin-bottom: 5px; font-weight: bold;">Auditoría de Integridad (Runtime)</div>
+                            ${mod.result.hot_reload ? `
+                                <div class="reload-info" style="font-size: 0.65rem; color: var(--accent); font-family: monospace;">
+                                    ${mod.result.hot_reload.map(r => {
             const statusText = r.status === 'RELOADED' ? '✓ Module Reloaded' :
                 r.status === 'FAILED' ? '✗ Reload Failed' :
                     r.status === 'PROTECTED' ? '🔒 Protected' : '';
             return `<div class="${r.status === 'FAILED' ? 'text-fail' : 'text-pass'}">
-                                    ${statusText}: ${r.module}
-                                    ${r.status === 'FAILED' ? `<span onclick="window.builderUI.retryReload('${r.module}')" style="text-decoration:underline; cursor:pointer; padding-left:5px; opacity:0.8;">(RETRY)</span>` : ''}
-                                </div>`;
+                                                ${statusText}: ${r.module}
+                                                ${r.status === 'FAILED' ? `<span onclick="window.builderUI.retryReload('${r.module}')" style="text-decoration:underline; cursor:pointer; padding-left:5px; opacity:0.8;">(RETRY)</span>` : ''}
+                                            </div>`;
         }).join('')}
+                                </div>
+                            ` : ''}
+                            ${mod.result.verification ? `
+                                <div style="font-size: 0.65rem; margin-top: 5px; opacity: 0.8;">
+                                    <span style="color: var(--pizarron-safe);">✓ Verified:</span> ${mod.result.verification.message || 'No side effects detected.'}
+                                </div>
+                            ` : ''}
                         </div>
                     ` : ''}
                 </div>
