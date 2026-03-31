@@ -69,6 +69,23 @@ class BrainRouter:
         if active_mission and intent_group == "NATURAL_CHAT" and active_mission.status == MissionStatus.OPEN:
              mission_manager.set_status(MissionStatus.PAUSED, reason="Interrupción por charla casual.")
 
+        # 0.7 CONVERSATION FAST-PATH (Bloque Modo Conversación)
+        # For casual chat on the public chat surface, skip deliberation entirely.
+        # This makes "hola", "cómo estás", "qué tal" respond fast and clean.
+        if (
+            source_surface == "chat" 
+            and mode_hint == "conversational" 
+            and intent_group in ["NATURAL_CHAT", "GREETING"]
+            and not self._is_complex_request(msg_clean, specific_intent or "")
+        ):
+            logger.info(f"[FAST_CONV] Conversation fast-path activated for: '{msg_clean[:40]}'")
+            try:
+                res = await self._handle_natural_chat(msg_clean, None, lang)
+                if res:
+                    return await self._finalize_interaction(msg_clean, res, intent_group)
+            except Exception as conv_err:
+                logger.warning(f"[FAST_CONV_FAIL] {conv_err}. Falling through to full pipeline.")
+
         # 1. ASSEMBLE DELIBERATION CONTEXT (Protected Pipeline Entry)
         try:
             delib_context = await deliberation_engine.assemble_context(
@@ -211,7 +228,8 @@ class BrainRouter:
         chat_proc = self.command_router.registry.get_processor("chat")
         if chat_proc:
              # Natural shaping: tell the processor to be a chatbot, not an operator.
-             res = await chat_proc.process(msg, context={**(vars(ctx) if hasattr(ctx, '__dict__') else {}), "tone": "natural_chatbot"})
+             ctx_dict = (vars(ctx) if hasattr(ctx, '__dict__') else {}) if ctx else {}
+             res = await chat_proc.process(msg, context={**ctx_dict, "tone": "natural_chatbot"})
              return res
         return self._generate_natural_fallback(lang)
 
@@ -589,21 +607,21 @@ class BrainRouter:
         import random
         if lang == "es":
             options = [
-                "Entiendo el contexto. Seguí con la siguiente instrucción para profundizar.",
-                "De acuerdo. El sistema está estable. ¿Qué priorizamos ahora?",
-                "Vale. Sigo monitoreando los procesos en tiempo real.",
-                "Listo. Estoy a la espera de tu dirección, Creador.",
-                "Comprendido. Sigamos con la evaluación del flujo.",
-                "Bien. La sincronización es sólida. Decidí el siguiente paso."
+                "Acá estoy, contame. ¿En qué te puedo ayudar?",
+                "Dale, te escucho. ¿Qué necesitás?",
+                "Contame, ¿qué tenés en mente?",
+                "Claro, decime. ¿Qué hacemos?",
+                "Estoy listo. ¿Qué querés saber o hacer?",
+                "Sí, decime. ¿En qué andás?"
             ]
         else:
             options = [
-                "Understood the context. Proceed with the next instruction to go deeper.",
-                "Alright. System is stable. What do we prioritize next?",
-                "Got it. I'm monitoring the processes in real-time.",
-                "Ready. I'm waiting for your direction, Creator.",
-                "Understood. Let's continue with the flow evaluation.",
-                "Good. Synchronization is solid. Decide the next step."
+                "I'm here, what's up? How can I help?",
+                "Sure thing, I'm listening. What do you need?",
+                "Tell me, what's on your mind?",
+                "Alright, go ahead. What are we doing?",
+                "Ready. What do you want to know or do?",
+                "Yes, tell me. What are you working on?"
             ]
         return AICommandResponse(intent="chat", status="success", message=random.choice(options))
 

@@ -151,7 +151,13 @@ async def propose_edit(
         origin="CreatorEditor"
     )
     
-    preview = patch_preview_engine.generate_preview(task.id, module.id, batch)
+    preview = patch_preview_engine.generate_preview(
+        task.id, 
+        module.id, 
+        batch, 
+        reasoning=f"Edición manual solicitada por el Creador en {os.path.basename(path)}.",
+        trigger="MANUAL_EDITOR_ACTION"
+    )
     
     # --- PHASE 4: Mission Tracker Integration ---
     from backend.core.ai_host.memory.mission_manager import mission_manager

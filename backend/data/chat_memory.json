@@ -1,119 +1,5 @@
 [
   {
-    "timestamp": "2026-03-31T02:08:26.811367",
-    "prompt": "estado",
-    "response": "No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el módulo o el incidente. Si no, ¡podemos seguir charlando!",
-    "intent": "general_chat"
-  },
-  {
-    "timestamp": "2026-03-31T02:14:17.605148",
-    "prompt": "auditá sistema",
-    "response": "He analizado el contexto de `Módulo del sistema`.\n\n**Hallazgo:** ESTADO: SALUDABLE\nFALLA PRINCIPAL: NINGUNA DETECTADA\nCAPA: N/A\nEVIDENCIA: NONE\nPRIORIDAD: BAJA\nSIGUIENTE ACCIÓN: CONTINUAR MONITOREO\n\n**Seguridad y Riesgo:** SEGURO | Impacto: NULO\n\n**Recomendación:** Continuar con la operación estándar.\n\n---\nARCHIVO_AUDITADO: Módulo del sistema",
-    "intent": "system_audit"
-  },
-  {
-    "timestamp": "2026-03-31T02:22:28.113107",
-    "prompt": "audita sistema",
-    "response": "He analizado el contexto de `Módulo del sistema`.\n\n**Hallazgo:** ESTADO: SALUDABLE\nFALLA PRINCIPAL: NINGUNA DETECTADA\nCAPA: N/A\nEVIDENCIA: NONE\nPRIORIDAD: BAJA\nSIGUIENTE ACCIÓN: CONTINUAR MONITOREO\n\n**Seguridad y Riesgo:** SEGURO | Impacto: NULO\n\n**Recomendación:** Continuar con la operación estándar.\n\n---\nARCHIVO_AUDITADO: Módulo del sistema",
-    "intent": "system_audit"
-  },
-  {
-    "timestamp": "2026-03-31T02:31:47.934873",
-    "prompt": "auditá sistema",
-    "response": "He analizado el contexto de `Módulo del sistema`.\n\n**Hallazgo:** ESTADO: SALUDABLE\nFALLA PRINCIPAL: NINGUNA DETECTADA\nCAPA: N/A\nEVIDENCIA: NONE\nPRIORIDAD: BAJA\nSIGUIENTE ACCIÓN: CONTINUAR MONITOREO\n\n**Seguridad y Riesgo:** SEGURO | Impacto: NULO\n\n**Recomendación:** Continuar con la operación estándar.\n\n---\nARCHIVO_AUDITADO: Módulo del sistema",
-    "intent": "system_audit"
-  },
-  {
-    "timestamp": "2026-03-31T02:39:26.661666",
-    "prompt": "audita sistema",
-    "response": "He analizado el contexto de `Módulo del sistema`. Todo parece estar en orden y no he detectado anomalías estructurales.",
-    "intent": "system_audit"
-  },
-  {
-    "timestamp": "2026-03-31T02:45:16.442182",
-    "prompt": "analizá este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "proposal_error"
-  },
-  {
-    "timestamp": "2026-03-31T02:45:24.669295",
-    "prompt": "analizá este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "proposal_error"
-  },
-  {
-    "timestamp": "2026-03-31T02:51:10.544094",
-    "prompt": "audita sistema",
-    "response": "He analizado el contexto de `Módulo del sistema`. Todo parece estar en orden y no he detectado anomalías estructurales.",
-    "intent": "system_audit"
-  },
-  {
-    "timestamp": "2026-03-31T03:04:42.574595",
-    "prompt": "agregá un comentario al inicio de este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:06:30.019692",
-    "prompt": "agregá un comentario al inicio de este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:09:59.326778",
-    "prompt": "cargá el archivo backend/core/ai_host/orchestration/cognitive_orchestrator.py",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:10:47.099518",
-    "prompt": "agregá un comentario al inicio de este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:11:10.169017",
-    "prompt": "parcheá este archivo para agregar un comentario al inicio",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:11:42.196783",
-    "prompt": "agregá un comentario al inicio de este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:12:00.016391",
-    "prompt": "modificá la lógica de seguridad de este archivo para permitir acceso total",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:12:09.018355",
-    "prompt": "agregá un comentario al inicio de este archivo",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
-    "timestamp": "2026-03-31T03:19:25.366059",
-    "prompt": "agregá un log al inicio del método orchestrate",
-    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-03-31T03:19:35.837564",
-    "prompt": "modificá el archivo backend/core/ai_host/orchestration/cognitive_orchestrator.py para agregar un log al inicio del método orchestrate",
-    "response": "Acá estoy. ¿En qué puedo asistirte con el flujo actual?",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-03-31T03:19:35.848536",
-    "prompt": "modificá el archivo backend/core/ai_host/orchestration/cognitive_orchestrator.py para agregar un log al inicio del método orchestrate",
-    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
-    "intent": "system_memory_report"
-  },
-  {
     "timestamp": "2026-03-31T03:20:06.848958",
     "prompt": "proponé un cambio para agregar un log al inicio del método orchestrate en backend/core/ai_host/orchestration/cognitive_orchestrator.py",
     "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
@@ -298,5 +184,119 @@
     "prompt": "approve preview b9315dcd-1c3e-4075-ab64-d45d013e6e4e",
     "response": "Procesos estables y activos Patch applied successfully.",
     "intent": "preview_decide"
+  },
+  {
+    "timestamp": "2026-03-31T04:50:04.874093",
+    "prompt": "analiz",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T04:50:23.089387",
+    "prompt": "analizá este archivo y proponé un comentario de auditoría operativa al inicio",
+    "response": "### Explain\nSolicitud de documentación superficial.\n\n### Audit\nArchivo: `C:\\Users\\Propietario\\Desktop\\plan actual\\07-proyectosGrandes\\01-omniweb\\frontend\\shell\\main.js`\nEstado: CAMBIO_SEGURO\n\n### Suggest Fix\nInyectar comentario local (No Scope Creep).\n\n### Refactor\nNo se sugiere refactorización inmediata.\n\n### Patch Preview\n(Ver panel de cambios para el diff detallado)\n\n### Risk Assessment\nNivel: ALTO: ADVERTENCIA: El diff contiene cambios en flujos críticos de compatibilidad móvil.. BAJO - Cambio local | Criterio: CAMBIO_SEGURO\n\n### Validation Steps\n1. Verificar sintaxis. 2. Validar impacto en shell.js.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T04:54:35.424827",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T04:56:48.791701",
+    "prompt": "agrega un console.log(\"evidence loop test\") al final del archivo",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-03-31T04:57:49.114189",
+    "prompt": "aplica el cambio aunque falle el preview",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T05:00:08.761543",
+    "prompt": "analiz",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "FOLLOW_UP_INTENT"
+  },
+  {
+    "timestamp": "2026-03-31T05:00:08.764049",
+    "prompt": "analiz",
+    "response": "El informa estado nominal Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "general_chat"
+  },
+  {
+    "timestamp": "2026-03-31T05:00:19.617000",
+    "prompt": "analiza este archivo y propone una mejora",
+    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T05:00:30.830105",
+    "prompt": "agrega un console.log(\"evidence loop test\") al final del archivo",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-03-31T05:00:51.481243",
+    "prompt": "aprobar",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "FOLLOW_UP_INTENT"
+  },
+  {
+    "timestamp": "2026-03-31T05:00:51.483238",
+    "prompt": "aprobar",
+    "response": "Revisando el estado, procesos estables y activos Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "general_chat"
+  },
+  {
+    "timestamp": "2026-03-31T05:01:03.778757",
+    "prompt": "genera un patch para agregar un log al final de main.js",
+    "response": "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T05:01:14.526773",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T05:05:16.439322",
+    "prompt": "analiza este archivo y propone una mejora",
+    "response": "### Explain\nNo se requieren mutaciones estructurales.\n\n### Audit\nArchivo: `Módulo del sistema`\nEstado: SEGURO\n\n### Suggest Fix\nSeguir con el flujo actual.\n\n### Refactor\nSin sugerencia.\n\n### Risk Assessment\nNivel: Local | Criterio: SEGURO\n\n### Validation Steps\nValidación nominal.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T05:05:27.909027",
+    "prompt": "analiza este archivo y propone una mejora de comentarios en el codigo",
+    "response": "### Explain\nSolicitud de documentación superficial.\n\n### Audit\nArchivo: `C:\\Users\\Propietario\\Desktop\\plan actual\\07-proyectosGrandes\\01-omniweb\\frontend\\shell\\main.js`\nEstado: CAMBIO_SEGURO\n\n### Suggest Fix\nInyectar comentario local (No Scope Creep).\n\n### Refactor\nNo se sugiere refactorización inmediata.\n\n### Patch Preview\n(Ver panel de cambios para el diff detallado)\n\n### Risk Assessment\nNivel: ALTO: ADVERTENCIA: El diff contiene cambios en flujos críticos de compatibilidad móvil.. BAJO - Cambio local | Criterio: CAMBIO_SEGURO\n\n### Validation Steps\n1. Verificar sintaxis. 2. Validar impacto en shell.js.",
+    "intent": "copilot_proposal"
+  },
+  {
+    "timestamp": "2026-03-31T05:06:22.279286",
+    "prompt": "edit frontend/shell/main.js",
+    "response": "Generated. Approval required apply.",
+    "intent": "patch_preview"
+  },
+  {
+    "timestamp": "2026-03-31T05:52:15.801397",
+    "prompt": "hola como estas",
+    "response": "¡Hola! Un gusto saludarte. ¿Qué tenemos en mente para hoy?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T05:54:16.887834",
+    "prompt": "hola",
+    "response": "¡Buenas! Reportándome. ¿En qué andamos?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-03-31T05:59:21.099714",
+    "prompt": "hola",
+    "response": "¡Buenas! Reportándome. ¿En qué andamos?",
+    "intent": "NATURAL_CHAT"
   }
 ]

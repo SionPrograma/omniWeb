@@ -142,7 +142,66 @@ class CommandRouter:
             "copilot_proposal": self._handle_proposal
         }
 
+    # --- HOTFIX: LOCAL FAST-PATH PATTERNS (Zero external dependency) ---
+    _FAST_GREETINGS = {"hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", 
+                       "buenos días", "todo bien", "todo ok", "buenas", "buen día", "buen dia"}
+    _FAST_ACKS = {"perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", 
+                  "bien", "claro", "awesome", "great", "thanks", "got it", "understood", "vale"}
+    _FAST_IDENTITY = {"quien eres", "quién eres", "who are you", "que eres", "qué eres", 
+                      "what are you", "tu nombre", "your name"}
+    _FAST_HOW = {"como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", 
+                 "cómo vas", "qué pasa", "que pasa"}
+    _FAST_SMALLTALK = {"chiste", "joke", "contame algo", "tell me something", "charlemos", 
+                       "cuéntame", "contame", "háblame", "hablame"}
+
+    def _is_local_fast_path(self, msg_clean: str, source_surface: str) -> Optional[str]:
+        """
+        Ultra-fast local pattern matcher for casual conversation.
+        Returns a fast-path category string or None if not matched.
+        No external dependencies. No AI calls. Pure string matching.
+        """
+        if source_surface not in ("chat", "text"):
+            return None
+        
+        words = set(msg_clean.split())
+        word_count = len(words)
+        
+        # Exact match for full string
+        if msg_clean in self._FAST_GREETINGS:
+            return "greeting"
+        
+        # Word-based match for greetings and ACKs to avoid false positives (like 'hi' in 'archive')
+        if any(w in words for w in self._FAST_GREETINGS) or \
+           (word_count <= 4 and any(g in msg_clean for g in self._FAST_GREETINGS if len(g) > 3)):
+            return "greeting"
+        
+        # Acknowledgment (word match)
+        if any(w in words for w in self._FAST_ACKS):
+            return "acknowledgment"
+        
+        # Identity
+        if any(q in msg_clean for q in self._FAST_IDENTITY):
+            return "identity"
+        
+        # How are you
+        if any(q in msg_clean for q in self._FAST_HOW):
+            return "how_are_you"
+        
+        # Small talk
+        if any(q in msg_clean for q in self._FAST_SMALLTALK):
+            return "smalltalk"
+        
+        # Ultra-short casual messages (Up to 3 words, no tech keywords)
+        tech_signals = {"error", "falla", "bug", "analiza", "audit", "chip", "fix", "arregla", 
+                        "plan", "roadmap", "diagnos", "problema", "system", "archivo", "código", "log", "bus"}
+        if word_count <= 3 and not any(t in msg_clean for t in tech_signals):
+            # Very short, non-technical → treat as casual chat
+            return "short_casual"
+        
+        return None
+
     async def route(self, message: str, modality: str = "text", context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        import asyncio
         from backend.core.permissions import set_chip_context
         user_id = context.get("user_id") if context else "default_user"
         
@@ -168,9 +227,27 @@ class CommandRouter:
                 logger.info(f"[ROUTER_FORWARD] Normalized Message: {msg_clean}")
                 print(f"\n[DEBUG] ROUTER RECEIVED: {msg_clean}\n")
 
+                # === HOTFIX: LOCAL FAST-PATH (No external dependency) ===
+                # Detects casual conversation BEFORE touching intent_engine or any heavy pipeline.
+                # This ensures the chat principal NEVER hangs on external API calls for basic interaction.
+                source_surface = context.get("source_surface", "chat") if context else "chat"
+                if not is_creator_prefixed:
+                    fast_category = self._is_local_fast_path(msg_clean, source_surface)
+                    if fast_category:
+                        logger.info(f"[LOCAL_FAST_PATH] Category: {fast_category} | Msg: '{msg_clean[:40]}'")
+                        try:
+                            chat_proc = self.registry.get_processor("chat")
+                            if chat_proc:
+                                fast_res = await chat_proc.process(msg_clean, context=context)
+                                if fast_res and fast_res.message:
+                                    logger.info(f"[LOCAL_FAST_PATH] Responded locally. No external call needed.")
+                                    return await self._finalize_response(fast_res, message)
+                        except Exception as fast_err:
+                            logger.warning(f"[LOCAL_FAST_PATH_FAIL] {fast_err}. Falling through to full pipeline.")
+                # === END HOTFIX ===
+
                 # Phase AA: Automatic Skill Discovery
                 try:
-                    import asyncio
                     from backend.core.skill_engine.skill_detector import skill_detector
                     asyncio.create_task(skill_detector.detect_from_input("default_user", msg_clean))
                 except Exception as e:
@@ -178,87 +255,100 @@ class CommandRouter:
                 
                 res = None
                 
-                # 1. SEMANTIC INTENT UNDERSTANDING
-                from ..intent_understanding.intent_engine import intent_engine
-                session_id = str(context.get("user_id", "default_user")) if context else "default_user"
-                understanding = await intent_engine.understand(msg_clean, session_id)
-                
-                intent = understanding["specific_intent"]
-                intent_group = understanding["intent_group"]
-                semantic_ctx = understanding["context"]
-                
-                if is_creator_prefixed and (not intent or intent == "chat"):
-                    intent = "creator_command"
+                # === FULL PIPELINE (with timeout protection) ===
+                async def _run_full_pipeline():
+                    nonlocal res
+                    # 1. SEMANTIC INTENT UNDERSTANDING
+                    from ..intent_understanding.intent_engine import intent_engine
+                    session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+                    understanding = await intent_engine.understand(msg_clean, session_id)
                     
-                # --- FIX OMNIWEB: RESOLVER COLISIÓN DE INTENT "FIX" ---
-                has_file_context = False
-                if context and "multimodal_evidence" in context:
-                    for item in context.get("multimodal_evidence", []):
-                        if item.get("type") == "current_file" and item.get("path"):
-                            has_file_context = True
-                            break
-                            
-                file_kws = ["archivo", "codigo", "código", "este", "file", "code", "script", "modulo", "módulo"]
-                has_file_ref = any(kw in msg_clean for kw in file_kws)
-                
-                if (intent == "healing" or intent == "remediation") and (has_file_context or has_file_ref):
-                    intent = "copilot_proposal"
-                    understanding["specific_intent"] = intent
-                    understanding["intent_group"] = "COPILOT_PROPOSAL_INTENT"
-                    understanding["mode"] = "constrained_output"
-                    logger.info("[ROUTING_OVERRIDE] Overriding healing/remediation intent to copilot_proposal due to active file context.")
-                # --- FIN FIX ---
+                    intent = understanding["specific_intent"]
+                    intent_group = understanding["intent_group"]
+                    semantic_ctx = understanding["context"]
+                    
+                    if is_creator_prefixed and (not intent or intent == "chat"):
+                        intent = "creator_command"
+                        
+                    # --- FIX OMNIWEB: RESOLVER COLISIÓN DE INTENT "FIX" ---
+                    has_file_context = False
+                    if context and "multimodal_evidence" in context:
+                        for item in context.get("multimodal_evidence", []):
+                            if item.get("type") == "current_file" and item.get("path"):
+                                has_file_context = True
+                                break
+                                
+                    file_kws = ["archivo", "codigo", "código", "este", "file", "code", "script", "modulo", "módulo"]
+                    has_file_ref = any(kw in msg_clean for kw in file_kws)
+                    
+                    if (intent == "healing" or intent == "remediation") and (has_file_context or has_file_ref):
+                        intent = "copilot_proposal"
+                        understanding["specific_intent"] = intent
+                        understanding["intent_group"] = "COPILOT_PROPOSAL_INTENT"
+                        understanding["mode"] = "constrained_output"
+                        logger.info("[ROUTING_OVERRIDE] Overriding healing/remediation intent to copilot_proposal due to active file context.")
+                    # --- FIN FIX ---
 
-                logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
+                    logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
+                    
+                    # --- PRIORITY CHAIN EXECUTION ---
+                    system_intents = ["system_audit", "list_chips", "show_logbook", "healing", "creator_command", "list"]
+                    chip_intents = ["open_chip", "inspect_chip", "activate", "deactivate"]
+                    nav_intents = ["navigate_to", "focus_chip_runtime"]
+                    memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
+                    brain_intents = ["creator_analysis", "creator_plan"]
+                    builder_intents = ["approve_roadmap", "start_execution"]
+                    proposal_intents = ["copilot_proposal"]
+                    
+                    priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents + ["operational_failure_report"]
+                    
+                    if intent in priority_intents and intent in self.intents and intent not in brain_intents:
+                        logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
+                        # Allow handlers to optionally receive context
+                        import inspect
+                        handler = self.intents[intent]
+                        if 'context' in inspect.signature(handler).parameters:
+                            res = await handler(msg_clean, context=context)
+                        else:
+                            res = await handler(msg_clean)
+
+                    # 3. UNIFIED COGNITIVE PIPELINE
+                    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+                    orchestrator = CognitiveOrchestrator(self)
+                    
+                    res = await orchestrator.orchestrate(
+                        message=msg_clean, 
+                        understanding=understanding,
+                        context=context,
+                        raw_response=res
+                    )
+                    return res
                 
-                # --- PRIORITY CHAIN EXECUTION ---
-                system_intents = ["system_audit", "list_chips", "show_logbook", "healing", "creator_command", "list"]
-                chip_intents = ["open_chip", "inspect_chip", "activate", "deactivate"]
-                nav_intents = ["navigate_to", "focus_chip_runtime"]
-                memory_intents = ["idea_captured", "list_ideas", "search_knowledge", "list_clusters", "show_cluster", "group_ideas", "summarize_cluster", "generate_project_draft", "initialize_project", "show_project_evolution", "show_cluster_lineage", "show_project_activity", "scan_projects", "generate_evolution_report", "get_project_timeline"]
-                brain_intents = ["creator_analysis", "creator_plan"]
-                builder_intents = ["approve_roadmap", "start_execution"]
-                proposal_intents = ["copilot_proposal"]
-                
-                priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents + ["operational_failure_report"]
-                
-                if intent in priority_intents and intent in self.intents and intent not in brain_intents:
-                    logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
-                    # Allow handlers to optionally receive context
-                    import inspect
-                    handler = self.intents[intent]
-                    if 'context' in inspect.signature(handler).parameters:
-                        res = await handler(msg_clean, context=context)
+                # Run full pipeline with timeout protection
+                try:
+                    res = await asyncio.wait_for(_run_full_pipeline(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    logger.error("[PIPELINE_TIMEOUT] Full pipeline exceeded 15s. Falling back to local response.")
+                    chat_proc = self.registry.get_processor("chat")
+                    if chat_proc:
+                        res = await chat_proc.process(msg_clean, context=context)
                     else:
-                        res = await handler(msg_clean)
+                        res = AICommandResponse(
+                            intent="timeout_fallback", status="success",
+                            message="Estoy tardando más de lo normal. ¿Podés repetirme lo que necesitás?"
+                        )
 
-                # 3. UNIFIED COGNITIVE PIPELINE
-                from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
-                orchestrator = CognitiveOrchestrator(self)
-                
-                res = await orchestrator.orchestrate(
-                    message=msg_clean, 
-                    understanding=understanding,
-                    context=context,
-                    raw_response=res
-                )
         except Exception as e:
             logger.error(f"[PIPELINE_ERROR] Route failed: {e}")
-            from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
-            orchestrator = CognitiveOrchestrator(self)
-            
-            error_res = AICommandResponse(
-                intent="recovery", 
-                status="success", 
-                message="Error en la generación de respuesta cognitiva" if "es" in message.lower() else "Cognitive response generation error"
-            )
-            
-            # FORCE orchestration even for errors
-            res = await orchestrator.orchestrate(
-                message=message,
-                understanding={"mode": "direct_response", "intent_group": "RECOVERY"},
-                context=context,
-                raw_response=error_res
+            # Lightweight error recovery — no heavy orchestrator for error fallback
+            import random
+            fallback_msgs = [
+                "Disculpá, hubo un inconveniente interno. ¿Podés repetirme lo que necesitás?",
+                "Se me cruzó un error procesando eso. ¿Probamos de nuevo?",
+                "Ay, algo no salió bien por acá. ¿Qué necesitás?"
+            ]
+            res = AICommandResponse(
+                intent="recovery", status="success", message=random.choice(fallback_msgs)
             )
 
         return await self._finalize_response(res, message)

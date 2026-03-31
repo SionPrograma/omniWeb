@@ -1,5 +1,5 @@
 ﻿document.addEventListener('DOMContentLoaded', () // Final test
-=> {
+    => {
     // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
     const CACHE_RESET_ID = "omni_v5_chrome_fix";
     try {
@@ -83,6 +83,8 @@
 
     // --- Onboarding Greeting ---
     function initGreeting() {
+        // Show suggestion chips on first load
+        showSuggestionChips();
         const fallback = "¿En qué puedo ayudarte hoy?";
         const urlParams = new URLSearchParams(window.location.search);
         const inviteToken = urlParams.get('invite') || urlParams.get('beta');
@@ -449,6 +451,46 @@
             .replace(/'/g, "&#039;");
     }
 
+    // --- SUGGESTION CHIPS (Modo Conversación) ---
+    function showSuggestionChips() {
+        const existing = document.getElementById('suggestion-chips');
+        if (existing) return; // Don't duplicate
+
+        const container = document.createElement('div');
+        container.id = 'suggestion-chips';
+        container.className = 'suggestion-chips';
+
+        const suggestions = [
+            { emoji: '💬', text: '¿Qué puedes hacer?' },
+            { emoji: '📋', text: '¿En qué proyecto estamos?' },
+            { emoji: '🧠', text: '¿Cómo funciona tu memoria?' },
+            { emoji: '🚀', text: 'Cuéntame sobre OmniWeb' }
+        ];
+
+        suggestions.forEach(s => {
+            const chip = document.createElement('button');
+            chip.className = 'suggestion-chip';
+            chip.innerHTML = `<span class="chip-emoji">${s.emoji}</span>${s.text}`;
+            chip.addEventListener('click', () => {
+                shellInput.value = s.text;
+                processCommand();
+                container.remove();
+            });
+            container.appendChild(chip);
+        });
+
+        chatLog.appendChild(container);
+        scrollToBottom(true);
+    }
+
+    // Remove suggestion chips when user types manually
+    if (shellInput) {
+        shellInput.addEventListener('focus', () => {
+            const chips = document.getElementById('suggestion-chips');
+            if (chips && shellInput.value.length > 0) chips.remove();
+        });
+    }
+
     window.addMessage = addMessage; // Expose to creator.js
 
     // --- Phase 2: Canonical Submit Path (Reliable Touch/Click) ---
@@ -508,7 +550,7 @@
                 shellInput.placeholder = "Procesando...";
             } else {
                 voiceBtn.classList.remove('listening', 'processing');
-                shellInput.placeholder = "Escribe un comando...";
+                shellInput.placeholder = "Preguntame algo...";
                 if (state === 'error') {
                     shellInput.classList.add('input-error');
                     setTimeout(() => shellInput.classList.remove('input-error'), 2000);
@@ -554,6 +596,10 @@
         shellInput.value = '';
         shellInput.classList.remove('input-error'); // Clear error state on submission
 
+        // Remove suggestion chips on first interaction
+        const sugChips = document.getElementById('suggestion-chips');
+        if (sugChips) sugChips.remove();
+
         // Typing indicator + Orb pulse
         const orb = document.querySelector('.ai-orb');
         if (orb) orb.classList.add('processing');
@@ -570,6 +616,10 @@
         }
 
         try {
+            // === HOTFIX: Timeout protection to prevent eternal hang ===
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s max
+
             const response = await fetch('/api/v1/ai-host/process', {
                 method: 'POST',
                 headers: {
@@ -580,8 +630,12 @@
                     message: cmd,
                     multimodal_evidence: evidence,
                     source_surface: document.getElementById('creator-workspace-view').classList.contains('active') ? 'workspace' : 'chat'
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+            // === END HOTFIX ===
 
             const data = await response.json();
             if (orb) orb.classList.remove('processing');
@@ -710,9 +764,17 @@
             }
 
         } catch (error) {
-            console.error('AI Host Error:', error);
+            if (orb) orb.classList.remove('processing');
             typingDiv.remove();
-            addMessage("Tengo problemas para conectar con el sistema central. Por favor, verifica la conexiÃ³n.", 'ai');
+
+            if (error.name === 'AbortError') {
+                // === HOTFIX: Timeout fallback — respond locally ===
+                console.warn('[CHAT_TIMEOUT] Backend exceeded 15s. Showing local fallback.');
+                addMessage("Estoy tardando más de lo esperado en procesar tu mensaje. Probá de nuevo en un momento.", 'ai');
+            } else {
+                console.error('AI Host Error:', error);
+                addMessage("Tengo problemas para conectar con el sistema central. Por favor, verificá la conexión.", 'ai');
+            }
         }
     }
 

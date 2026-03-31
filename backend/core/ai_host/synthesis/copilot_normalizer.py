@@ -49,6 +49,20 @@ class CopilotNormalizer:
         }
     }
 
+    # MEGAPROMPT: DISCIPLINED OUTPUT CONTRACT (CAPA 4)
+    MEGAPROMPT_LABELS = {
+        "es": {
+            "intent": "### MISIÓN ENTENDIDA",
+            "touch": "### LO QUE VOY A TOCAR",
+            "dont_touch": "### LO QUE NO VOY A TOCAR",
+            "risk": "### RIESGO Y SEGURIDAD",
+            "evidence": "### EVIDENCIA PREVIA",
+            "plan": "### ÁRBOL DE EJECUCIÓN",
+            "next": "### PRÓXIMO PASO",
+            "gate": "### REQUIERE APROBACIÓN"
+        }
+    }
+
     def normalize(self, text: str, understanding: Dict[str, Any], lang: str = "es", policy_result: Dict[str, Any] = None, task_tree: Dict[str, Any] = None, source_surface: str = "chat") -> str:
         # Detect labels for all possible Copilot outputs
         lines = text.splitlines()
@@ -63,9 +77,15 @@ class CopilotNormalizer:
             if ":" in line:
                 for label in target_labels:
                     if line.strip().upper().startswith(label):
-                        key, val = line.split(":", 1)
+                        # Use partition to handle multiple colons
+                        _, _, val = line.partition(":")
                         data[label] = val.strip()
                         break
+
+        # Check for Megaprompt context
+        compiled_mission = understanding.get("compiled_mission")
+        if compiled_mission and source_surface == "workspace":
+            return self._normalize_megaprompt(compiled_mission, task_tree, lang)
 
         if not data and not policy_result:
             return text 
@@ -100,22 +120,39 @@ class CopilotNormalizer:
                 
             return w_narrative.strip()
 
-        # --- BRANCH B: CHAT MODE (CONVERSATIONAL & HUMAN) ---
-        labels = self.SEC_LABELS[lang]
+        # ... (conversational part follows)
+    
+    def _normalize_megaprompt(self, mission: Any, tree: Dict[str, Any], lang: str) -> str:
+        """Disciplined Workspace Output for Megaprompts (CAPA 4)"""
+        labels = self.MEGAPROMPT_LABELS.get(lang, self.MEGAPROMPT_LABELS["es"])
         
-        # Narrative construction without hard headers
-        narrative = f"{labels['context']} `{file_path}`. "
+        narrative = f"{labels['intent']}\n{mission.mission_name}\n> {mission.primary_objective}\n\n"
         
-        # We transform the report into a sentence
-        if "saludable" in summary.lower() or "ninguno" in summary.lower() or "no se requiere" in summary.lower():
-            narrative += "Todo parece estar en orden y no he detectado anomalías estructurales."
-        else:
-            narrative += f"He identificado un posible ajuste: {summary}. "
-            narrative += f"Mi recomendación técnica es: {proposal}."
+        touch_zones = ", ".join([f"`{f}`" for f in mission.critical_files]) or "Sistema Omnicore"
+        narrative += f"{labels['touch']}\n{touch_zones}\n\n"
+        
+        forbidden = "\n".join([f"- {z}" for z in mission.forbidden_layers]) or "Ninguna zona explícita."
+        narrative += f"{labels['dont_touch']}\n{forbidden}\n\n"
+        
+        risk = "MÍNIMO" if not mission.is_ambiguous else "MODERADO"
+        narrative += f"{labels['risk']}\nNivel: {risk} | Criterio: Disciplina de Árbol Operativo\n\n"
+        
+        if mission.is_ambiguous:
+             narrative += f"> [!WARNING]\n> {mission.ambiguity_notes[0] if mission.ambiguity_notes else 'Ambigüedad detectada.'}\n\n"
 
-        if "alto" in str(safety).lower() or "crítico" in str(safety).lower():
-            narrative += f"\n\n⚠️ **Nota de seguridad:** Este cambio tiene un impacto {impact} y requiere precaución."
-
+        if tree and "root" in tree:
+            # We show a simplified tree for the report
+            narrative += f"{labels['plan']}\n"
+            for phase in tree["root"].get("children", []):
+                narrative += f"- {phase['label']} ({phase['status']})\n"
+                for task in phase.get("children", []):
+                    narrative += f"    - [{ 'x' if task['status'] == 'COMPLETED' else ' ' }] {task['label']}\n"
+            narrative += "\n"
+        
+        narrative += f"{labels['next']}\nEjecución del primer nodo del árbol: `Fase 1: Auditar`.\n\n"
+        narrative += f"{labels['gate']}\nSe requiere aprobación para iniciar la misión disciplinada."
+        
         return narrative.strip()
+
 
 copilot_normalizer = CopilotNormalizer()

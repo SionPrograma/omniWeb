@@ -10,6 +10,9 @@ from .responses_api import ResponsesAPI, InternalStructuredOutput
 from backend.core.ai_host.observability.tracing_api import tracing_api
 from backend.core.ai_host.observability.self_correction import self_correction
 from backend.core.ai_host.orchestration.tool_definitions import tool_registry
+from backend.core.ai_host.orchestration.prompt_compiler import prompt_compiler
+from backend.core.ai_host.orchestration.execution_tree import tree_planner
+from backend.core.ai_host.orchestration.scope_lock import DeviationDetector
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +61,19 @@ class CognitiveOrchestrator:
             system_state, runtime_ctx = await self.build_context()
             tracing_api.end_observation(trace_id, "build_context")
 
+            # --- MEGAPROMPT EXECUTION LAYER (CAPA 1 & 2) ---
+            # If the input is long or explicitly a mission, we compile it.
+            if len(message) > 400 or message.lower().startswith(("misión:", "mission:", "megaprompt:")):
+                logger.info("[MEGAPROMPT_LAYER] Complex mission detected. Triggering Compiler.")
+                compiled = prompt_compiler.compile(message)
+                understanding["compiled_mission"] = compiled
+                understanding["mode"] = "constrained_output" # Force disciplined mode
+                
+                # Check for ambiguity
+                if compiled.is_ambiguous:
+                    logger.warning(f"[MEGAPROMPT_LAYER] Mission is ambiguous: {compiled.ambiguity_notes}")
+            # --- END MEGAPROMPT BLOCK ---
+
             # 3. Memory Retrieval (PIPELINE 3)
             tracing_api.start_observation(trace_id, "retrieve_memory")
             recent_context = await self.retrieve_memory(
@@ -105,6 +121,14 @@ class CognitiveOrchestrator:
 
             # 7. Response Synthesis & Normalization (PIPELINE 6)
             tracing_api.start_observation(trace_id, "synthesize_response")
+            
+            # If we have a compiled mission, generate the Execution Tree (CAPA 3)
+            megaprompt_tree = None
+            if understanding.get("compiled_mission"):
+                logger.info("[MEGAPROMPT_LAYER] Generating Execution Tree.")
+                tree_obj = tree_planner.generate(understanding["compiled_mission"])
+                megaprompt_tree = tree_obj.model_dump()
+            
             final_response = await self.synthesize_response(
                 message=message,
                 brain_response=brain_response,
@@ -112,7 +136,8 @@ class CognitiveOrchestrator:
                 understanding=enhanced_understanding,
                 recent_context=recent_context,
                 session_id=session_id,
-                context=context
+                context=context,
+                megaprompt_tree=megaprompt_tree
             )
             tracing_api.end_observation(trace_id, "synthesize_response")
             
@@ -260,7 +285,8 @@ class CognitiveOrchestrator:
         self, message: str, brain_response: AICommandResponse, 
         system_state: Any, understanding: Dict[str, Any], 
         recent_context: List[str], session_id: str,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        megaprompt_tree: Optional[Dict[str, Any]] = None
     ) -> AICommandResponse:
         """PIPELINE 6: Response Synthesis (Unification, Naturalization, Audit)"""
         logger.info("[PIPELINE 6] Synthesizing final response...")
@@ -328,7 +354,9 @@ class CognitiveOrchestrator:
             
             # Evaluate Policy & Task Tree Decomposition (BLOCK 8)
             policy_result = execution_policy.evaluate(task_type, target_path)
-            task_tree = task_tree_engine.decompose(message, enhanced_understanding if 'enhanced_understanding' in locals() else understanding)
+            
+            # Use specific Megaprompt Tree if available, otherwise fallback to generic decomposition
+            task_tree = megaprompt_tree or task_tree_engine.decompose(message, enhanced_understanding if 'enhanced_understanding' in locals() else understanding)
             
             lang = "es" # Default for now
             # BLOCK 9: Inject into Payload for Pizarrón Vivo
@@ -341,10 +369,20 @@ class CognitiveOrchestrator:
                 source_surface=source_surface
             )
             
-            # BLOCK 9: Inject into Payload for Pizarrón Vivo
+            # BLOCK 9: Inject into Payload for Pizarrón Vivo (CAPA 5: Deviation Detection)
             if brain_response.payload is None: brain_response.payload = {}
             brain_response.payload["policy_result"] = policy_result
             brain_response.payload["task_tree"] = task_tree
+            
+            # CAPA 5: DEVIATION DETECTOR (Check for Drift)
+            if understanding.get("compiled_mission"):
+                detector = DeviationDetector()
+                drift_check = detector.check_drift(understanding["compiled_mission"], task_tree.get("children", []) if megaprompt_tree else [])
+                if drift_check["has_drift"]:
+                    logger.warning(f"[SCOPE_LOCK] Drift detected: {drift_check['drifts']}")
+                    brain_response.payload["drift_detected"] = drift_check["drifts"]
+                    if drift_check["is_blocked"]:
+                         brain_response.message = "> [!CAUTION]\n> **DESVIACIÓN DE MISIÓN:** Se han detectado acciones fuera de scope. Operación bloqueada por Scope Lock.\n\n" + brain_response.message
         else:
             brain_response.message = self._unify_response(
                 text=brain_response.message,

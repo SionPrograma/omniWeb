@@ -226,7 +226,7 @@ class BuilderUI {
         this.currentPreviewId = previewId;
 
         try {
-            const res = await fetch(`/api/v1/ai-host/execution/builder/preview/${previewId}`, {
+            const res = await fetch(`/api/v1/ai-host/copilot/builder/preview/${previewId}`, {
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
             const preview = await res.json();
@@ -251,6 +251,19 @@ class BuilderUI {
         if (wsStatus) {
             wsStatus.innerHTML = `STATUS: <span style="background: rgba(212, 175, 55, 0.2); color: var(--creator-gold); padding: 2px 6px; border-radius: 3px;">PROPUESTA LISTA</span>`;
         }
+
+        // --- NEW: EVIDENCE LOOP OVERLAY ---
+        const reasoningHtml = `
+            <div class="evidence-block" style="margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--creator-gold); border-radius: 4px;">
+                <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--creator-gold); margin-bottom: 5px; opacity: 0.8;">DIAGNÓSTICO / AUDITORÍA</div>
+                <div style="font-size: 0.85rem; line-height: 1.4;">${preview.reasoning || "Análisis operativo estándar del sistema."}</div>
+                <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; opacity: 0.6; font-size: 0.65rem;">
+                    <span>TRIGGER: <b>${preview.trigger || "ACTION_INTERNAL"}</b></span>
+                    <span>ID: <code>${preview.id.split('-')[0]}</code></span>
+                    <span>MISIÓN: <code>${preview.task_id.split('-')[0]}</code></span>
+                </div>
+            </div>
+        `;
 
         const diffHtml = preview.diffs.map(d => {
             const escape = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -286,8 +299,8 @@ class BuilderUI {
             `;
         }).join('');
 
-        if (content) content.innerHTML = diffHtml;
-        if (wsContent) wsContent.innerHTML = diffHtml;
+        if (content) content.innerHTML = reasoningHtml + diffHtml;
+        if (wsContent) wsContent.innerHTML = reasoningHtml + diffHtml;
     }
 
     async decidePreview(approved) {
@@ -301,7 +314,7 @@ class BuilderUI {
         }
 
         try {
-            const res = await fetch(`/api/v1/ai-host/execution/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
+            const res = await fetch(`/api/v1/ai-host/copilot/builder/preview/${this.currentPreviewId}/decide?approved=${approved}`, {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });

@@ -1032,3 +1032,68 @@ button {
     border-color: rgba(50, 150, 255, 0.5);
     border-left: 4px solid #3296ff;
 }
+
+/* SUGGESTION CHIPS (Modo Conversación) */
+.suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 4px;
+    animation: chipsIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes chipsIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.suggestion-chip {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s var(--spring-easing);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(8px);
+    touch-action: manipulation;
+    min-height: 44px;
+}
+
+.suggestion-chip:hover {
+    border-color: var(--accent);
+    background: rgba(0, 212, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.suggestion-chip:active {
+    transform: scale(0.95);
+}
+
+.chip-emoji {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+@media screen and (max-width: 480px) {
+    .suggestion-chips {
+        gap: 6px;
+    }
+
+    .suggestion-chip {
+        font-size: 0.78rem;
+        padding: 7px 11px;
+    }
+}

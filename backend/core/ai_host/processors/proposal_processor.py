@@ -242,7 +242,13 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
                     origin="Copilot"
                 )
                 
-                preview = patch_preview_engine.generate_preview(task.id, module.id, batch)
+                preview = patch_preview_engine.generate_preview(
+                    task.id, 
+                    module.id, 
+                    batch,
+                    reasoning=all_proposals[0]["problem"] if all_proposals else "Análisis proactivo de arquitectura en el scope solicitado.",
+                    trigger="COPILOT_CMD"
+                )
                 preview_id = preview.id
                 gate_decision = preview.gate_decision
                 

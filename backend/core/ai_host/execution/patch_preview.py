@@ -24,6 +24,8 @@ class PatchPreview(BaseModel):
     module_id: str
     batch: MutationBatch
     diffs: List[FileDiff]
+    reasoning: Optional[str] = None
+    trigger: Optional[str] = None
     status: str = "PENDING"
     gate_decision: Optional[Dict[str, Any]] = None
     timestamp: float = Field(default_factory=time.time)
@@ -32,7 +34,7 @@ class PatchPreviewEngine:
     """
     Generates and manages diff previews for proposed mutations.
     """
-    def generate_preview(self, task_id: str, module_id: str, batch: MutationBatch) -> PatchPreview:
+    def generate_preview(self, task_id: str, module_id: str, batch: MutationBatch, reasoning: str = None, trigger: str = None) -> PatchPreview:
         logger.info(f"[PATCH_PREVIEW] Generating preview for batch {batch.id}")
         from ..shadow_swarm.approval_gate import approval_gate, GateStatus
         
@@ -86,6 +88,8 @@ class PatchPreviewEngine:
             module_id=module_id,
             batch=batch,
             diffs=file_diffs,
+            reasoning=reasoning,
+            trigger=trigger,
             gate_decision=decision.dict()
         )
         
@@ -96,12 +100,13 @@ class PatchPreviewEngine:
         try:
             with db_manager.get_connection(internal=True) as conn:
                 conn.execute("""
-                    INSERT INTO builder_patch_previews (id, task_id, module_id, batch_data, diff_data, status, timestamp)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO builder_patch_previews (id, task_id, module_id, batch_data, diff_data, reasoning, trigger, status, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     preview.id, preview.task_id, preview.module_id,
                     preview.batch.json(),
                     json.dumps([d.dict() for d in preview.diffs]),
+                    preview.reasoning, preview.trigger,
                     preview.status, preview.timestamp
                 ))
                 conn.commit()
@@ -123,6 +128,8 @@ class PatchPreviewEngine:
                     module_id=row["module_id"],
                     batch=MutationBatch(**batch_data),
                     diffs=[FileDiff(**d) for d in diff_data],
+                    reasoning=row.get("reasoning"),
+                    trigger=row.get("trigger"),
                     status=row["status"],
                     timestamp=row["timestamp"]
                 )

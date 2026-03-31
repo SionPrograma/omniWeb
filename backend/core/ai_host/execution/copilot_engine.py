@@ -268,7 +268,13 @@ class CreatorCopilotEngine:
                         origin="Copilot"
                     )
                     from .patch_preview import patch_preview_engine
-                    preview = patch_preview_engine.generate_preview(batch.task_id, batch.module_id, batch)
+                    preview = patch_preview_engine.generate_preview(
+                        batch.task_id, 
+                        batch.module_id, 
+                        batch,
+                        reasoning=plan.summary or step.description,
+                        trigger="COPILOT_PLAN_STEP"
+                    )
                     
                     result = {
                         "success": False, # Stop execution to await approval

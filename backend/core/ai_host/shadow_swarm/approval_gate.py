@@ -80,24 +80,51 @@ class ApprovalGate:
         elif is_risky_action and danger_level == "LOW":
             danger_level = "MEDIUM"
 
-        # 3. Status Determination
+        # 3. MEGAPROMPT SCOPE LOCK INTEGRATION (CAPA 2 & 5)
         status = GateStatus.AWAITING_HUMAN
         blocking_reason = None
         is_safe = True
-
-        if danger_level == "EXTREME":
-            status = GateStatus.EXTREME
-            blocking_reason = "PELIGRO EXTREMO: Acción bloqueada por política de seguridad."
-            is_safe = False
-        elif is_sensitive and not audit_confirmed and action_type == "mutation":
-            status = GateStatus.AWAITING_AUDIT
-            blocking_reason = "Falta validación técnica (Shadow Audit) previa."
-            is_safe = False
-        elif is_sensitive:
-            status = GateStatus.ESCALATED
-            is_safe = False
         
-        # 4. Final Metadata (Bloque 3)
+        try:
+            from backend.core.ai_host.memory.mission_manager import mission_manager
+            from backend.core.ai_host.orchestration.scope_lock import ScopeLock
+            active_mission = mission_manager.get_active_mission()
+            
+            if active_mission and "plan_data" in active_mission.context_snap:
+                plan_data = active_mission.context_snap["plan_data"]
+                # We extract the compiled mission if present
+                from backend.core.ai_host.orchestration.prompt_compiler import CompiledMission
+                # Handle both dict and object
+                if isinstance(plan_data, dict) and "compiled_mission" in plan_data:
+                    compiled = CompiledMission(**plan_data["compiled_mission"])
+                    lock = ScopeLock(compiled)
+                    
+                    for target in targets:
+                        check = lock.validate_action(action_type, target, intent)
+                        if not check["is_valid"]:
+                            status = GateStatus.BLOCKED_BY_RISK
+                            blocking_reason = f"DESVIACIÓN DE MISIÓN: {check['violations'][0]}"
+                            is_safe = False
+                            logger.error(f"[SCOPE_LOCK_VIOLATION] Blocked {action_type} on {target}: {blocking_reason}")
+                            break
+        except Exception as e:
+            logger.warning(f"[APPROVAL_GATE] ScopeLock check failed (continuing with normal rules): {e}")
+
+        # 4. Sensitivity Determination
+        if is_safe:
+            if danger_level == "EXTREME":
+                status = GateStatus.EXTREME
+                blocking_reason = "PELIGRO EXTREMO: Acción bloqueada por política de seguridad."
+                is_safe = False
+            elif is_sensitive and not audit_confirmed and action_type == "mutation":
+                status = GateStatus.AWAITING_AUDIT
+                blocking_reason = "Falta validación técnica (Shadow Audit) previa."
+                is_safe = False
+            elif is_sensitive:
+                status = GateStatus.ESCALATED
+                is_safe = False
+        
+        # 5. Final Metadata (Bloque 3)
         rollback = f"Restaurar configuración previa o checkpoint de seguridad."
         if proposal_id != "gen_action" and not proposal_id.startswith("swarm"):
             rollback = f"Restaurar desde checkpoint `.shadow_checkpoints/before_{proposal_id}_*.bak`"
@@ -120,6 +147,7 @@ class ApprovalGate:
             checkpoint_required=True,
             result_summary=summary
         )
+
 
 # Singleton instance
 # Note: For real use, inject the actual policy engine
