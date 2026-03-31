@@ -13,13 +13,17 @@ class GateStatus(Enum):
     AWAITING_HUMAN = "awaiting_human_approval"
     BLOCKED_BY_RISK = "blocked_by_risk"
     ESCALATED = "escalated"
+    EXTREME = "extreme_risk_escalated"
     READY_FOR_APPLY = "ready_for_apply"
     REJECTED = "rejected"
 
 class ApprovalGateDecision(BaseModel):
     proposal_id: str
     status: GateStatus
-    risk_level: str
+    requires_approval: bool = True
+    danger_level: str # CRITICAL, HIGH, MEDIUM, LOW
+    affected_targets: List[str]
+    rollback_note: str
     is_safe: bool
     blocking_reason: Optional[str] = None
     audit_confirmed: bool = False
@@ -33,67 +37,82 @@ class ApprovalGate:
     Ensures that no change passes without structured validation.
     """
     
-    def __init__(self, policy_engine: Any):
+    def __init__(self, policy_engine: Any = None):
         self.policy_engine = policy_engine
-        self.sensitive_layers = ["core/kernel", "security/auth", "core/permissions", "infrastructure/db"]
+        self.sensitive_layers = [
+            "backend/core", "core/kernel", "security/auth", 
+            "core/permissions", "infrastructure/db", "core/ai_host", 
+            "core/orchestration", ".env", "main.py"
+        ]
 
-    def evaluate_proposal(self, constructor: ShadowConstructor) -> ApprovalGateDecision:
-        if not constructor.proposal:
-            return ApprovalGateDecision(
-                proposal_id=constructor.shadow_id,
-                status=GateStatus.BLOCKED_BY_RISK,
-                risk_level="UNKNOWN",
-                is_safe=False,
-                blocking_reason="Propuesta incompleta (falta reporte o diff).",
-                result_summary="BLOQUEADO: Propuesta sin datos."
-            )
-
+    def evaluate_proposal(self, constructor: "ShadowConstructor") -> ApprovalGateDecision:
+        # (Preserving evaluate_proposal but ensuring it calls the unified logic)
         proposal = constructor.proposal
+        if not proposal:
+             return self.execute_governance_check(
+                 intent=constructor.assigned_microtask,
+                 targets=[constructor.target_layer or "shadow"],
+                 action_type="shadow_draft",
+                 risk_hint="UNKNOWN"
+             )
         
-        # 1. Check Mandatory Audit Review
-        audit_confirmed = constructor.auditor_note is not None
+        return self.execute_governance_check(
+            intent=constructor.assigned_microtask,
+            targets=[proposal.target_file] if proposal.target_file else [constructor.target_layer or "shadow"],
+            action_type="mutation",
+            risk_hint=proposal.risk_assessment,
+            proposal_id=constructor.shadow_id,
+            audit_confirmed=constructor.auditor_note is not None
+        )
+
+    def execute_governance_check(self, intent: str, targets: List[str], action_type: str, risk_hint: str = "MEDIUM", proposal_id: str = "gen_action", audit_confirmed: bool = False) -> ApprovalGateDecision:
+        """
+        Unified Governance Entry Point for ALL sensitive actions (Bloque 3).
+        """
+        # 1. Sensitivity Detection
+        is_sensitive = any(any(layer in (t or "") for layer in self.sensitive_layers) for t in targets)
+        is_risky_action = action_type.lower() in ["restart", "delete", "mutation", "remediation", "patch"]
         
-        # 2. Check Security / Core Layers
-        is_sensitive = any(layer in proposal.target_file or layer in constructor.target_layer 
-                          for layer in self.sensitive_layers)
-        
-        # 3. Check Policy Contradiction
-        # Assuming policy_engine has a check_safety method
-        policy_allows = proposal.no_touch_zones_respected
-        
-        # 4. Determine Gate Status
-        status = GateStatus.AWAITING_AUDIT
+        # 2. Risk Calculation
+        danger_level = risk_hint.upper()
+        if is_sensitive:
+            danger_level = "CRITICAL" if any("core" in (t or "") for t in targets) else "HIGH"
+        elif is_risky_action and danger_level == "LOW":
+            danger_level = "MEDIUM"
+
+        # 3. Status Determination
+        status = GateStatus.AWAITING_HUMAN
         blocking_reason = None
         is_safe = True
-        
-        if is_sensitive:
-            status = GateStatus.ESCALATED
-            blocking_reason = f"Afecta capa sensible: {constructor.target_layer}"
-            is_safe = False
-        elif not policy_allows:
-            status = GateStatus.BLOCKED_BY_RISK
-            blocking_reason = "Contradice la política de zonas blindadas (Forbidden Zones)."
-            is_safe = False
-        elif not audit_confirmed:
-            status = GateStatus.AWAITING_AUDIT
-            blocking_reason = "Falta revisión de Shadow Auditor obligatoria."
-            is_safe = False
-        else:
-            status = GateStatus.AWAITING_HUMAN
-            is_safe = True
 
-        # Summary for UI
+        if danger_level == "EXTREME":
+            status = GateStatus.EXTREME
+            blocking_reason = "PELIGRO EXTREMO: Acción bloqueada por política de seguridad."
+            is_safe = False
+        elif is_sensitive and not audit_confirmed and action_type == "mutation":
+            status = GateStatus.AWAITING_AUDIT
+            blocking_reason = "Falta validación técnica (Shadow Audit) previa."
+            is_safe = False
+        elif is_sensitive:
+            status = GateStatus.ESCALATED
+            is_safe = False
+        
+        # 4. Final Metadata (Bloque 3)
+        rollback = f"Restaurar configuración previa o checkpoint de seguridad."
+        if proposal_id != "gen_action" and not proposal_id.startswith("swarm"):
+            rollback = f"Restaurar desde checkpoint `.shadow_checkpoints/before_{proposal_id}_*.bak`"
+
+        summary = f"GATED: {status.value.upper()} ({danger_level})"
         if is_safe and status == GateStatus.AWAITING_HUMAN:
             summary = "LISTO PARA APROBACIÓN HUMANA"
-        elif status == GateStatus.ESCALATED:
-            summary = "ESCALADO A NIVEL 2 (SENSITIVO)"
-        else:
-            summary = f"BLOQUEADO: {blocking_reason}"
 
         return ApprovalGateDecision(
-            proposal_id=constructor.shadow_id,
+            proposal_id=proposal_id,
             status=status,
-            risk_level=proposal.risk_assessment,
+            requires_approval=True,
+            danger_level=danger_level,
+            affected_targets=targets,
+            rollback_note=rollback,
             is_safe=is_safe,
             blocking_reason=blocking_reason,
             audit_confirmed=audit_confirmed,

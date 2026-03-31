@@ -48,16 +48,28 @@ class ActionExecutionBridge:
 
     async def propose_action(self, action: ActionPlan, task_id: Optional[str] = None) -> PatchPreview:
         """
-        Translates an ActionPlan into a PatchPreview for Creator approval.
+        Translates an ActionPlan into a PatchPreview for Creator approval (Bloque 3).
         """
         logger.info(f"[ACTION_BRIDGE] Proposing action for intent: {action.intent}")
+        from ..shadow_swarm.approval_gate import approval_gate, GateStatus
         
-        # 1. Safety Filter
+        # 1. Governance Evaluation (Bloque 3)
+        decision = approval_gate.execute_governance_check(
+            intent=action.intent,
+            targets=action.target_files,
+            action_type="mutation",
+            risk_hint=action.risk_level
+        )
+        
+        if decision.status == GateStatus.EXTREME:
+            raise PermissionError(f"BLOQUEO SEGURIDAD: {decision.blocking_reason}")
+
+        # 2. Safety Filter
         for file_op in action.proposed_changes:
             if self._is_file_blocked(file_op["path"]):
                 raise PermissionError(f"Safety Violation: Modification of sensitive file blocked - {file_op['path']}")
 
-        # 2. Convert ActionPlan to MutationBatch
+        # 3. Convert ActionPlan to MutationBatch
         ops = []
         for change in action.proposed_changes:
             op_type = MutationType.PATCH_FILE
@@ -78,15 +90,18 @@ class ActionExecutionBridge:
             origin="OmniAI"
         )
 
-        # 3. Generate Preview (This persists it as PENDING)
+        # 4. Generate Preview (This persists it as PENDING)
         preview = patch_preview_engine.generate_preview(
             task_id=batch.task_id,
             module_id="ai_host",
             batch=batch
         )
         
+        # Attach decision metadata for UI (Frontend/Creator)
+        preview.gate_decision = decision.dict()
+        
         self.active_proposals[preview.id] = action
-        logger.info(f"[ACTION_BRIDGE] Patch Preview {preview.id} generated and awaiting approval.")
+        logger.info(f"[ACTION_BRIDGE] Patch Preview {preview.id} generated with {decision.danger_level} risk.")
         
         return preview
 

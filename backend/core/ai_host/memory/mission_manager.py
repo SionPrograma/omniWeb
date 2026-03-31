@@ -47,6 +47,7 @@ class MissionManager:
         return cls._instance
 
     def create_mission(self, goal: str, plan_id: str = None, pending_steps: List[str] = None, plan: Optional[Any] = None) -> MissionState:
+        print(f"DEBUG: [MISSION_MANAGER] create_mission called for goal: '{goal}'")
         """
         Initializes a new mission and persists it.
         """
@@ -102,6 +103,9 @@ class MissionManager:
         """
         Retrieves the latest OPEN or PAUSED mission.
         """
+        if self.active_mission:
+            print(f"DEBUG: [MISSION_MANAGER] Active mission status in memory: {self.active_mission.status.value}")
+        
         if self.active_mission and self.active_mission.status in [MissionStatus.OPEN, MissionStatus.PAUSED]:
             return self.active_mission
 

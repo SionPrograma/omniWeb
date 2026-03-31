@@ -8,6 +8,7 @@ from ..learning.adaptive_learning import adaptive_learning
 class DeliberationContext(BaseModel):
     user_intent: str
     normalized_request: str
+    source_surface: str = "chat"
     recent_topic: Optional[str] = None
     semantic_memory_matches: List[Dict[str, Any]] = []
     system_world_state: Dict[str, Any] = {}
@@ -32,7 +33,7 @@ class DeliberationEngine:
     def __init__(self):
         self.default_uncertainty = 0.5
 
-    async def assemble_context(self, normalized_request: str, intent: str, session_id: str) -> DeliberationContext:
+    async def assemble_context(self, normalized_request: str, intent: str, session_id: str, source_surface: str = "chat") -> DeliberationContext:
         # 1. Gather World State & Evidence
         ws = cognitive_core.world_state
         evidence_bundle = await evidence_engine.collect_evidence()
@@ -51,7 +52,7 @@ class DeliberationEngine:
         
         # 5. Calculate global uncertainty
         uncertainty = self._calculate_uncertainty(evidence_bundle, raw_hypotheses)
-
+ 
         evidence_list = [i.to_dict() for i in evidence_bundle.items]
         hypotheses_list = []
         for h in raw_hypotheses:
@@ -59,10 +60,11 @@ class DeliberationEngine:
                 hypotheses_list.append(h.dict())
             else:
                 hypotheses_list.append(h.to_dict() if hasattr(h, 'to_dict') else vars(h))
-
+ 
         return DeliberationContext(
             user_intent=intent,
             normalized_request=normalized_request,
+            source_surface=source_surface,
             recent_topic=recent_topic,
             system_world_state=ws.dict() if hasattr(ws, 'dict') else ws.to_dict(),
             relevant_evidence=evidence_list,

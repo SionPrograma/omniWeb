@@ -358,11 +358,32 @@
     background: #444;
 }
 
+.status-dot.healthy,
 .status-dot.online {
     background: #00ff88;
     box-shadow: 0 0 5px #00ff88;
 }
 
+.status-dot.warning {
+    background: #ffcc00;
+    box-shadow: 0 0 5px #ffcc00;
+}
+
+.status-dot.unverified,
+.status-dot.neutral {
+    background: #a0aab5;
+}
+
+.status-dot.unknown {
+    background: #ff7700;
+}
+
+.status-dot.deactivated {
+    background: #333;
+    opacity: 0.5;
+}
+
+.status-dot.error,
 .status-dot.offline {
     background: #ff4444;
 }
@@ -607,7 +628,7 @@
     z-index: 5100;
     pointer-events: none;
     /* Phase 1 Repair: Do not block touch when hidden */
-    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 212, 255, 0.1);
     display: flex;
     flex-direction: column;
@@ -678,15 +699,24 @@
     letter-spacing: 1px;
 }
 
+.panel-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* Momentum scroll for iOS */
+}
+
 .context-section {
-    padding: 20px;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .context-section h3 {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
-    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 2.5px;
     margin-bottom: 15px;
 }
 
@@ -1573,4 +1603,28 @@ body.creator-authenticated #creator-toolbar {
     color: #fff;
     font-size: 1.5rem;
     cursor: pointer;
+}
+
+/* 7. MOBILE OVERRIDES (SAFE-MODE & DRAWERS) */
+@media screen and (max-width: 768px) {
+    #context-panel {
+        width: 100vw;
+        max-width: none;
+        height: 100%;
+        top: 0;
+        left: 0;
+        right: auto;
+        border-radius: 0;
+        transform: translateX(100%);
+        pointer-events: none;
+        visibility: hidden;
+        z-index: 6000;
+        /* Priority over Mobile Nav */
+    }
+
+    #context-panel.active {
+        transform: translateX(0);
+        pointer-events: auto;
+        visibility: visible;
+    }
 }

@@ -78,8 +78,6 @@ LÍMITE_DE_INTERACCIÓN: SOLO_LECTURA / SIN_CONTROL_DE_FLUJO_EXTERNO
             )
 
         # 2. MEMORY AUDIT (OS-like check)
-
-        # 2. MEMORY AUDIT (OS-like check)
         if any(kw in msg.lower() for kw in ["roadmap", "qué bloque", "regla dura", "mi memoria", "continuidad", "qué estábamos", "qué veníamos", "último scope", "decisión", "decisiones", "fixes validados", "pospuesto", "pospudo"]):
              from ..orchestration.executive_synthesis import executive_synthesis
              lang = "es" if any(w in msg.lower() for w in ["qué", "quien", "cómo", "donde", "estábamos", "bloque", "decisión"]) else "en"
@@ -217,6 +215,7 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
             
         # 5. GENERATE PREVIEW
         preview_id = None
+        gate_decision = None
         if operations:
             try:
                 task = BuilderTask(
@@ -245,6 +244,7 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
                 
                 preview = patch_preview_engine.generate_preview(task.id, module.id, batch)
                 preview_id = preview.id
+                gate_decision = preview.gate_decision
                 
                 module.result = {"preview_id": preview_id, "type": "patch_preview"}
                 await builder_execution_engine._persist_module(module)
@@ -313,6 +313,8 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
 PRIMERA_LINEA: {first_line}
 RESUMEN_REAL: {purpose}
 MICROFIX_PROPUESTO: {prop.get('change', 'No se requiere.')}
+REFACTOR_ACORTADO: {prop.get('refactor', 'No se requiere refactorización amplia.')}
+PASOS_VALIDACIÓN: {prop.get('validation', 'Validación por inspección visual.')}
 CONTEXTO_DE_MEMORIA: {', '.join(prop.get('memory_notes', [])) if prop.get('memory_notes') else 'Sin interferencia sistémica.'}
 IMPACTO_RELACIONADO: {highest_risk} - Cambio local
 CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
@@ -347,6 +349,7 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
                 "allowed_files": [op.path for op in operations] if operations else target_files,
                 "forbidden_files": safety_policy.FORBIDDEN_FILES,
                 "proposal": all_proposals[0] if all_proposals else {},
+                "gate_decision": gate_decision,
                 "diff": aggregate_diff if not is_global else "",
                 "preview_id": preview_id if not is_global else None,
                 "mode": "proposal_only",
@@ -356,6 +359,15 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         )
 
     def _resolve_target(self, msg: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        # Priority 0: Context Multimodal (Current File in Editor)
+        if context and "multimodal_evidence" in context:
+            for item in context["multimodal_evidence"]:
+                if item.get("type") == "current_file" and item.get("path"):
+                    # Only return if the message is general (e.g., "analiza esto")
+                    p_low = msg.lower()
+                    if any(kw in p_low for kw in ["este", "esto", "aquí", "archivo actual", "current", "this", "file"]):
+                        return item["path"]
+
         # Priority 1: Explicit Folder/Module/Hierarchy Mention
         match = re.search(r"(?:carpeta|m[oó]dulo|directorio|estructura|jerarqu[íi]a|[aá]rbol|proyecto)\s+([\w/\.-]+)", msg)
         if match:
@@ -365,11 +377,17 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
         if self._is_global_project_request(msg):
             return os.path.abspath(".")
 
-        # Priority 3: Current Editor Path from context
+        # Priority 3: Fallback explicitly mentioned paths
         match = re.search(r"en ([\w/\.-]+)", msg)
         if match:
             return match.group(1)
             
+        # Priority 4: Last Resort - If there's only one file in evidence, use it
+        if context and "multimodal_evidence" in context:
+             files = [i["path"] for i in context["multimodal_evidence"] if i.get("type") == "current_file" and i.get("path")]
+             if len(files) == 1:
+                 return files[0]
+
         return None
 
     def _is_global_project_request(self, msg: str) -> bool:
@@ -557,6 +575,8 @@ CRITERIO_DE_SEGURIDAD: {prop.get('safety', 'CAMBIO_SEGURO')}
             "problem": problem,
             "hypothesis": hypothesis,
             "change": change,
+            "refactor": "Detectado patrón repetitivo que podría abstraerse." if "render" in change.lower() else "No se sugiere refactorización inmediata.",
+            "validation": "1. Verificar sintaxis. 2. Validar impacto en shell.js.",
             "new_content": new_content,
             "risk": risk,
             "verification": verification,

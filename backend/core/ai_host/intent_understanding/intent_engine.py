@@ -20,12 +20,35 @@ class IntentEngine:
         
         # 1. HUMAN INPUT INTERPRETATION (Preprocessing messy input)
         interpretation = human_interpreter.interpret(msg)
+        clarity = interpretation.get("clarity")
         
         # 2. BUILD SEMANTIC CONTEXT (Enhanced with interpretation)
         refined_msg = interpretation.get("refined_text", msg)
         ctx = await semantic_context_builder.build(refined_msg, session_id)
         ctx.interpretation = interpretation # Attach interpretation to context
         
+        # 2.5 SEMANTIC RECONSTRUCTION (Surgical context injection)
+        if clarity == "follow_up":
+            from ..memory.mission_manager import mission_manager
+            active_mission = mission_manager.get_active_mission()
+            if active_mission:
+                refined_msg = f"Continúa con la misión: {active_mission.active_goal}. Acción específica: {refined_msg}"
+                print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Mission: {active_mission.active_goal}")
+            elif ctx.history.last_topic:
+                refined_msg = f"Continúa hablando de/haciendo: {ctx.history.last_topic}. Acción específica: {refined_msg}"
+                print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Topic: {ctx.history.last_topic}")
+
+        elif clarity == "vague":
+            if ctx.history.last_referenced_entity:
+                refined_msg = refined_msg.replace("eso", ctx.history.last_referenced_entity)
+                refined_msg = refined_msg.replace("ese", ctx.history.last_referenced_entity)
+                refined_msg = f"{refined_msg} (Referencia: {ctx.history.last_referenced_entity})"
+                print(f"DEBUG: [RECONSTRUCTION] Vague resolved to: {ctx.history.last_referenced_entity}")
+            elif ctx.history.active_panel_id:
+                panel_name = ctx.history.active_panel_id.replace("-", " ")
+                refined_msg = f"{refined_msg} (En el panel: {panel_name})"
+                print(f"DEBUG: [RECONSTRUCTION] Spatial resolved to: {panel_name}")
+
         # 3. DETECT CORE INTENT GROUP & SPECIFIC INTENT
         from ..routing.intent_classifier import intent_classifier
         specific_intent = intent_classifier.classify(refined_msg)
@@ -64,7 +87,8 @@ class IntentEngine:
             "intent_group": detected_group,
             "specific_intent": specific_intent,
             "mode": mode,
-            "context": ctx
+            "context": ctx,
+            "refined_message": refined_msg
         }
 
     def _detect_semantic_group(self, msg: str, ctx: SemanticContext) -> str:

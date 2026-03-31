@@ -146,10 +146,6 @@
         const chipContainer = document.getElementById('chip-status-container');
         if (chipContainer) {
             chipContainer.innerHTML = state.chips.map(chip => {
-                let healthClass = 'offline';
-                if (chip.health === 'healthy') healthClass = 'online';
-                else if (chip.health === 'warning') healthClass = 'warning';
-                else if (chip.health === 'unverified') healthClass = 'neutral';
                 return `
                 <div class="chip-status-card" onclick="creatorEnv.inspectChip('${chip.slug}')">
                     <div class="chip-status-info">
@@ -157,8 +153,8 @@
                         <p>${chip.status.toUpperCase()} | <span style="opacity: 0.6">Last act: ${chip.last_execution || 'never'}</span></p>
                     </div>
                     <div class="chip-health-indicator">
-                        <span class="status-dot ${healthClass}"></span>
-                        <span class="health-label" style="color: var(--${healthClass}-color, inherit)">${chip.health.toUpperCase()}</span>
+                        <span class="status-dot ${chip.health}"></span>
+                        <span class="health-label" style="text-transform: uppercase;">${chip.health}</span>
                     </div>
                 </div>
             `}).join('');
@@ -168,6 +164,7 @@
         const wsView = document.getElementById('creator-workspace-view');
         if (wsView && wsView.classList.contains('active')) {
             this.updateWorkspaceMonitor(state);
+            this.updateWorkspaceBackendState();
             this.renderWorkspaceMissionDashboard(state);
         }
     }
@@ -180,11 +177,22 @@
         }
     }
 
-    updateIndicator(id, isOnline) {
+    updateIndicator(id, status) {
         const el = document.getElementById(id);
         if (!el) return;
-        el.classList.toggle('online', isOnline);
-        el.classList.toggle('offline', !isOnline);
+
+        // Remove all possible status classes
+        el.classList.remove('online', 'offline', 'warning', 'neutral', 'unknown', 'deactivated');
+
+        // Map Boolean or Enum status to CSS class
+        let cssClass = 'offline';
+        if (status === true || status === 'healthy' || status === 'online') cssClass = 'online';
+        else if (status === 'warning') cssClass = 'warning';
+        else if (status === 'unverified') cssClass = 'neutral';
+        else if (status === 'deactivated') cssClass = 'deactivated';
+        else if (status === 'unknown') cssClass = 'unknown';
+
+        el.classList.add(cssClass);
     }
 
     // 2. MISSION CONTROL (COCKPIT)
@@ -539,7 +547,11 @@
                     'Authorization': 'Bearer omniweb-dev-secret-token',
                     'X-Shell-Identity': 'omniweb-shell'
                 },
-                body: JSON.stringify({ message: prompt, multimodal_evidence: evidence })
+                body: JSON.stringify({
+                    message: prompt,
+                    multimodal_evidence: evidence,
+                    source_surface: 'workspace'
+                })
             });
             const data = await res.json();
             this.lastCopilotResponse = data;
@@ -797,7 +809,7 @@
                 <div class="cockpit-grid">
                     ${this.systemState.chips.map(chip => `
                         <div class="cockpit-card" onclick="creatorEnv.runInspection('${chip.slug}')">
-                            <h3>${chip.name} <span class="status-dot ${chip.health === 'healthy' ? 'online' : 'warning'}"></span></h3>
+                            <h3>${chip.name} <span class="status-dot ${chip.health}"></span></h3>
                             <p style="font-size: 0.75rem; color: #888;">Slug: ${chip.slug}</p>
                             <p style="font-size: 0.75rem; color: #888;">State: ${chip.status}</p>
                         </div>

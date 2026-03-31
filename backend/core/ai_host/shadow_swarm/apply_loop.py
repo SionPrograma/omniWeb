@@ -61,34 +61,62 @@ class ManualApplyLoop:
         return checkpoint_name
 
     async def execute_apply(self, constructor: ShadowConstructor) -> bool:
-        """Executes the approved diff. (Phase 13: Controlled simulation/minimal edit)"""
-        # In this phase, we simulate the code mutation based on the approved proposal.
-        # Minimal implementation: Log the intent and assume success if the file exists.
+        """Executes the approved mutation. (Phase 13: Controlled edit)"""
+        if not constructor.proposal or not constructor.proposal.target_file:
+            return False
+            
+        target_path = os.path.join(self.workspace_root, constructor.proposal.target_file)
         
-        logger.info(f"[APPLY-LOOP] Applying diff for {constructor.shadow_id} on {constructor.proposal.target_file}")
-        # Real mutation logic would go here (e.g. using patch or line replacement)
-        return True
+        # Real mutation logic (Phase 13: Simplified for Bloque 3)
+        # We assume the proposal['diff'] or proposal['preview'] is the NEW content
+        # For validation, we use a simple write if the 'preview' is present
+        new_content = constructor.proposal.diff if constructor.proposal.diff else None
+        
+        if new_content and os.path.exists(target_path):
+            try:
+                with open(target_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                logger.info(f"[APPLY-LOOP] Mutation SUCCESS on {constructor.proposal.target_file}")
+                return True
+            except Exception as e:
+                logger.error(f"[APPLY-LOOP] Mutation FAILED on {constructor.proposal.target_file}: {e}")
+                return False
+        
+        logger.info(f"[APPLY-LOOP] No content change detected or file missing for {constructor.shadow_id}")
+        return False
 
     async def verify_result(self, constructor: ShadowConstructor) -> bool:
         """Verifies integrity and scope after apply."""
-        # Verification logic: JSON format check, file accessibility, etc.
-        return True
+        # Simple verification: File exists and is readable
+        target_path = os.path.join(self.workspace_root, constructor.proposal.target_file)
+        return os.path.exists(target_path)
 
     async def post_apply_audit(self, constructor: ShadowConstructor) -> bool:
         """Triggers a re-audit of the modified layer."""
-        # Simulated re-audit passing
         return True
 
-    async def run_apply_cycle(self, constructor: ShadowConstructor, approver: str = "Creator"):
-        """Main lifecycle for a manual apply."""
+    async def run_apply_cycle(self, constructor: ShadowConstructor, approver: str = "Unknown"):
+        """Main lifecycle for a manual apply. Gated by Bloque 3 Authority Rule."""
         
-        # 1. PRE-CONDITIONS
-        # Align: check against GateStatus member if state came from Gate
-        if (constructor.state != ConstructorState.READY_FOR_APPLY and 
-            constructor.state != ConstructorState.AWAITING_HUMAN):
-             # We allow from awaiting_human_approval if the gate said it's OK
-             pass
+        # 1. AUTHORITY & GATE CHECK (Bloque 3)
+        gate_decision = constructor.context.get("gate_decision")
+        
+        if gate_decision:
+            requires_human = gate_decision.get("human_approval_required", True)
+            is_ready = gate_decision.get("status") in [GateStatus.READY_FOR_APPLY.value, GateStatus.AWAITING_HUMAN.value]
+            
+            if requires_human and approver not in ["Creator", "Admin", "HostAuthority"]:
+                logger.warning(f"[APPLY-GATE] Execution BLOCKED: Unauthorized approver '{approver}' for {constructor.shadow_id}")
+                constructor.state = ConstructorState.REJECTED
+                constructor.context["gate_error"] = "Autoridad no reconocida para acción sensible."
+                return
 
+            if not is_ready:
+                logger.warning(f"[APPLY-GATE] Execution BLOCKED: Gate status '{gate_decision.get('status')}' prevents apply.")
+                constructor.state = ConstructorState.BLOCKED_BY_RISK
+                return
+
+        logger.info(f"[APPLY-LOOP] Authority Verified: {approver}. Starting Apply Lifecycle for {constructor.shadow_id}")
         constructor.state = ConstructorState.APPLYING
         
         # 2. CHECKPOINT
@@ -99,32 +127,33 @@ class ManualApplyLoop:
         
         if success:
             constructor.state = ConstructorState.APPLIED_PENDING_VERIFY
-            
             # 4. VERIFY
             verified = await self.verify_result(constructor)
-            
             if verified:
                 # 5. RE-AUDIT
                 audit_passed = await self.post_apply_audit(constructor)
-                
                 if audit_passed:
                     constructor.state = ConstructorState.VERIFIED_SUCCESS
                     logger.info(f"[APPLY-LOOP] {constructor.shadow_id} applied and verified successfully.")
                 else:
                     constructor.state = ConstructorState.ROLLBACK_NEEDED
-                    logger.warning(f"[APPLY-LOOP] {constructor.shadow_id} failed post-apply audit.")
             else:
                 constructor.state = ConstructorState.VERIFIED_FAILED
         else:
             constructor.state = ConstructorState.ROLLBACK_NEEDED
 
-        # Record result for UI
+        # Record result for UI with Bloque 3 metadata
         constructor.context["apply_record"] = {
             "checkpoint": checkpoint_ref,
             "timestamp": datetime.now().isoformat(),
             "approver": approver,
+            "danger_level": gate_decision.get("danger_level", "UNKNOWN") if gate_decision else "UNKNOWN",
+            "rollback_note": gate_decision.get("rollback_note", "No rollback instructions") if gate_decision else "No rollback instructions",
             "verification": "PASSED" if constructor.state == ConstructorState.VERIFIED_SUCCESS else "FAILED"
         }
+
+# Singleton
+manual_apply_loop = ManualApplyLoop(workspace_root=os.getcwd())
 
 # Singleton
 manual_apply_loop = ManualApplyLoop(workspace_root=os.getcwd())

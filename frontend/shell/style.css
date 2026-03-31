@@ -918,26 +918,6 @@ button {
     }
 }
 
-@media screen and (max-width: 768px) {
-    #context-panel {
-        width: 100vw;
-        max-width: none;
-        left: 0;
-        transform: translateX(100%);
-        pointer-events: none;
-        /* Phase 1 Final Fix */
-        visibility: hidden;
-        /* Extra safety */
-    }
-
-    #context-panel.active {
-        transform: translateX(0);
-        pointer-events: auto;
-        visibility: visible;
-    }
-}
-
-/* Status badge touch improvement */
 .status-badge {
     min-height: 44px;
     padding: 0 20px;

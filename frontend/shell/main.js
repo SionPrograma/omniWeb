@@ -577,7 +577,8 @@
                 },
                 body: JSON.stringify({
                     message: cmd,
-                    multimodal_evidence: evidence
+                    multimodal_evidence: evidence,
+                    source_surface: document.getElementById('creator-workspace-view').classList.contains('active') ? 'workspace' : 'chat'
                 })
             });
 

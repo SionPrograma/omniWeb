@@ -35,9 +35,10 @@ class ExecutiveSynthesis:
                    project: Dict[str, Any], 
                    query: str, 
                    lang: str = "es",
-                   tone: Optional[str] = None) -> str:
+                   tone: Optional[str] = None,
+                   surface: str = "chat") -> str:
         
-        policy = get_output_policy(query)
+        policy = get_output_policy(query, surface=surface)
         is_natural = tone == "natural_chatbot" or policy.tone == "natural"
         # 1. Null-handling & Defaults (OS-like resilience)
         last_op = working.get("last_operation_summary")
@@ -209,12 +210,13 @@ class ExecutiveSynthesis:
                             execution_result: Dict[str, Any],
                             chip_report: str = "",
                             lang: str = "es",
-                            query: str = "") -> str:
+                            query: str = "",
+                            surface: str = "chat") -> str:
         """
         Grounded synthesis of technical logic.
         Communicates Diagnosis, Planning, and Verification state clearly.
         """
-        policy = get_output_policy(query)
+        policy = get_output_policy(query, surface=surface)
         is_es = lang == "es"
         
         # 1. DIAGNOSIS BLOCK

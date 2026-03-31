@@ -4,8 +4,11 @@ from enum import Enum
 
 class SystemHealth(str, Enum):
     HEALTHY = "healthy"
+    UNVERIFIED = "unverified"
+    UNKNOWN = "unknown"
     WARNING = "warning"
     ERROR = "error"
+    DEACTIVATED = "deactivated"
 
 class SystemMode(str, Enum):
     LIVE = "live"

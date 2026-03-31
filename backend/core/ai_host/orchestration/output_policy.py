@@ -21,7 +21,7 @@ class OutputPolicy:
     tone: str = "executive" # "executive" | "natural"
 
     @classmethod
-    def from_query(cls, query: str):
+    def from_query(cls, query: str, surface: str = "chat"):
         low = query.lower()
         
         # 1. Detection of Minimal/Brief constraints
@@ -50,21 +50,36 @@ class OutputPolicy:
         # Runtime logs/telemetry
         hide_runtime = any(k in low for k in ["sin runtime", "sin logs", "sin sistema", "limpio"]) or hide_telemetry
 
-        # 4. Final Policy Assignment
+        # 4. Surface Defaults (Surgical context injection)
+        tone_default = "executive"
+        report_default = not hide_report
+        
+        if surface == "chat":
+            # In Chat, default to natural voice unless explicit technical keywords
+            is_explicit_tech = any(k in low for k in ["reporte", "detalle", "análisis", "analisis", "pasos", "plan", "por qué", "por que", "paso a paso", "diagnosis"])
+            tone_default = "natural" if not is_explicit_tech else "executive"
+            report_default = is_explicit_tech
+            
+            # Additional Chat cleanup
+            is_brief = is_brief or not is_explicit_tech
+            hide_runtime = hide_runtime or not is_explicit_tech
+            hide_block = hide_block or not is_explicit_tech
+
+        # 5. Final Policy Assignment
         return cls(
             show_telemetry = not hide_telemetry,
-            show_header = not (is_minimal or any(k in low for k in ["corto", "limpio", "sin modo", "sin encabezado"]) or hide_report),
-            show_action = not hide_report,
-            show_footer = not (is_minimal or hide_audit or hide_report),
+            show_header = not (is_minimal or any(k in low for k in ["corto", "limpio", "sin modo", "sin encabezado"]) or not report_default),
+            show_action = report_default,
+            show_footer = not (is_minimal or hide_audit or not report_default),
             is_minimal = is_minimal,
             is_brief = is_brief,
-            is_report_mode = not hide_report,
-            suppress_audit = hide_audit or is_minimal,
-            suppress_block = hide_block or is_minimal,
+            is_report_mode = report_default,
+            suppress_audit = hide_audit or is_minimal or not report_default,
+            suppress_block = hide_block or is_minimal or not report_default,
             suppress_runtime = hide_runtime or is_minimal,
-            tone = "natural" if any(k in low for k in ["criollo", "hablame", "chat", "natural", "contame", "che"]) else "executive"
+            tone = "natural" if any(k in low for k in ["criollo", "hablame", "chat", "natural", "contame", "che"]) else tone_default
         )
 
 # Global helper for quick policy check
-def get_output_policy(query: str) -> OutputPolicy:
-    return OutputPolicy.from_query(query)
+def get_output_policy(query: str, surface: str = "chat") -> OutputPolicy:
+    return OutputPolicy.from_query(query, surface=surface)

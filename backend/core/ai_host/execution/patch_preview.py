@@ -25,6 +25,7 @@ class PatchPreview(BaseModel):
     batch: MutationBatch
     diffs: List[FileDiff]
     status: str = "PENDING"
+    gate_decision: Optional[Dict[str, Any]] = None
     timestamp: float = Field(default_factory=time.time)
 
 class PatchPreviewEngine:
@@ -33,8 +34,20 @@ class PatchPreviewEngine:
     """
     def generate_preview(self, task_id: str, module_id: str, batch: MutationBatch) -> PatchPreview:
         logger.info(f"[PATCH_PREVIEW] Generating preview for batch {batch.id}")
-        file_diffs = []
+        from ..shadow_swarm.approval_gate import approval_gate, GateStatus
+        
+        # Governance Evaluation (Bloque 3)
+        targets = [op.path for op in batch.operations]
+        decision = approval_gate.execute_governance_check(
+            intent=f"Mutación en {len(targets)} archivo(s)",
+            targets=targets,
+            action_type="mutation"
+        )
+        
+        if decision.status == GateStatus.EXTREME:
+            raise PermissionError(f"BLOQUEO SEGURIDAD: {decision.blocking_reason}")
 
+        file_diffs = []
         for op in batch.operations:
             existing_content = ""
             if os.path.exists(op.path):
@@ -72,7 +85,8 @@ class PatchPreviewEngine:
             task_id=task_id,
             module_id=module_id,
             batch=batch,
-            diffs=file_diffs
+            diffs=file_diffs,
+            gate_decision=decision.dict()
         )
         
         self._save_preview(preview)

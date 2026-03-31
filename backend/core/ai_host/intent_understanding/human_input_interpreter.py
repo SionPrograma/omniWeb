@@ -23,6 +23,7 @@ class HumanInputInterpreter:
             "original_text": text,
             "refined_text": refined_text
         }
+        print(f"DEBUG: [INTERPRETER] Clarity: {interpretation['clarity']} for msg: '{text}'")
         
         logger.info(f"[HUMAN_INTERPRETATION] {interpretation}")
         return interpretation
@@ -65,6 +66,10 @@ class HumanInputInterpreter:
         return text
 
     def _extract_intent(self, msg: str) -> str:
+        # Continuity / Flow
+        if any(w in msg for w in ["seguí", "segui", "dale", "continuá", "keep", "next", "ahora", "y?", "que mas"]):
+            return "follow_up"
+        
         # Debug/Fix triggers
         if any(w in msg for w in ["anda", "falla", "raro", "mal", "funciona", "arregla", "bug", "error"]):
             return "debug"
@@ -81,6 +86,10 @@ class HumanInputInterpreter:
         return "neutral_query"
 
     def _extract_context(self, msg: str) -> str:
+        # References (Eso, este, ese)
+        if any(w in msg.split() for w in ["eso", "ese", "esa", "esto", "este", "esta", "ello"]):
+            return "referential_context"
+        
         if any(w in msg for w in ["chat", "habla", "responde", "dijo"]):
             return "conversational_behavior"
         if any(w in msg for w in ["ui", "visual", "pantalla", "botón", "color"]):
@@ -110,8 +119,21 @@ class HumanInputInterpreter:
 
     def _assess_clarity(self, msg: str) -> str:
         words = msg.split()
-        if len(words) < 4:
+        msg_lower = msg.lower()
+        
+        # Follow-up markers (Continuity)
+        followup_bullets = ["seguí", "segui", "dale", "y ahora", "and now", "seguimos", "keep going", "continuemos", "go on", "continuar"]
+        if any(f in msg_lower for f in followup_bullets):
+             return "follow_up"
+        
+        # Vague References (Eso, lo otro)
+        references = ["lo otro", "eso", "aquello", "ese", "esa", "este", "esta", "ahí", "ahi", "allá", "alla", "acá", "aca"]
+        if any(r == word for r in references for word in words) or re.search(r"\w+(lo|la|los|las|lo|la)$", msg_lower):
+             return "vague"
+
+        if len(words) < 3: # Even shorter threshold
             return "ambiguous"
+        
         if any(w in msg for w in ["algo", "onda", "medio", "tipo", "coso"]):
             return "partial"
         return "clear"

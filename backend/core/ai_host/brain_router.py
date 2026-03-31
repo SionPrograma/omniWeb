@@ -42,6 +42,7 @@ class BrainRouter:
         session_id = str(context.get("user_id", "default_user")) if context else "default_user"
         lang = session_state.get_language(session_id)
         source = context.get("source", "text") if context else "text"
+        source_surface = context.get("source_surface", "chat") if context else "chat"
         
         # 0. NORMALIZE & SEMANTIC UNDERSTANDING
         # Voice-specific cleanup
@@ -53,9 +54,15 @@ class BrainRouter:
             from .intent_understanding.intent_engine import intent_engine
             understanding = await intent_engine.understand(msg_clean, session_id)
         
+        # SEMANTIC RECONSTRUCTION: Final override
+        if understanding.get("refined_message"):
+             msg_clean = understanding["refined_message"]
+             logger.info(f"[BRAIN_RECONSTRUCTION] Overriding msg with: {msg_clean}")
+
         intent_group = understanding["intent_group"]
         specific_intent = understanding.get("specific_intent")
-        mode_hint = understanding["mode"]
+        # Refinement: Detect mode locally to respect source_surface
+        mode_hint = self._detect_mode(msg_clean, specific_intent or intent_group, source_surface=source_surface)
         
         # 0.5 MISSION CONTINUITY GUARD
         active_mission = mission_manager.get_active_mission()
@@ -64,7 +71,12 @@ class BrainRouter:
 
         # 1. ASSEMBLE DELIBERATION CONTEXT (Protected Pipeline Entry)
         try:
-            delib_context = await deliberation_engine.assemble_context(msg_clean, intent_group, session_id)
+            delib_context = await deliberation_engine.assemble_context(
+                msg_clean, 
+                intent_group, 
+                session_id, 
+                source_surface=source_surface
+            )
         except Exception as e:
             logger.error(f"[PIPELINE_ERROR] Deliberation context assembly failed: {e}. Bypassing to default.")
             # Simple fallback context
@@ -104,7 +116,7 @@ class BrainRouter:
 
             # Prioridad 2: Motor Local L1 (Verdad -> Plan -> Verficar -> Síntesis)
             # Se activa en diagnósticos, errores o peticiones de sistema.
-            is_technical = mode_hint in ["diagnostic", "operational_diagnostic", "remediation", "action_execution"]
+            is_technical = mode_hint == "technical"
             if is_technical or self._is_complex_request(msg_clean, specific_intent):
                  # Este es el flujo local que refactorizamos recientemente
                  res = await self._process_analysis(
@@ -112,7 +124,8 @@ class BrainRouter:
                      lang=lang, 
                      system_state=system_state, 
                      plan=None, 
-                     evidence_bundle=delib_context.evidence_bundle
+                     evidence_bundle=delib_context.evidence_bundle,
+                     source_surface=source_surface
                  )
 
                  return await self._finalize_interaction(msg_clean, res, "technical_analysis")
@@ -450,7 +463,7 @@ class BrainRouter:
             payload={"evidence": bundle.items, "confidence": claim.confidence}
         )
 
-    async def _process_analysis(self, msg: str, lang: str, system_state: Any, plan: Any, evidence_bundle: Optional[Any] = None, completed_steps: Optional[List[str]] = None) -> AICommandResponse:
+    async def _process_analysis(self, msg: str, lang: str, system_state: Any, plan: Any, evidence_bundle: Optional[Any] = None, completed_steps: Optional[List[str]] = None, source_surface: str = "chat") -> AICommandResponse:
         """
         Structured Reasoning using actual system state and detailed plan.
         """
@@ -533,7 +546,8 @@ class BrainRouter:
             execution_result=execution_result,
             chip_report=chip_report,
             lang=lang,
-            query=msg
+            query=msg,
+            surface=source_surface
         )
 
         return AICommandResponse(
@@ -780,8 +794,18 @@ class BrainRouter:
         )
         return AICommandResponse(intent="learning_query", status="success", message=body)
 
-    def _detect_mode(self, msg: str, intent: str) -> str:
+    def _detect_mode(self, msg: str, intent: str, source_surface: str = "chat") -> str:
         """Detects if we should be in Conversational or Technical reasoning mode."""
+        
+        # 1. Surface Override (Chat demands clean voice)
+        if source_surface == "chat":
+             # Special tech triggers for chat
+             tech_triggers = ["por qué", "por que", "analiza", "diagnosis", "error", "fallo", "roadmap", "plan", "evidence"]
+             if any(w in msg.lower() for w in tech_triggers) or intent in ["creator_analysis", "creator_plan"]:
+                  return "technical"
+             return "conversational"
+
+        # 2. Workspace / Default Logic
         tech_keywords = [
             "analiza", "analyze", "why", "por qué", "qué pasa", "error", 
             "problem", "evidence", "plan", "fix", "repara", "diagnóstico",

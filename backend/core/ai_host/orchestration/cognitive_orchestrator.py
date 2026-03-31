@@ -264,6 +264,7 @@ class CognitiveOrchestrator:
     ) -> AICommandResponse:
         """PIPELINE 6: Response Synthesis (Unification, Naturalization, Audit)"""
         logger.info("[PIPELINE 6] Synthesizing final response...")
+        source_surface = context.get("source_surface", "chat") if context else "chat"
         
         # 6.1 Cognitive Unification
         is_technical = (
@@ -330,12 +331,14 @@ class CognitiveOrchestrator:
             task_tree = task_tree_engine.decompose(message, enhanced_understanding if 'enhanced_understanding' in locals() else understanding)
             
             lang = "es" # Default for now
+            # BLOCK 9: Inject into Payload for Pizarrón Vivo
             brain_response.message = copilot_normalizer.normalize(
                 brain_response.message, 
                 enhanced_understanding if 'enhanced_understanding' in locals() else understanding, 
                 lang, 
                 policy_result=policy_result,
-                task_tree=task_tree
+                task_tree=task_tree,
+                source_surface=source_surface
             )
             
             # BLOCK 9: Inject into Payload for Pizarrón Vivo
@@ -351,7 +354,8 @@ class CognitiveOrchestrator:
                 intent_group=understanding.get("intent_group", "CONVERSATIONAL_INTENT"),
                 session_id=session_id,
                 interpretation=understanding.get("context").interpretation if hasattr(understanding.get("context"), "interpretation") else {},
-                query=message
+                query=message,
+                surface=source_surface
             )
         
         # 6.2 Adaptation & Antimodal
@@ -683,7 +687,7 @@ class CognitiveOrchestrator:
 
         return cleaned.strip()
 
-    def _unify_response(self, text: str, system_state: Any, mode: str, recent_context: list, intent_group: str, session_id: str = "default", interpretation: dict = {}, query: str = "") -> str:
+    def _unify_response(self, text: str, system_state: Any, mode: str, recent_context: list, intent_group: str, session_id: str = "default", interpretation: dict = {}, query: str = "", surface: str = "chat") -> str:
         """
         Cognitive Response Transformation Layer.
         """
@@ -691,7 +695,7 @@ class CognitiveOrchestrator:
         from backend.core.ai_host.sessions import session_state
         # Silent Director: Bypass total si es chat natural o mínima
         lang = session_state.get_language(session_id)
-        policy = get_output_policy(query)
+        policy = get_output_policy(query, surface=surface)
         if mode == "constrained_output" or intent_group in ["SYSTEM_AUDIT_INTENT", "MEMORY_INTENT", "NATURAL_CHAT", "GREETING"] or policy.is_minimal:
             return text
             

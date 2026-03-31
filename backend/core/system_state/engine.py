@@ -56,43 +56,46 @@ class SystemStateEngine:
             # 2. Chips & Health (Runtime Alignment)
             all_chips = module_registry.discover_all_chips()
             chip_states = []
-            overall_health = SystemHealth.HEALTHY
+            overall_health = SystemHealth.HEALTHY if db_ok else SystemHealth.WARNING
 
             for c in all_chips:
                 slug = c.get("slug", "unknown")
                 reg_info = module_registry.get_module_data(slug)
                 
                 # Default values from metadata
+                # Criterio: Si no está en el registry, está solo 'registered' (pasivo)
                 health_val = c.get("health", "unverified")
                 status_val = "registered" if c.get("active") else "disabled"
                 
-                # Override with runtime truth if registered
+                # Dynamic checks (if registered)
                 if reg_info:
-                    # Registry exists
-                    health_val = reg_info.get("health", health_val)
-                    status_val = reg_info.get("status", status_val)
+                    health_val = reg_info.get("health", "unverified")
+                    status_val = reg_info.get("status", "active")
                     
-                    # Detection of "Partial Health": claimed backend but not loaded
                     if c.get("has_backend") and not reg_info.get("prefix"):
-                        # Mark as warning if it claims backend but is only "frontend-only" or "none"
                         status_val = "unloaded_backend"
-                        if health_val != "error":
+                        if health_val not in ["error", "disabled"]:
                             health_val = "warning"
                 else:
-                    # Discovered on disk but NO trace in registry
                     if c.get("active"):
-                        # If it should be active but isn't registered, it's a failure
-                        status_val = "registration_failed"
-                        health_val = "error"
+                        status_val = "unlisted"
+                        health_val = "unverified"
+                    else:
+                        status_val = "disabled"
+                        health_val = "deactivated"
 
-                # Convert health to enum
-                health_enum = SystemHealth.HEALTHY
-                if health_val == "warning": 
-                    health_enum = SystemHealth.WARNING
-                    if overall_health != SystemHealth.ERROR: overall_health = SystemHealth.WARNING
-                elif health_val == "error": 
-                    health_enum = SystemHealth.ERROR
+                # Map to official SystemHealth Enum (Honest Mapping)
+                try:
+                    health_enum = SystemHealth(health_val)
+                except ValueError:
+                    health_enum = SystemHealth.UNKNOWN
+
+                # System wide health propagation
+                if health_enum == SystemHealth.ERROR:
                     overall_health = SystemHealth.ERROR
+                elif health_enum == SystemHealth.WARNING and overall_health != SystemHealth.ERROR:
+                    overall_health = SystemHealth.WARNING
+                # UNVERIFIED doesn't necessarily break the whole host, but we keep it sober
 
                 chip_states.append(ChipState(
                     slug=slug,

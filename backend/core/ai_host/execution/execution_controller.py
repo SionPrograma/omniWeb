@@ -203,22 +203,27 @@ class ExecutionController:
 
     def _step_requires_confirmation(self, step: TaskStep) -> bool:
         """
-        Safety logic to determine if a step needs manual approval.
+        Safety logic powered by Central Governance (Bloque 3).
         """
-        step_type = step.type.lower()
-        desc = step.description.lower()
-
-        # Failsafe rules from prompt
-        dangerous_keywords = [
-            "mutation", "override", "restart", "delete", 
-            "modify configuration", "apply patch", "mutar sistema",
-            "reiniciar", "modificar configuración"
-        ]
+        from ..shadow_swarm.approval_gate import approval_gate
         
-        if any(w in desc for w in dangerous_keywords):
-            return True
-            
-        if step_type in self.UNSAFE_STEP_TYPES:
+        # 1. Map step to governance request
+        action_type = "mutation" if step.type.lower() in self.UNSAFE_STEP_TYPES else "read"
+        targets = []
+        if "file" in step.description.lower() or "/" in step.description:
+             # Basic target extraction
+             targets = [w for w in step.description.split() if "/" in w or "." in w]
+        
+        # 2. Query Unified Gate
+        decision = approval_gate.execute_governance_check(
+            intent=step.description,
+            targets=targets or ["system_config"],
+            action_type=action_type,
+            risk_hint="HIGH" if action_type == "mutation" else "LOW"
+        )
+        
+        # 3. Decision
+        if not decision.is_safe or decision.human_approval_required:
             return True
             
         return False
