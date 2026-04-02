@@ -30,7 +30,7 @@ class GeneralChatProcessor(CommandProcessor):
     ]
     GREETINGS = ["hola", "hello", "hi", "hey", "buenos dias", "buenas tardes", "buenas noches", "buenos días", "todo bien", "todo ok", "buenas"]
     WHO_ARE_YOU = ["quien eres", "quién eres", "who are you", "que eres", "qué eres", "what are you", "tu nombre", "your name"]
-    HOW_ARE_YOU = ["como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", "cómo vas", "todo bien", "qué pasa", "que pasa"]
+    HOW_ARE_YOU = [r"\bcomo estas\b", r"\bcómo estás\b", r"\bhow are you\b", r"\bque tal\b", r"\bqué tal\b", r"\bcomo vas\b", r"\bcómo vas\b", r"\btodo bien\b", r"\bqué pasa\b", r"\bque pasa\b"]
     ACKNOWLEDGMENTS = ["perfecto", "dale", "seguimos", "genial", "gracias", "ok", "listo", "entendido", "bien", "claro", "awesome", "great", "thanks", "got it", "understood"]
 
     async def can_handle(self, command: str) -> bool:
@@ -44,9 +44,16 @@ class GeneralChatProcessor(CommandProcessor):
         words = msg.split()
         lang = "es" # Default
         
-        # 0. Context extraction
         if context:
             lang = context.get("language", "es")
+
+        # 0.5 DIRECT HONESTY CHECK (Priority 0)
+        # Category A & B (No entendí & No lo sé) detected by synthesis
+        honest_msg = executive_synthesis.synthesize_conversational(cmd, lang=lang, context=context)
+        # Check if the synthesis returned an honest fallback (No entendí / No lo sé)
+        honest_markers = ["no lo sé", "no tengo idea", "no tengo cómo verificar", "confirmar", "mataste", "perdí", "perdido", "don't know", "lost", "don't have way to confirm"]
+        if any(h in honest_msg.lower() for h in honest_markers):
+             return AICommandResponse(intent="honest_fallback", status="success", message=honest_msg)
 
         # 1. Jokes / Fun (Silent Director: Prioridad absoluta para evitar falsos positivos)
         if any(w in cmd for w in ["chiste", "joke", "reite", "reí"]):
@@ -83,7 +90,10 @@ class GeneralChatProcessor(CommandProcessor):
              return AICommandResponse(intent="system_memory_report", status="success", message=msg_out)
 
         # 3. Greetings & Acknowledgments
-        if any(w in words or w in cmd for w in self.GREETINGS):
+        is_pure_greeting = any(w == cmd for w in self.GREETINGS) or \
+                          (len(words) <= 3 and any(w in words for w in self.GREETINGS) and not any(t in cmd for t in ["chip", "log", "módulo", "error", "falla", "build", "ayuda"]))
+        
+        if is_pure_greeting:
             if lang == "es":
                 responses = [
                     "¡Hola! Todo bien por acá. ¿En qué puedo ayudarte?",
@@ -109,20 +119,18 @@ class GeneralChatProcessor(CommandProcessor):
 
         # 3. Identity (Who am I?)
         if any(w in words or w in cmd for w in self.WHO_ARE_YOU):
-            if lang == "es":
-                msg_out = "Soy Omni, el núcleo de inteligencia de OmniWeb. Estoy aquí para ayudarte a construir, auditar y expandir tu ecosistema digital."
-            else:
-                msg_out = "I am Omni, the intelligence core of OmniWeb. I'm here to help you build, audit, and expand your digital ecosystem."
-            return AICommandResponse(intent="identity", status="success", message=msg_out)
+             msg_out = executive_synthesis.synthesize_conversational(cmd, lang=lang, context=context)
+             return AICommandResponse(intent="identity", status="success", message=msg_out)
 
         # 4. Status/How are you
-        if any(w in words or w in cmd for w in self.HOW_ARE_YOU):
+        if any(re.search(w, cmd) for w in self.HOW_ARE_YOU):
             if lang == "es":
                 responses = [
                     "¡Todo impecable! Sistema estable y listo para la acción. ¿Y vos, cómo va eso?",
                     "Por ahora todo en orden por acá. Me siento con energía para cualquier reto técnico.",
                     "Sistema al 100%. ¿Cómo viene tu día? ¿En qué nos enfocamos ahora?",
-                    "¡Muy bien! Procesando ideas y esperando tus órdenes. ¿Qué contás vos?"
+                    "¡Muy bien! Procesando ideas y esperando tus órdenes. ¿Qué contás vos?",
+                    "Mejor que nunca. La arquitectura está sólida y yo estoy listo. ¿Qué andamos planeando?" # New
                 ]
             else:
                 responses = [
@@ -133,34 +141,6 @@ class GeneralChatProcessor(CommandProcessor):
                 ]
             return AICommandResponse(intent="status_check", status="success", message=random.choice(responses))
 
-        # 5. Jokes / Fun
-        if any(w in cmd for w in ["chiste", "joke"]):
-             if lang == "es":
-                  chistes = [
-                      "¿Qué le dice un bit a otro? ... Nos vemos en el bus.",
-                      "A un programador le dicen: 'Andá al súper y traé una leche. Si hay huevos, traé seis'. El tipo volvió con seis leches.",
-                      "¿Por qué los programadores confunden Halloween con Navidad? Porque Oct 31 == Dec 25."
-                  ]
-                  msg_out = f"¡Ja! Ahí va uno: {random.choice(chistes)}"
-             else:
-                  jokes = [
-                      "Why do programmers always mix up Christmas and Halloween? Because Oct 31 equals Dec 25.",
-                      "A SQL query walks into a bar, walks up to two tables, and asks... 'Can I join you?'",
-                      "How many programmers does it take to change a light bulb? None, that's a hardware problem."
-                  ]
-                  msg_out = f"Haha! Here is one: {random.choice(jokes)}"
-             return AICommandResponse(intent="joke", status="success", message=msg_out)
-
-        # 6. Fallback conversational reply
-        tone = context.get("tone") if context else None
-        if tone == "natural_chatbot" or any(w in cmd for w in ["raro", "entiendes", "confuso", "weird", "wrong"]):
-             if lang == "es":
-                  msg_out = "Acá estoy, tal vez me puse un poco rígido repasando los módulos. ¿Todo bien por ahí? ¿Qué tenías en mente?"
-             else:
-                  msg_out = "I'm here, maybe I got a bit too rigid reviewing the modules. Everything okay? What's on your mind?"
-        elif lang == "es":
-            msg_out = f"No detecté un comando operativo específico, pero acá estoy. Si querés que hagamos un chequeo técnico, decime el chip o el incidente. Si no, ¡podemos seguir charlando!"
-        else:
-            msg_out = f"I didn't detect an operational command, but I'm here. Let me know if you want a technical check or just want to chat."
-            
+        # 5. Fallback conversational reply
+        msg_out = executive_synthesis.synthesize_conversational(cmd, lang=lang, context=context)
         return AICommandResponse(intent="general_chat", status="success", message=msg_out)

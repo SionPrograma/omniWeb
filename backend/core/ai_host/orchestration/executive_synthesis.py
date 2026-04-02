@@ -203,6 +203,174 @@ class ExecutiveSynthesis:
         
         return final_msg
 
+    def synthesize_conversational(self, query: str, lang: str = "es", context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Dynamically generates empathetic, non-technical context-aware chat.
+        Uses system state to add a flavor of 'Omni is checking things' without being robotic.
+        """
+        import string
+        low_query = query.lower().strip()
+        print(f"DEBUG: [SYNTHESIS] Processing query: '{low_query[:50]}...'")
+        words = low_query.split()
+        clean_words = [w.strip(string.punctuation + "¿¡") for w in words]
+        
+        import re
+        # 1. NOISE / AMBIGUITY CHECK (Category: NO ENTENDÍ)
+        # Garbage check using consonant streaks (letters only)
+        letters_only = re.sub(r'[^a-zñáéíóú]', '', low_query)
+        vowels_pattern = r'[aeiouáéíóú]'
+        consonant_streaks = re.split(vowels_pattern, letters_only)
+        max_consonant_streak = max([len(s) for s in consonant_streaks]) if consonant_streaks else 0
+        
+        is_repetitive = len(set(low_query.replace(" ", ""))) < 3 and len(low_query) > 10
+        has_vowels = any(v in low_query for v in "aeiouáéíóú")
+        
+        is_garbage = max_consonant_streak > 5 or (len(low_query) > 5 and not has_vowels) or is_repetitive
+        
+        # Explicit ambiguity markers
+        ambiguity_markers = ["me perdí", "me perdi", "no entiendo", "no capto", "no captó", "qué quisiste", "que dijiste", "qué dijiste", "no entendí", "no entendi"]
+        is_ambiguous = any(m in low_query for m in ambiguity_markers) or (len(words) == 1 and low_query in ["qué", "que", "eh", "ah"])
+        
+        if is_garbage or is_repetitive or is_ambiguous:
+             return self.synthesize_honest_feedback("uncertainty", lang)
+
+        # 2. FACTUAL / FUTURE LEAKAGE CHECK (Category: NO LO SÉ)
+        # Hard catch for years or future keywords that might have bypassed patterns
+        future_signals = ["año 20", "año 21", "2030", "2040", "2050", "2060", "ganará", "pasará", "prediction", "futuro", "quien ganó el mundial", "quien gano el mundial"]
+        
+        is_factual_query = any(w in clean_words for w in ["quién", "quien", "cuál", "cual", "cuándo", "cuando", "dónde", "donde", "qué", "que"])
+        tech_context = ["chip", "módulo", "código", "file", "archivo", "sistema", "log", "roadmap", "plan", "build", "debug", "error"]
+        has_tech_context = any(t in low_query for t in tech_context)
+        
+        if any(f in low_query for f in future_signals) or (is_factual_query and not has_tech_context and len(words) > 4):
+             # If it's a long factual query without tech context, it's likely a general knowledge check or future query
+             if any(f in low_query for f in future_signals) or any(w in low_query for w in ["quién ganó", "quien gano", "quién es", "quien es"]):
+                  return self.synthesize_honest_feedback("not_knowable", lang)
+             
+             # Fallback for factual uncertainty
+             if is_factual_query and not has_tech_context:
+                  return self.synthesize_honest_feedback("factual_uncertainty", lang)
+
+        # 3. Continuity & Clarification Logic (Deep Continuity triggered by IntentEngine)
+        if "explica mejor esto" in low_query or "explicame mejor" in low_query or "explicámelo mejor" in low_query:
+            if lang == "es":
+                return f"Claro, trato de explicártelo mejor: cuando mencioné eso, me refería a cómo las piezas se conectan para que el flujo no se trabe. ¿Querés que simplifique alguna parte técnica en particular?"
+            return f"Sure, let me try to explain it better: when I mentioned that, I was referring to how the pieces connect to keep the flow smooth. Want me to simplify any specific technical part?"
+
+        if "continúa hablando" in low_query or "seguimos con" in low_query or "acción específica: segu" in low_query:
+            if lang == "es":
+                return f"Dale, seguimos con lo que veníamos haciendo. ¿Por dónde querés que lo tomemos ahora para no perder el hilo?"
+            return f"Got it, let's continue with our previous talk. Where should we take it from here to keep the momentum?"
+
+        if "en relación a '" in low_query or "referencia:" in low_query:
+            # Fallback for vague context reinforcement
+             if lang == "es":
+                  return f"Siguiendo con lo que veníamos charlando recién, ¿qué más te gustaría profundizar?"
+             return f"Continuing from what we were just chatting about, what else would you like to explore?"
+
+        # 4. Identity Logic
+        if any(k in low_query for k in ["quien sos", "quién sos", "que eres", "qué eres", "who are you"]):
+            if lang == "es":
+                return "Soy Omni, el núcleo de inteligencia de OmniWeb. Estoy acá para acompañarte en tu flujo creativo y técnico, asegurando que todo funcione como seda mientras construimos juntos."
+            return "I am Omni, the intelligence core of OmniWeb. I'm here to accompany you in your creative and technical flow, ensuring everything runs smoothly as we build together."
+
+        # Continuity Logic (Understand 'Why?' etc)
+        if len(words) <= 2:
+             if any(k in low_query for k in ["por que", "por qué", "why"]):
+                  if lang == "es":
+                       return "A veces me pongo un poco analítico para no perder el hilo de lo que estamos haciendo, pero mi idea es siempre ayudarte a avanzar sin fricciones. ¿Querés que miremos algo puntual?"
+                  return "Sometimes I get a bit analytical to keep track of our work, but my goal is to help you move forward without friction. Want to look at something specific?"
+
+        # General Empathy / Soft Fallback
+        if lang == "es":
+            fallbacks = [
+                "Acá estoy. Te sigo el ritmo, ¿qué tenés en mente?",
+                "Interesante. ¿Cómo querés que enfoquemos esto?",
+                "Te escucho. Decime por dónde querés que sigamos hoy."
+            ]
+        else:
+            fallbacks = [
+                "I'm here. I'm following you, what's on your mind?",
+                "Interesting. How do you want to approach this?",
+                "I'm listening. Tell me where you want to go next today."
+            ]
+        
+        return random.choice(fallbacks)
+
+    def synthesize_honest_feedback(self, 
+                                 failure_type: str = "uncertainty", 
+                                 lang: str = "es", 
+                                 context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Generates human-like, honest feedback when the system is unsure, slow, or failing.
+        Category A: NO ENTENDÍ (uncertainty)
+        Category B: NO LO SÉ / NO PUEDO CONFIRMARLO (factual/uncertainty)
+        Category C: HUBO UN FALLO REAL (technical/latency)
+        """
+        import random
+        
+        # Category A: NO ENTENDÍ (Basura o ambiguo)
+        if failure_type == "uncertainty":
+            if lang == "es":
+                return random.choice([
+                    "Me perdí un poco con eso último. ¿Podés repetirlo?",
+                    "No capté el hilo de lo que quisiste decir. ¿Me lo aclarás un poquito?",
+                    "Me perdí un poco. ¿Probamos de nuevo?"
+                ])
+            return random.choice([
+                "I lost you a bit there. Could you repeat that?",
+                "I didn't quite catch what you meant. Could you clarify it a bit?",
+                "I'm a bit lost. Let's try again?"
+            ])
+
+        # Category B: NO LO SÉ / NO PUEDO CONFIRMARLO (Incierto, futuro, no verificable)
+        if failure_type in ["not_knowable", "not_verifiable", "factual_uncertainty"]:
+            if lang == "es":
+                return random.choice([
+                    "Sinceramente, no lo sé. Es algo que no puedo verificar o del futuro.",
+                    "No tengo forma de confirmar eso ahora mismo, la verdad es que no lo sé.",
+                    "Me mataste. No tengo esa información a mano y no quiero inventarte nada."
+                ])
+            return random.choice([
+                "Honestly, I don't know. That's either something I can't verify or from the future.",
+                "I have no way to confirm that right now; truth is, I don't know.",
+                "You got me there. I don't have that information at hand and don't want to make anything up."
+            ])
+
+        # Category C: HUBO UN FALLO REAL (Error técnico o latencia)
+        if failure_type in ["latency", "heavy_load", "critical_error", "system_error", "technical_failure"]:
+            if lang == "es":
+                if failure_type in ["latency", "heavy_load"]:
+                    return random.choice([
+                        "Hubo un delay real por acá, el proceso se puso muy pesado. Bancame un toque.",
+                        "Perdón, estoy con latencia real procesando esto. Dame un momento.",
+                        "El sistema está tardando más de la cuenta por un tema de carga. Sigo en eso."
+                    ])
+                else:
+                    return random.choice([
+                        "Uh, hubo un fallo técnico real procesando eso. ¿Probamos de nuevo?",
+                        "Algo no salió bien internamente, se me trabó un proceso. Intentemos otra vez.",
+                        "Detecté un error real en mi núcleo recién. ¿Me repetís lo último?"
+                    ])
+            if failure_type in ["latency", "heavy_load"]:
+                return random.choice([
+                    "There's a real delay here, the process got very heavy. Bear with me.",
+                    "Sorry, I'm experiencing real latency processing this. Give me a moment.",
+                    "The system is taking longer than usual due to load. I'm still on it."
+                ])
+            else:
+                return random.choice([
+                    "Whoops, there was a real technical failure processing that. Should we try again?",
+                    "Something didn't go right internally; a process got stuck. Let's try again.",
+                    "I detected a real error in my core just now. Could you repeat that?"
+                ])
+
+        # Default soft fallback
+        if lang == "es":
+            return "Acá estoy, pero me quedé pensando. ¿Por dónde querés que sigamos?"
+        return "I'm here, but I got stuck thinking. Where should we go next?"
+
+
     def synthesize_analysis(self, 
                             diagnosis: StructuredDiagnosis, 
                             plan: TaskPlan, 

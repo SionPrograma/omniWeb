@@ -31,6 +31,25 @@ class MissionExecutor:
         extended_context = context.copy()
         extended_context["mission_plan"] = plan.dict()
         
+        # 1.1 OPERATIONAL PIVOT (Phase 18)
+        from ..memory.mission_manager import mission_manager
+        active = mission_manager.get_active_mission()
+        if active:
+             params = active.parameters
+             extended_context["audit_only"] = params.get("audit_only", False)
+             extended_context["conservative_mode"] = params.get("conservative_mode", False)
+             extended_context["roadmap_first"] = params.get("roadmap_first", False)
+        
+        # If it's roadmap_first, we stop here and return the plan for UI inspection
+        if extended_context.get("roadmap_first"):
+             logger.info(f"[EXECUTOR] Roadmap-first mode: Halting before swarm execution.")
+             return {
+                 "mission_title": plan.title,
+                 "status": "awaiting_approval",
+                 "execution_details": {"message": "Roadmap generado. Esperando revisión del Creador.", "plan": plan.dict()},
+                 "audit_summary": ["Plan de misión listo para inspección."]
+             }
+
         swarm_result = await shadow_orchestrator.execute_mission(plan.title, extended_context)
         
         # 2. GENERATE LEARNING RECORD

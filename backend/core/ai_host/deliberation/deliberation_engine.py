@@ -22,6 +22,7 @@ class DeliberationContext(BaseModel):
     reasoning_mode: str = "conversational"
     evidence_bundle: Optional[Any] = None # Preservar el objeto original para el router
     active_mission: Optional[Dict[str, Any]] = None # Persistence Anchor
+    mission_intake: Optional[Dict[str, Any]] = None # New Intake Layer (risks, success_criteria, etc.)
 
 
 class DeliberationEngine:

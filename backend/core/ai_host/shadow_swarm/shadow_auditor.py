@@ -4,6 +4,8 @@ from enum import Enum
 from pydantic import BaseModel
 from datetime import datetime
 
+from .shadow_memory import shadow_memory_manager, IncidentType
+
 logger = logging.getLogger(__name__)
 
 class ShadowState(Enum):
@@ -14,17 +16,29 @@ class ShadowState(Enum):
     BLOCKED = "blocked_by_risk"
     NEEDS_HUMAN_REVIEW = "awaiting_human_approval"
 
+class RiskCategory(Enum):
+    SHARED_LAYER_RISK = "shared_layer"
+    CONTRACT_RISK = "interface_contract"
+    INIT_BOOT_RISK = "boot_sequence"
+    UI_SYNC_RISK = "ui_synchronization"
+    PERSISTENCE_RISK = "data_persistence"
+    ROUTING_RISK = "api_routing"
+    STATE_INTEGRITY_RISK = "state_consistency"
+    HIGH_BLAST_RADIUS = "high_impact_radius"
+
 class ShadowType(Enum):
     AUDITOR = "auditor"
-    CONSTRUCTOR = "constructor" # For future phases
+    CONSTRUCTOR = "constructor"
 
 class ShadowAuditorReport(BaseModel):
     microtask: str
     target_layer: str
     findings: List[str]
     risk_level: str # LOW, MEDIUM, HIGH, CRITICAL
+    granular_risks: List[RiskCategory] = []
     recommendations: List[str]
     no_touch_zones: List[str]
+    affected_components: List[str] = []
     timestamp: datetime = datetime.now()
 
 class ShadowAuditor(BaseModel):
@@ -45,18 +59,49 @@ class ShadowAuditor(BaseModel):
 
     async def audit(self) -> ShadowAuditorReport:
         self.state = ShadowState.AUDITING
-        logger.info(f"[SHADOW-{self.shadow_id}] Starting audit: {self.assigned_microtask}")
+        logger.info(f"[SHADOW-{self.shadow_id}] Starting proactive technical audit: {self.assigned_microtask}")
         
-        # Real logic would happen here (scanning files, etc.)
-        # For this phase, we simulate the results
+        # 1. HISTORICAL MEMORY CHECK (NUEVO BLOQUE)
+        history = shadow_memory_manager.get_incidents(layer=self.target_layer)
+        has_critical_history = any(i.severity in ["HIGH", "CRITICAL"] for i in history)
         
+        # Proactive Detection Simulation
+        risks = []
+        findings = [f"Auditoría técnica de '{self.assigned_microtask}' completada."]
+        components = [self.target_layer]
+        
+        # Incorporate Memory in Findings
+        if history:
+            findings.append(f"ANTECEDENTES DETECTADOS ({len(history)}): Zona con historial de incidentes ({history[0].incident_type.value}).")
+            if has_critical_history:
+                risks.append(RiskCategory.HIGH_BLAST_RADIUS)
+                findings.append("ALERTA: Historial técnico crítico detectado en esta capa.")
+
+        if "core" in self.target_layer or "logic" in self.assigned_microtask.lower():
+            risks.append(RiskCategory.SHARED_LAYER_RISK)
+            findings.append("Detectada dependencia en capa compartida crítica.")
+            components.append("backend/core/engine")
+            
+        if "ui" in self.assigned_microtask.lower() or "frontend" in self.target_layer:
+            risks.append(RiskCategory.UI_SYNC_RISK)
+            findings.append("Riesgo de desincronización de estado en UI real-time.")
+
+        # Elevate risk if historical friction is present
+        base_level = "HIGH" if len(risks) > 1 else ("MEDIUM" if risks else "LOW")
+        if history and base_level != "HIGH":
+            base_level = "MEDIUM"
+        if has_critical_history:
+            base_level = "HIGH"
+
         report = ShadowAuditorReport(
             microtask=self.assigned_microtask,
             target_layer=self.target_layer,
-            findings=[f"Auditoría interna de {self.assigned_microtask} completada sin anomalías críticas."],
-            risk_level="LOW",
-            recommendations=[f"Proceder con cautela en el despliegue de {self.target_layer}."],
-            no_touch_zones=["core/engine", "backend/security"]
+            findings=findings,
+            risk_level=base_level,
+            granular_risks=risks,
+            recommendations=[f"Utilizar estrategia conservadora para {self.target_layer}." + (" (Historial detectado)" if history else "")],
+            no_touch_zones=["core/engine", "backend/security"],
+            affected_components=components
         )
         
         self.current_report = report

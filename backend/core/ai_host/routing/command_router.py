@@ -139,7 +139,12 @@ class CommandRouter:
             "acknowledgment": self._handle_acknowledgment,
             "creator_analysis": self._handle_brain_task,
             "creator_plan": self._handle_brain_task,
-            "copilot_proposal": self._handle_proposal
+            "copilot_proposal": self._handle_proposal,
+            "mission_followup": self._handle_mission_task,
+            "mission_cancel": self._handle_mission_task,
+            "mission_approve": self._handle_mission_task,
+            "mission_status": self._handle_mission_task,
+            "identity": self._handle_chat_task # Map identity to chat
         }
 
     # --- HOTFIX: LOCAL FAST-PATH PATTERNS (Zero external dependency) ---
@@ -152,31 +157,56 @@ class CommandRouter:
     _FAST_HOW = {"como estas", "cómo estás", "how are you", "que tal", "qué tal", "como vas", 
                  "cómo vas", "qué pasa", "que pasa"}
     _FAST_SMALLTALK = {"chiste", "joke", "contame algo", "tell me something", "charlemos", 
-                       "cuéntame", "contame", "háblame", "hablame"}
+                       "cuéntame", "contame", "háblame", "hablame", "no entiendo", "entiendes", "entendés"}
 
     def _is_local_fast_path(self, msg_clean: str, source_surface: str) -> Optional[str]:
         """
         Ultra-fast local pattern matcher for casual conversation.
-        Returns a fast-path category string or None if not matched.
-        No external dependencies. No AI calls. Pure string matching.
+        Now mission-aware: skips fast-path if in Workspace with active operation.
         """
-        if source_surface not in ("chat", "text"):
+        if source_surface not in ("chat", "text") and source_surface != "workspace":
             return None
         
+        # MISSION-FIRST SAFETY: If we are in the Workspace, we check if there's an active technical context
+        # before assuming it's just 'casual chat'.
+        if source_surface == "workspace":
+             from ..memory.mission_manager import MissionManager, MissionStatus
+             active = MissionManager().get_active_mission()
+             if active and active.status == MissionStatus.OPEN:
+                  # If we have an active mission, we skip casual fast-path to let the full orchestrator
+                  # decide if this is a follow-up or truly a context switch.
+                  return None
+
         words = set(msg_clean.split())
         word_count = len(words)
         
+        # MISSION-FIRST SAFETY: If we are in the Workspace, we check if there's an active technical context
+        # before assuming it's just 'casual chat'.
+        if source_surface == "workspace":
+             from ..memory.mission_manager import MissionManager, MissionStatus
+             active = MissionManager().get_active_mission()
+             if active and active.status == MissionStatus.OPEN:
+                  return None
+
+        # Pre-check for tech signals to avoid hijacking complex technical prompts that start with a greeting
+        tech_signals = {"error", "falla", "bug", "analiza", "audit", "chip", "fix", "arregla", 
+                        "plan", "roadmap", "diagnos", "problema", "system", "archivo", "código", "log", "bus"}
+        has_tech_signal = any(t in msg_clean for t in tech_signals)
+        
+        # If it's a long message with tech signals, avoid fast-path
+        if word_count > 4 and has_tech_signal:
+             return None
+
         # Exact match for full string
         if msg_clean in self._FAST_GREETINGS:
             return "greeting"
         
-        # Word-based match for greetings and ACKs to avoid false positives (like 'hi' in 'archive')
-        if any(w in words for w in self._FAST_GREETINGS) or \
-           (word_count <= 4 and any(g in msg_clean for g in self._FAST_GREETINGS if len(g) > 3)):
+        # Word-based match for greetings and ACKs
+        if any(w in words for w in self._FAST_GREETINGS) and word_count <= 4 and not has_tech_signal:
             return "greeting"
         
         # Acknowledgment (word match)
-        if any(w in words for w in self._FAST_ACKS):
+        if any(w in words for w in self._FAST_ACKS) and word_count <= 2:
             return "acknowledgment"
         
         # Identity
@@ -192,9 +222,7 @@ class CommandRouter:
             return "smalltalk"
         
         # Ultra-short casual messages (Up to 3 words, no tech keywords)
-        tech_signals = {"error", "falla", "bug", "analiza", "audit", "chip", "fix", "arregla", 
-                        "plan", "roadmap", "diagnos", "problema", "system", "archivo", "código", "log", "bus"}
-        if word_count <= 3 and not any(t in msg_clean for t in tech_signals):
+        if word_count <= 2 or (word_count <= 3 and not has_tech_signal):
             # Very short, non-technical → treat as casual chat
             return "short_casual"
         
@@ -226,6 +254,9 @@ class CommandRouter:
 
                 logger.info(f"[ROUTER_FORWARD] Normalized Message: {msg_clean}")
                 print(f"\n[DEBUG] ROUTER RECEIVED: {msg_clean}\n")
+                
+                from ..intent_understanding.conversation_tracker import conversation_tracker
+                conversation_tracker.update_context(user_id, msg_clean, "INITIAL_RECEIPT", role="user")
 
                 # === HOTFIX: LOCAL FAST-PATH (No external dependency) ===
                 # Detects casual conversation BEFORE touching intent_engine or any heavy pipeline.
@@ -257,15 +288,35 @@ class CommandRouter:
                 
                 # === FULL PIPELINE (with timeout protection) ===
                 async def _run_full_pipeline():
-                    nonlocal res
+                    nonlocal res, msg_clean
                     # 1. SEMANTIC INTENT UNDERSTANDING
                     from ..intent_understanding.intent_engine import intent_engine
                     session_id = str(context.get("user_id", "default_user")) if context else "default_user"
-                    understanding = await intent_engine.understand(msg_clean, session_id)
+                    
+                    # --- MISSION INTENT OVERLAY (Regex over IntentEngine) ---
+                    from .patterns import MISSION_INTENT_PATTERNS
+                    import re
+                    understanding = None
+                    for intent_name, p_list in MISSION_INTENT_PATTERNS.items():
+                         if any(re.search(p, msg_clean) for p in p_list):
+                              logger.info(f"[ROUTER_PATTERN] Hardened Match: {intent_name}")
+                              understanding = {
+                                  "specific_intent": intent_name,
+                                  "intent_group": "FOLLOW_UP_INTENT",
+                                  "mode": "technical",
+                                  "context": {"source": "pattern_match"}
+                              }
+                              break
+                    
+                    if not understanding:
+                         understanding = await intent_engine.understand(msg_clean, session_id)
+                    
+                    # USE RECONSTRUCTED MESSAGE FOR THE REST OF THE PIPELINE
+                    msg_clean = understanding.get("refined_message", msg_clean)
                     
                     intent = understanding["specific_intent"]
                     intent_group = understanding["intent_group"]
-                    semantic_ctx = understanding["context"]
+                    semantic_ctx = understanding.get("context")
                     
                     if is_creator_prefixed and (not intent or intent == "chat"):
                         intent = "creator_command"
@@ -289,7 +340,7 @@ class CommandRouter:
                         logger.info("[ROUTING_OVERRIDE] Overriding healing/remediation intent to copilot_proposal due to active file context.")
                     # --- FIN FIX ---
 
-                    logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent}")
+                    logger.info(f"[INTENT_ENGINE_RESULT] Group: {intent_group} | Specific: {intent} | Refined: {msg_clean[:40]}")
                     
                     # --- PRIORITY CHAIN EXECUTION ---
                     system_intents = ["system_audit", "list_chips", "show_logbook", "healing", "creator_command", "list"]
@@ -300,7 +351,8 @@ class CommandRouter:
                     builder_intents = ["approve_roadmap", "start_execution"]
                     proposal_intents = ["copilot_proposal"]
                     
-                    priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents + ["operational_failure_report"]
+                    priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents + \
+                                       ["mission_followup", "mission_cancel", "mission_approve", "mission_status"]
                     
                     if intent in priority_intents and intent in self.intents and intent not in brain_intents:
                         logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
@@ -314,9 +366,9 @@ class CommandRouter:
 
                     # 3. UNIFIED COGNITIVE PIPELINE
                     from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
-                    orchestrator = CognitiveOrchestrator(self)
+                    orchestrator_inst = CognitiveOrchestrator(self)
                     
-                    res = await orchestrator.orchestrate(
+                    res = await orchestrator_inst.orchestrate(
                         message=msg_clean, 
                         understanding=understanding,
                         context=context,
@@ -351,14 +403,22 @@ class CommandRouter:
                 intent="recovery", status="success", message=random.choice(fallback_msgs)
             )
 
+        from ..intent_understanding.conversation_tracker import conversation_tracker
+        conversation_tracker.update_context(user_id, res.message, res.intent, role="omni")
         return await self._finalize_response(res, message)
 
     async def _finalize_response(self, res: AICommandResponse, original_msg: str) -> AICommandResponse:
         """Adds final touches to response logging."""
-        # Antimodal adaptation and Telemetry are now handled by CognitiveOrchestrator
-        # for a single unified pipeline.
-        logger.info(f"[RESPONSE_READY] Intent: {res.intent} | Message: {res.message[:50]}...")
+        # Save OMNI's response to history for Deep Continuity
+        from ..intent_understanding.conversation_tracker import conversation_tracker
+        # We try to extract user_id if we have access to context, otherwise default
+        # CommandRouter.route context is not easily available here, so we would need to pass it
+        # Actually, let's do it in the route method itself before returning.
         return res
+
+    async def _handle_chat_task(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        chat_proc = self.registry.get_processor("chat")
+        return await chat_proc.process(msg, context=context)
 
     async def _handle_open_chip(self, msg: str) -> AICommandResponse:
         from backend.core.module_registry import module_registry
@@ -797,5 +857,86 @@ class CommandRouter:
     async def _handle_proposal(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         processor = self.registry.get_processor("proposal")
         return await processor.process(msg, context=context)
+
+    async def _handle_mission_task(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        """Handels mission-specific operational intents (followup, cancel, approve)."""
+        from ..memory.mission_manager import MissionManager, MissionStatus
+        
+        intent = "mission_action"
+        step_id = None
+        if "rescue job" in msg or "reintentar" in msg:
+            intent = "mission_rescue"
+            # Extract ID if present (e.g. rescue job 1)
+            parts = msg.split()
+            for p in parts:
+                if p.isdigit(): step_id = p; break
+        elif "cancel" in msg or "abort" in msg or "detener" in msg:
+            intent = "mission_cancel"
+        elif "aprob" in msg or "listo" in msg or "aplicá" in msg:
+            intent = "mission_approve"
+        elif "checkpoint mission" in msg or "crear punto" in msg:
+            intent = "mission_checkpoint"
+            from ..memory.mission_manager import mission_manager
+            id = mission_manager.get_active_mission().mission_id
+            cp_id = mission_manager.create_checkpoint(id, f"Manual: {msg}")
+            return AICommandResponse(
+                intent=intent,
+                status="success",
+                message=f"🔒 Checkpoint '{cp_id}' creado con éxito. Estado de archivos y misión asegurado.",
+                payload={"action": "checkpoint", "checkpoint_id": cp_id}
+            )
+        elif "rollback mission" in msg or "volver al punto" in msg:
+            intent = "mission_rollback"
+            parts = msg.split()
+            cp_id = None
+            for p in parts:
+                if p.startswith("cp_"): cp_id = p; break
+            
+            if cp_id:
+                from ..memory.mission_manager import mission_manager
+                mission_id = mission_manager.get_active_mission().mission_id
+                mission_manager.rollback_mission(mission_id, cp_id)
+                return AICommandResponse(
+                    intent=intent,
+                    status="success",
+                    message=f"🔄 Rollback total a '{cp_id}' completado. El sistema ha vuelto al estado anterior.",
+                    payload={"action": "rollback", "checkpoint_id": cp_id}
+                )
+
+        elif "approve rescue" in msg or "aprobar rescate" in msg:
+            intent = "mission_rescue_approve"
+            parts = msg.split()
+            for p in parts:
+                if p.isdigit(): step_id = p; break
+            if step_id:
+                from ..memory.mission_manager import mission_manager
+                # Update status to completed after human approval
+                mission_manager.update_step_status(step_id, "COMPLETED", f"Rescate aprovado por Creador para {step_id}.")
+                return AICommandResponse(
+                    intent=intent,
+                    status="success",
+                    message=f"✅ Rescate para subtarea {step_id} aprobado y aplicado. Misión estabilizada.",
+                    payload={"action": "approve_rescue", "step_id": step_id}
+                )
+
+        if intent == "mission_rescue" and step_id:
+            from ..shadow_swarm.shadow_orchestrator import shadow_orchestrator
+            # Execute rescue in background task if needed, or await for validation
+            # For UI responsiveness, we return quickly and let the tree update via telemetry
+            import asyncio
+            asyncio.create_task(shadow_orchestrator.rescue_step(step_id))
+            return AICommandResponse(
+                intent=intent,
+                status="success",
+                message=f"Rescate para subtarea {step_id} iniciado. Observá el Pizarrón para ver la recuperación en tiempo real.",
+                payload={"action": "rescue", "step_id": step_id}
+            )
+
+        return AICommandResponse(
+            intent=intent,
+            status="success",
+            message="Procesando instrucción de misión..." if "es" in msg else "Processing mission instruction...",
+            payload={"action": intent, "original_command": msg}
+        )
 
 ai_command_router = CommandRouter()

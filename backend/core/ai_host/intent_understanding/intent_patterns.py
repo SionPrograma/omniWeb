@@ -94,6 +94,13 @@ INTENT_GROUPS: Dict[str, List[str]] = {
     "MEMORY_INTENT": [
         "qué estamos", "qué hacemos", "que estamos", "que hacemos", "venimos", "hacemos", "hicimos", "viendo", "mirando", "cerrando", "terminando", "ajustar", "tocar", "hilo", "acordás", "acordas", "anterior", "seguimos", "lo último", "lo ultimo", "con qué", "con que", "en qué", "en que"
     ],
+    "FACTUAL_UNCERTAINTY": [
+        "quien ganó", "quién ganó", "quien gano", "quien ganará", "quien ganara",
+        "mundial de", "quién es el", "quien es el", "qué pasará", "que pasara",
+        "año 20", "año 21", " del 20", " del 21",
+        "futuro", "quien será", "quien sera", "quién será",
+        "predicción", "prediccion", "pronóstico", "pronostico", "quien va a ganar"
+    ],
     "NATURAL_CHAT": [
         "hola", "buen día", "todo bien", "qué tal", "cómo va", "cómo estás", 
         "quién sos", "qué haces", "che", "háblame", "charlemos", "contame",

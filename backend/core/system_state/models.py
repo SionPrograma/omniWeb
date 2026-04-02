@@ -46,3 +46,4 @@ class SystemState(BaseModel):
     sync_status: Optional[Dict[str, Any]] = None
     cluster: Optional[Dict[str, Any]] = None
     active_mission: Optional[Dict[str, Any]] = None
+    proposals: List[Dict[str, Any]] = [] # Block 30: Swarm Visibility

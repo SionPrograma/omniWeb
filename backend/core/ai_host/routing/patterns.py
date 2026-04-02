@@ -127,9 +127,34 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
         "en qué bloque estamos", "que bloque", "roadmap", "fixes cerrados", 
         "qué arreglamos", "scope", "alcance", "últimos cambios", 
         "estado del proyecto", "how is the project",
-        "qué fixes", "que fixes", "fixes validados", "fixes are already closed", "bugs cerramos",
+        "qué arreglamos", "que arreglamos", "fixes validados", "fixes are already closed", "bugs cerramos",
         "pertenece al bloque", "es de este bloque", "redundante", "reabrir fixes"
+    ],
+    "mission_followup": [
+        "seguí", "seguí con la misión", "continuá", "dale", "eso", "arreglalo", "reintentá",
+        "keep going", "continue", "fix it", "retry", "y ahora", "and now", "next step",
+        "próximo paso", "siguiente paso", "reintenta", "arreglálo", "hacelo", "hazlo"
+    ],
+    "mission_cancel": [
+        "cancelar misión", "abortar misión", "detener ejecución", "salir de la misión",
+        "cancel mission", "abort mission", "stop execution", "exit mission", "cancelá la misión", "detené la misión"
+    ],
+    "mission_approve": [
+        "aprobado", "listo para aplicar", "aprobá los cambios", "aplicá esto",
+        "approve changes", "apply this", "looks good", "se ve bien", "aprobado, aplicalo", "aprobado, aplicálo"
+    ],
+    "mission_status": [
+        "cómo va la misión", "estado de la misión", "qué falta", "mission status",
+        "what is pending", "cuánto falta"
     ]
+}
+
+# Specific subset for mission-first routing logic (Overlay Layer)
+MISSION_INTENT_PATTERNS: Dict[str, List[str]] = {
+    "mission_followup": INTENT_PATTERNS["mission_followup"],
+    "mission_cancel": INTENT_PATTERNS["mission_cancel"],
+    "mission_approve": INTENT_PATTERNS["mission_approve"],
+    "mission_status": INTENT_PATTERNS["mission_status"]
 }
 
 # Helper to avoid repetitive loops

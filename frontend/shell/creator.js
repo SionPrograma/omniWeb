@@ -27,9 +27,26 @@
             console.error("Workspace Setup Failed:", err);
         }
 
-        // Auto-access for Creator Audit (Phase 30)
+        this.setupAdminShortcuts();
+
+        // --- Emergency Readiness Pulse (Mission 36) ---
+        // If telemetry is slow or fails, we don't leave the creator hanging in the dark.
         setTimeout(() => {
-            if (document.body.classList.contains('creator-authenticated') || !document.body.classList.contains('user-mode')) {
+            const cockpitLoading = document.querySelector('#cockpit-main-panel .loading-indicator');
+            if (cockpitLoading && !this.systemState) {
+                console.warn("[CREATOR_BOOT] Slow telemetry detected. Rendering fallback UI...");
+                cockpitLoading.innerHTML = "Telemetría lenta o bloqueada. Intentando re-vincular...";
+                cockpitLoading.style.opacity = "0.5";
+                // Even without state, the user should see the buttons
+                if (!document.body.classList.contains('user-mode')) {
+                    this.renderCockpit();
+                }
+            }
+        }, 2500);
+
+        setTimeout(() => {
+            const hasAdminToken = localStorage.getItem('omni_token') || localStorage.getItem('omni_session');
+            if (document.body.classList.contains('creator-authenticated') || hasAdminToken || !document.body.classList.contains('user-mode')) {
                 console.log("Restoring Creator session...");
                 this.switchView('mission');
                 if (window.masterLogbook) window.masterLogbook.toggle(true);
@@ -47,10 +64,11 @@
 
     // 1. SYSTEM STATE UPDATES
     async startStatusPolling() {
-        const updateStatus = async () => {
+        // Shared update function
+        this.forceSync = async () => {
             try {
                 const res = await fetch('/api/v1/system/state', {
-                    headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
                 });
                 this.systemState = await res.json();
                 this.updateUI(this.systemState);
@@ -62,22 +80,30 @@
             }
         };
 
-        updateStatus();
-        this.statusInterval = setInterval(() => {
-            // Adaptive Polling (Phase 14)
-            const isMissionActive = document.getElementById('mission-control-view').classList.contains('active');
-            const isUserMode = document.body.classList.contains('user-mode');
+        const pollLoop = async () => {
+            await this.forceSync();
 
-            // Only poll frequently if in creator mode AND watching the cockpit
-            if (isMissionActive && !isUserMode) {
-                updateStatus();
-            } else if (Date.now() % 15000 < 5000) { // Every 15s for background/user
-                updateStatus();
+            // Adaptive Interval (Phase 16: Performance & Sync Hardening)
+            let interval = 5000; // Normal
+            const isMissionActive = this.systemState && this.systemState.active_mission &&
+                ['OPEN', 'ACTIVE', 'RECOVERING'].includes(this.systemState.active_mission.status);
+            const isWorkspaceVisible = document.getElementById('creator-workspace-view').classList.contains('active');
+
+            if (isWorkspaceVisible && isMissionActive) {
+                interval = 2000; // Fast sync during operations
+            } else if (!isWorkspaceVisible) {
+                interval = 10000; // Low power background
             }
-        }, 5000);
+
+            this.statusInterval = setTimeout(pollLoop, interval);
+        };
+
+        pollLoop();
     }
 
     updateUI(state) {
+        if (!state) return;
+
         // Mode & Auth Handling (Phase 14 + Creator Session)
         const isCreator = state.creator_authenticated || state.system_mode === 'creator' || state.system_mode === 'live';
 
@@ -87,7 +113,6 @@
         } else if (isCreator) {
             document.body.classList.remove('user-mode');
             document.body.classList.add('creator-authenticated');
-            console.log("[AUDIT_DRAWER] Creator Mode detected and authenticated.");
         }
 
         const qrBtn = document.getElementById('global-qr-scan');
@@ -106,66 +131,55 @@
         let msgType = 'info';
 
         if (state.system_mode === 'maintenance_pending') {
-            displayMsg = "SYSTEM ALERT: Maintenance window starting soon. Please save your work.";
+            displayMsg = "SISTEMA: Ventana de mantenimiento próximamente.";
             msgType = 'warning';
-        } else if (state.announcement) {
+        } else if (state.announcement && state.announcement.message) {
             displayMsg = state.announcement.message;
-            msgType = state.announcement.type.toLowerCase();
+            msgType = (state.announcement.type || 'info').toLowerCase();
         }
 
         if (displayMsg && announcementBar) {
             announcementBar.style.display = 'block';
-            announcementText.innerText = displayMsg;
+            if (announcementText) announcementText.innerText = displayMsg;
             announcementBar.className = `global-announcement-bar active ${msgType}`;
         } else if (announcementBar) {
             announcementBar.style.display = 'none';
         }
 
-        // Top Bar
-        document.getElementById('sys-status-version').innerText = `v${state.version}`;
-        document.getElementById('sys-status-branch').innerText = state.git_branch;
-        document.getElementById('sys-chips-count').innerText = state.chips.length;
+        // Basic Info
+        const verEl = document.getElementById('sys-status-version');
+        if (verEl) verEl.innerText = `v${state.version || '0.0.0'}`;
 
-        // DB & AI Indicators
+        const branchEl = document.getElementById('sys-status-branch');
+        if (branchEl) branchEl.innerText = state.git_branch || 'master';
+
+        const chipEl = document.getElementById('sys-chips-count');
+        if (chipEl) chipEl.innerText = (state.chips ? state.chips.length : 0);
+
+        // Health Indicators
         this.updateIndicator('db-indicator', (state.database && state.database.connected));
         this.updateIndicator('ai-indicator', (state.ai_host && state.ai_host.status === 'online'));
 
-        // AI Orb States
+        // Orb Effects
         const orb = document.getElementById('main-ai-orb');
         if (orb) {
             orb.classList.remove('system_warning', 'system_error', 'auto_fix_running');
+            if (state.health === 'warning') orb.classList.add('system_warning');
             if (state.health === 'error') orb.classList.add('system_error');
-            else if (state.health === 'warning') orb.classList.add('system_warning');
-
-            if (state.is_healing) {
-                orb.classList.add('auto_fix_running');
-            }
+            if (state.is_healing) orb.classList.add('auto_fix_running');
         }
 
-        // Chip Status List
-        const chipContainer = document.getElementById('chip-status-container');
-        if (chipContainer) {
-            chipContainer.innerHTML = state.chips.map(chip => {
-                return `
-                <div class="chip-status-card" onclick="creatorEnv.inspectChip('${chip.slug}')">
-                    <div class="chip-status-info">
-                        <h4>${chip.name}</h4>
-                        <p>${chip.status.toUpperCase()} | <span style="opacity: 0.6">Last act: ${chip.last_execution || 'never'}</span></p>
-                    </div>
-                    <div class="chip-health-indicator">
-                        <span class="status-dot ${chip.health}"></span>
-                        <span class="health-label" style="text-transform: uppercase;">${chip.health}</span>
-                    </div>
-                </div>
-            `}).join('');
+        // Dashboard Dispatch (Additive)
+        if (this.currentTab === 'health') {
+            this.renderCockpit();
         }
 
-        // Update Workspace Monitor if active
-        const wsView = document.getElementById('creator-workspace-view');
-        if (wsView && wsView.classList.contains('active')) {
-            this.updateWorkspaceMonitor(state);
-            this.updateWorkspaceBackendState();
-            this.renderWorkspaceMissionDashboard(state);
+        // Render Creator Dashboard components (MissionState, etc.)
+        this.renderWorkspaceMissionDashboard(state);
+
+        // Update Editor with Swarm info
+        if (window.creatorEditor) {
+            window.creatorEditor.updateFromState(state);
         }
     }
 
@@ -351,7 +365,7 @@
                             if (wsTextarea) wsTextarea.value = "";
                         }
                     } catch (err) {
-                        this.addWorkspaceLog(`CRITICAL ERROR: ${err.message}`, 'error');
+                        this.addWorkspaceLog(`CRITICAL ERROR: ${err.message} `, 'error');
                     }
                 } else {
                     this.addWorkspaceLog("ERROR: CreatorEditor system not initialized.", 'error');
@@ -394,15 +408,15 @@
 
                         if (preview_id && window.builderUI) {
                             window.builderUI.showPreview(preview_id);
-                            this.addWorkspaceLog(`Proposal generated: ${preview_id}`, 'system');
+                            this.addWorkspaceLog(`Proposal generated: ${preview_id} `, 'system');
                         } else {
                             this.addWorkspaceLog("Draft proposed but no preview ID returned.", 'warning');
                         }
                     } else {
-                        this.addWorkspaceLog(`Propose failed: ${data.detail || "Unknown API error"}`, 'error');
+                        this.addWorkspaceLog(`Propose failed: ${data.detail || "Unknown API error"} `, 'error');
                     }
                 } catch (err) {
-                    this.addWorkspaceLog(`CRITICAL ERROR during proposal: ${err.message}`, 'error');
+                    this.addWorkspaceLog(`CRITICAL ERROR during proposal: ${err.message} `, 'error');
                 } finally {
                     proposeBtn.innerText = "PROPOSE";
                     proposeBtn.disabled = false;
@@ -416,7 +430,74 @@
             copilotSend.onclick = () => this.sendCopilotPrompt();
         }
 
-        // Deleted: Preview Reload (Replaced by Backend State integration)
+        // --- MEGAPROMPT LOGIC (MEGAPROMPTS & COMPILATION) ---
+        const modeToggle = document.getElementById('ws-copilot-mode-toggle');
+        const compileBtn = document.getElementById('ws-copilot-compile');
+        const inputArea = document.getElementById('ws-copilot-input');
+
+        if (modeToggle && compileBtn && inputArea) {
+            modeToggle.onclick = () => {
+                const isMegaprompt = modeToggle.classList.toggle('active');
+                if (isMegaprompt) {
+                    modeToggle.innerText = "CHAT MODE";
+                    modeToggle.style.background = "rgba(0, 150, 255, 0.1)";
+                    modeToggle.style.borderColor = "rgba(0, 150, 255, 0.3)";
+                    modeToggle.style.color = "#0096ff";
+                    inputArea.placeholder = "Pegué un Megaprompt aquí (Ej: 'MISIÓN: Refactorizar X...')";
+                    inputArea.rows = 8;
+                    compileBtn.style.display = 'block';
+                    copilotSend.style.display = 'none';
+                } else {
+                    modeToggle.innerText = "MEGAPROMPT";
+                    modeToggle.style.background = "rgba(212, 175, 55, 0.1)";
+                    modeToggle.style.borderColor = "rgba(212, 175, 55, 0.3)";
+                    modeToggle.style.color = "var(--creator-gold)";
+                    inputArea.placeholder = "Ask Copilot (e.g. 'Analizá este archivo')";
+                    inputArea.rows = 2;
+                    compileBtn.style.display = 'none';
+                    copilotSend.style.display = 'inline-block';
+                }
+            };
+
+            compileBtn.onclick = async () => {
+                const prompt = inputArea.value.trim();
+                if (!prompt) return;
+
+                compileBtn.innerText = "COMPILING...";
+                compileBtn.disabled = true;
+
+                // Add to chat as system command
+                this.addCopilotMsg(`Compilando Megaprompt: "${prompt.substring(0, 50)}..."`, 'system');
+
+                try {
+                    // Send to backend with force mission flag
+                    const res = await fetch('/api/v1/ai-host/process', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer omniweb-dev-secret-token',
+                            'X-Shell-Identity': 'omniweb-shell'
+                        },
+                        body: JSON.stringify({
+                            message: `MISSION: ${prompt}`,
+                            source_surface: 'workspace',
+                            options: { compile_only: false } // Trigger execution tree generation
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.message) {
+                        this.addCopilotMsg(data.message, 'ai');
+                        // Switch to Mission panel to see the tree
+                        this.openWorkspace('mission');
+                    }
+                } catch (err) {
+                    this.addCopilotMsg("Error during mission compilation.", "error");
+                } finally {
+                    compileBtn.innerText = "COMPILE MISSION";
+                    compileBtn.disabled = false;
+                }
+            };
+        }
     }
 
     updateWorkspaceBackendState() {
@@ -427,18 +508,18 @@
         const uptime = Math.floor(this.systemState.uptime_seconds || 0);
         const hours = Math.floor(uptime / 3600);
         const minutes = Math.floor((uptime % 3600) / 60);
-        const uptimeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${uptime % 60}s`;
+        const uptimeStr = hours > 0 ? `${hours}h ${minutes} m` : `${minutes}m ${uptime % 60} s`;
 
         const cluster = this.systemState.cluster || {};
         const flows = this.systemState.flow_data || {};
 
         stateEl.innerHTML = `
-            <div style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                < div style = "margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;" >
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>OmniEngine:</span> <span style="color:var(--pass-color)">${this.systemState.health || 'nominal'}</span></div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Memory:</span> <span>${(this.systemState.memory_usage && this.systemState.memory_usage.rss_mb) || 0} MB</span></div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Uptime:</span> <span style="color:var(--creator-gold)">${uptimeStr}</span></div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Cluster Load:</span> <span>${(cluster.cluster_load || 0).toFixed(1)}%</span></div>
-            </div>
+            </div >
             
             <h5 style="color:var(--creator-gold); font-family:'Outfit'; margin-bottom:6px; font-size: 0.75rem;">Technical Flows</h5>
             <div style="margin-bottom: 12px; font-size: 0.7rem; opacity: 0.8;">
@@ -450,7 +531,7 @@
             <div style="display:flex; flex-wrap:wrap; gap:4px;">
                 ${(this.systemState.chips || []).map(c => `<span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:3px; font-size:0.65rem; border: 1px solid rgba(255,255,255,0.05);">${c.slug}</span>`).join('')}
             </div>
-        `;
+            `;
     }
 
     openWorkspace(targetPanel = 'editor') {
@@ -523,7 +604,7 @@
         // Reset classes
         grid.className = 'workspace-grid';
         if (activePanels > 0) {
-            grid.classList.add(`panels-${activePanels}`);
+            grid.classList.add(`panels - ${activePanels} `);
         }
     }
 
@@ -564,11 +645,15 @@
                 console.log("[CREATOR] Proposal with preview detected. Launching preview UI:", data.payload.preview_id);
                 window.builderUI.showPreview(data.payload.preview_id);
             }
+            if (data.message) {
+                this.addCopilotMsg(data.message, 'ai');
+                this.forceSync(); // IMMEDIATE FEEDBACK (Block 16)
+            }
             if (data.audit && this.updateAuditResult) {
                 this.updateAuditResult(data.audit);
             }
         } catch (err) {
-            this.addCopilotMsg("Error connecting to AI Host.", "system");
+            this.addCopilotMsg("Error talking to AI Host.", "error");
         }
     }
 
@@ -577,7 +662,7 @@
         if (!log) return;
 
         const msg = document.createElement('div');
-        msg.className = `copilot-msg ${type}`;
+        msg.className = `copilot - msg ${type} `;
 
         // --- VISUAL DIFF RENDERER (CREATOR MODE) ---
         const renderDiff = (raw) => {
@@ -598,7 +683,7 @@
                 .replace(/\n/g, '<br/>');
 
             if (diffPart) {
-                html += `<div class="diff-container">`;
+                html += `< div class="diff-container" > `;
                 const escape = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 diffPart.split('\n').forEach(line => {
                     let cls = "";
@@ -607,10 +692,10 @@
                     else if (line.startsWith('-')) cls = "removed";
                     else if (line.startsWith('+')) cls = "added";
 
-                    if (cls) html += `<div class="diff-line ${cls}">${escape(line)}</div>`;
-                    else if (line.trim()) html += `<div class="diff-line">${escape(line)}</div>`;
+                    if (cls) html += `< div class="diff-line ${cls}" > ${escape(line)}</div > `;
+                    else if (line.trim()) html += `< div class="diff-line" > ${escape(line)}</div > `;
                 });
-                html += `</div>`;
+                html += `</div > `;
             }
             return html;
         };
@@ -623,8 +708,8 @@
     addWorkspaceLog(text, type = 'info') {
         const log = document.getElementById('ws-monitor-logs');
         const entry = document.createElement('div');
-        entry.className = `log-entry ${type}`;
-        entry.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+        entry.className = `log - entry ${type} `;
+        entry.innerText = `[${new Date().toLocaleTimeString()}] ${text} `;
         log.appendChild(entry);
         log.scrollTop = log.scrollHeight;
     }
@@ -634,25 +719,33 @@
         const ram = document.getElementById('ws-stat-ram');
         const disk = document.getElementById('ws-stat-disk');
 
-        if (cpu) cpu.innerText = `${state.health === 'nominal' ? '5%' : (state.health === 'warning' ? '14%' : '32%')}`;
-        if (ram) ram.innerText = `${(state.memory_usage && state.memory_usage.rss_mb) || 0}MB`;
+        if (cpu) cpu.innerText = `${state.health === 'nominal' ? '5%' : (state.health === 'warning' ? '14%' : '32%')} `;
+        if (ram) ram.innerText = `${(state.memory_usage && state.memory_usage.rss_mb) || 0} MB`;
         if (disk) disk.innerText = (state.database && state.database.connected) ? 'READY' : 'FAULT';
 
         // Throttled random logs for realism
         if (Math.random() > 0.98 && state.auditor_summary && state.auditor_summary.issues && state.auditor_summary.issues.length > 0) {
             const issue = state.auditor_summary.issues[0];
-            this.addWorkspaceLog(`AUDIT: ${issue.message}`, 'system');
+            this.addWorkspaceLog(`AUDIT: ${issue.message} `, 'system');
         }
     }
 
     renderCockpit() {
         const panel = document.getElementById('cockpit-main-panel');
-        if (!this.systemState) return;
+        if (!panel) return;
+
+        if (!this.systemState) {
+            panel.innerHTML = `< div style = "text-align:center; padding:40px; color:#666;" >
+                <p>TELEMETRÍA PENDIENTE</p>
+                <small>Conectando con el núcleo cognitivo...</small>
+            </div > `;
+            return;
+        }
 
         if (this.currentTab === 'health') {
             const audit = this.systemState.auditor_summary || {};
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card">
                         <h3>System Health [${this.systemState.health.toUpperCase()}]</h3>
                         <div class="health-metric">
@@ -685,8 +778,8 @@
                     '<p style="opacity: 0.5; font-size: 0.8rem;">No filesystem issues detected.</p>'
                 }
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'operations') {
             // --- PIZARRON VIVO INTEGRATION ---
             const missionData = {
@@ -696,11 +789,11 @@
             // Re-use Pizarrón Logic as an embedded Dashboard
             if (window.pizarronUI) {
                 // Ensure panel has base structure for Pizarrón
-                panel.innerHTML = `<div id="pizarron-dashboard-mount" class="pizarron-dashboard-panel"></div>`;
+                panel.innerHTML = `< div id = "pizarron-dashboard-mount" class="pizarron-dashboard-panel" ></div > `;
                 const mount = document.getElementById('pizarron-dashboard-mount');
                 window.pizarronUI.renderInto(mount, missionData);
             } else {
-                panel.innerHTML = `<div class="error-msg">Pizarrón Module not initialized.</div>`;
+                panel.innerHTML = `< div class="error-msg" > Pizarrón Module not initialized.</div > `;
             }
         } else if (this.currentTab === 'evidence') {
             const sessionMedia = this.sessionMedia || [];
@@ -714,7 +807,7 @@
             });
             // Renderizado principal
             panel.innerHTML = `
-                <div class="evidence-viewer-panel">
+                < div class="evidence-viewer-panel" >
                     <h3>Evidence Viewer <span style='font-size:0.8em;opacity:0.6;'>(Session Media)</span></h3>
                     <div class="evidence-batch-list">
                         ${Object.keys(batches).map(batchNum => `
@@ -746,29 +839,29 @@
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            `;
+                </div >
+                `;
             // IntegraciÃ³n con lÃ­nea de tiempo (eventos)
             if (this.systemState && this.systemState.timeline) {
                 const timelinePanel = document.getElementById('timeline-panel');
                 if (timelinePanel) {
                     const mediaEvents = this.systemState.timeline.filter(e => e.type === 'MEDIA_UPLOADED' || e.type === 'MEDIA_ANNOTATED');
-                    timelinePanel.innerHTML = mediaEvents.map(e => `<div class="timeline-event ${e.type}">
+                    timelinePanel.innerHTML = mediaEvents.map(e => `< div class="timeline-event ${e.type}" >
                         <span class="event-type">${e.type}</span>
                         <span class="event-ts">${new Date(e.timestamp).toLocaleString()}</span>
                         <span class="event-detail">${e.detail || ''}</span>
-                    </div>`).join('');
+                    </div > `).join('');
                 }
             }
             return;
         } else if (this.currentTab === 'map') {
             panel.innerHTML = `
-                <div class="cockpit-card" style="padding: 0;">
+                < div class="cockpit-card" style = "padding: 0;" >
                     <div class="galaxy-container" id="galaxy-map-mount">
                         <div class="loading-indicator">Mapping galactic nodes...</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
             setTimeout(() => {
                 if (window.galaxyMap) {
                     if (!window.galaxyMap.initialized) {
@@ -779,14 +872,14 @@
             }, 50);
         } else if (this.currentTab === 'fixes') {
             panel.innerHTML = `
-                <div class="cockpit-card">
+                < div class="cockpit-card" >
                     <h3>Pending Auto-Fixes (${this.systemState.pending_fixes})</h3>
                     ${this.systemState.is_healing ? '<p class="healing-pulse">âœ¨ System is actively healing...</p>' : ''}
-                    <p style="text-align: center; padding: 20px; opacity: 0.5;">
-                        ${this.systemState.pending_fixes > 0 ? 'Repairs are queued. Approve them via AI Host.' : 'Stable. No pending fixes.'}
-                    </p>
-                </div>
-            `;
+            <p style="text-align: center; padding: 20px; opacity: 0.5;">
+                ${this.systemState.pending_fixes > 0 ? 'Repairs are queued. Approve them via AI Host.' : 'Stable. No pending fixes.'}
+            </p>
+                </div >
+                `;
         } else if (this.currentTab === 'editor') {
             if (window.creatorEditor) {
                 window.creatorEditor.init();
@@ -795,7 +888,7 @@
             }
         } else if (this.currentTab === 'code') {
             panel.innerHTML = `
-                <div class="cockpit-card" style="margin-bottom: 15px;">
+                < div class="cockpit-card" style = "margin-bottom: 15px;" >
                     <h3>System Inspection</h3>
                     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <input type="text" id="cockpit-inspect-query" placeholder="Search architecture (e.g. 'router', 'auth')..." 
@@ -805,7 +898,7 @@
                     <div id="inspection-results" style="font-size: 0.8rem; height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
                         <p style="opacity: 0.5;">Select a chip below or enter a search query.</p>
                     </div>
-                </div>
+                </div >
                 <div class="cockpit-grid">
                     ${this.systemState.chips.map(chip => `
                         <div class="cockpit-card" onclick="creatorEnv.runInspection('${chip.slug}')">
@@ -815,10 +908,10 @@
                         </div>
                     `).join('')}
                 </div>
-             `;
+            `;
         } else if (this.currentTab === 'security') {
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card">
                         <h3>Chip Permissions Model</h3>
                         <div style="font-size: 0.8rem; height: 300px; overflow-y: auto;">
@@ -839,13 +932,13 @@
                             <div class="loading-indicator">Monitoring audit trail...</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
             this.fetchSecurityLogs();
         } else if (this.currentTab === 'sync') {
             const sync = this.systemState.sync_status || { devices_count: 0, status: 'unconfigured' };
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card">
                         <h3>Device Sync Status</h3>
                         <div class="health-metric">
@@ -870,12 +963,12 @@
                             <div class="loading-indicator">Retrieving sync history...</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
             this.fetchSyncLogs();
         } else if (this.currentTab === 'insights') {
             panel.innerHTML = `
-                <div class="cockpit-card">
+                < div class="cockpit-card" >
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h3>Actionable Insights</h3>
                         <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 15px;" onclick="creatorEnv.analyzeInsights()">Refresh Analysis</button>
@@ -883,12 +976,12 @@
                     <div id="insights-container">
                         <div class="loading-indicator">Analyzing patterns and system state...</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
             this.fetchInsights();
         } else if (this.currentTab === 'admin') {
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card">
                         <h3>AI Suggestions for Approval</h3>
                         <div id="admin-suggestions-container" style="font-size: 0.8rem; height: 300px; overflow-y: auto;">
@@ -912,13 +1005,13 @@
                             <p style="opacity: 0.5;">Enter a label to create a new system-wide checkpoint.</p>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
             this.fetchAdminData();
         } else if (this.currentTab === 'creator') {
             const maint = this.systemState.maintenance_info;
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card">
                         <h3>System Governance Mode</h3>
                         <p style="font-size: 0.8rem; margin-bottom: 15px; opacity: 0.7;">
@@ -987,7 +1080,7 @@
         } else if (this.currentTab === 'cluster') {
             const cluster = this.systemState.cluster;
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <h3>Cluster Infrastructure Overview</h3>
                         <div style="display: flex; gap: 20px; margin-top: 10px;">
@@ -1052,7 +1145,7 @@
         } else if (this.currentTab === 'knowledge') {
             this.fetchKnowledgeUnits();
             panel.innerHTML = `
-                <div class="knowledge-container">
+                < div class="knowledge-container" >
                     <div class="cockpit-header">
                         <h2>Knowledge Explorer</h2>
                         <div class="k-type-tag">Semantic Index Active</div>
@@ -1060,11 +1153,11 @@
                     <div class="knowledge-grid" id="knowledge-grid-content">
                         <div style="padding: 20px; text-align: center; opacity: 0.3;">Scanning Digital Alexandria...</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'learning') {
             panel.innerHTML = `
-                <div class="learning-container">
+                < div class="learning-container" >
                     <h3>Adaptive Learning Paths</h3>
                     <div class="cockpit-grid">
                         <div class="cockpit-card">
@@ -1074,11 +1167,11 @@
                             <div class="path-node"><div class="node-status locked"></div> Scale Optimization</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'certs') {
             panel.innerHTML = `
-                <div class="certs-container">
+                < div class="certs-container" >
                     <h3>Decentralized Certifications</h3>
                     <div class="cockpit-grid">
                         <div class="cockpit-card">
@@ -1088,22 +1181,22 @@
                             <div style="color: #00ff88; font-size: 0.8rem; margin-top:10px;">VERIFIED SYSTEM-WIDE</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'opportunities') {
             this.fetchOpportunities();
             panel.innerHTML = `
-                <div class="opportunities-container">
+                < div class="opportunities-container" >
                     <h3>Skill-Based Opportunities</h3>
                     <div id="opp-list-content">
                         <div style="padding: 20px; text-align: center; opacity: 0.3;">Matching skills to market...</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'collab') {
             this.fetchProjects();
             panel.innerHTML = `
-                <div class="collab-container">
+                < div class="collab-container" >
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h3>Collaborative Projects</h3>
                         <button class="cockpit-btn">Start New Project</button>
@@ -1111,11 +1204,11 @@
                     <div class="collab-grid" id="project-list-content">
                         <div style="padding: 20px; text-align: center; opacity: 0.3;">Fetching active collaborations...</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'labs') {
             panel.innerHTML = `
-                <div class="labs-container">
+                < div class="labs-container" >
                     <div class="cockpit-header">
                         <h3>Creator Labs</h3>
                         <span class="reputation-badge">Experimental Access Active</span>
@@ -1131,22 +1224,22 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'market') {
             this.fetchMarketListings();
             panel.innerHTML = `
-                <div class="market-container">
+                < div class="market-container" >
                     <h3>Knowledge & Skill Market</h3>
                     <div class="market-grid" id="market-list-content">
                         <div style="padding: 20px; text-align: center; opacity: 0.3;">Connecting to the global marketplace...</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'mentor') {
             this.fetchMentorState();
             panel.innerHTML = `
-                <div class="mentor-container">
+                < div class="mentor-container" >
                     <h3>AI Personal Mentor</h3>
                     <div class="cockpit-grid">
                         <div class="cockpit-card" style="grid-column: span 2;">
@@ -1160,12 +1253,12 @@
                             <div class="metric"><span class="label">SKILL GROWTH</span><span class="value">+12%</span></div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'omniverse') {
             this.fetchGateways();
             panel.innerHTML = `
-                <div class="omniverse-container">
+                < div class="omniverse-container" >
                     <h3>Omniverse Gateways</h3>
                     <div class="omniverse-viz" id="gate-viz">
                         <div class="gate-token">G-01</div>
@@ -1176,12 +1269,12 @@
                             <div style="opacity:0.3; text-align:center;">Initializing spatial mapping...</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'observability') {
             this.fetchMetrics();
             panel.innerHTML = `
-                <div class="observability-container">
+                < div class="observability-container" >
                     <h3>Global System Telemetry</h3>
                     <div class="telemetry-grid">
                         <div class="telemetry-card">
@@ -1203,11 +1296,11 @@
                             <div style="opacity:0.3;">Scanning threat vectors...</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'beta') {
             panel.innerHTML = `
-                <div class="beta-container">
+                < div class="beta-container" >
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h3>Public Beta Controller</h3>
                         <button class="cockpit-btn" onclick="missionControl.generateBetaInvite()">Generate Viral Invite</button>
@@ -1217,11 +1310,11 @@
                         <textarea id="beta-feedback-input" placeholder="Enter feature feedback or bug reports..."></textarea>
                         <button class="cockpit-btn" onclick="missionControl.submitBetaFeedback()">Submit Feedback</button>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'archival') {
             panel.innerHTML = `
-                <div class="archival-container">
+                < div class="archival-container" >
                     <h3>Distributed Archive Layer</h3>
                     <div class="cockpit-card">
                         <div class="archive-row" style="font-weight:bold;">
@@ -1234,12 +1327,12 @@
                             <div style="padding: 20px; text-align: center; opacity: 0.3;">Accessing cold storage grid...</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'communication') {
             this.fetchCommunicationData();
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h3>ðŸ“¡ Natural Communication Layer</h3>
@@ -1278,22 +1371,22 @@
                             <div class="loading-indicator">Fetching message logs...</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
 
         } else if (this.currentTab === 'accessibility') {
             panel.innerHTML = `
-                <div class="access-container">
+                < div class="access-container" >
                     <h3>Accessibility Settings</h3>
                     <div class="access-toggle"><span>Voice Navigation</span><input type="checkbox"></div>
                     <div class="access-toggle"><span>Braille Output Scaffolding</span><input type="checkbox"></div>
                     <div class="access-toggle"><span>Cognitive Simplification</span><input type="range" min="0" max="2"></div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'music') {
             this.fetchMusicData();
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h3>ðŸŽµ Music Intelligence Domain</h3>
@@ -1322,7 +1415,21 @@
 
                     <div class="cockpit-card">
                         <h3>Groove Trainer</h3>
-                        <div style="font-family: monospace; padding: 12px; background: #08080c; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem; color: #00ff88; letter-spacing: 2px;" id="music-groove-timeline">
+                        <!-- Phase 16: Cognitive Telemetry Pulse -->
+                ${state.active_mission && state.active_mission.telemetry_snap ? `
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(212,175,55,0.05); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px;">
+                        <h5 style="color: var(--creator-gold); font-family: 'Outfit'; font-size: 0.8rem; margin: 0 0 10px 0;">COGNITIVE TELEMETRY PULSE</h5>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.75rem;">Status: <b style="color: ${state.active_mission.telemetry_snap.status_color}">${state.active_mission.telemetry_snap.last_event || 'Monitoring...'}</b></span>
+                            <span style="font-size: 0.7rem; opacity: 0.6;">Heartbeat: ${state.active_mission.telemetry_snap.last_sync}</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; text-align: center; opacity: 0.5;">
+                        <span style="font-size: 0.7rem;">Telemetry Offline (No Active Mission)</span>
+                    </div>
+                `}
+                        <div style="font-family: monospace; padding: 12px; background: #08080c; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem; color: #00ff88; letter-spacing: 2px; margin-top: 15px;" id="music-groove-timeline">
                             [----|----|----|----]
                         </div>
                         <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.85rem;">
@@ -1344,12 +1451,12 @@
                             <p style="opacity: 0.3; font-size: 0.8rem;">Detecting real instrument neck... Overlay active.</p>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'integration') {
             this.fetchIntegrationData();
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <h3>Active Domain Bridges</h3>
                         <div id="integration-bridges-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1372,12 +1479,12 @@
                             AI Host is now authorized to chain actions across Music, Education, and Governance domains.
                         </p>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'qr_gateway') {
             this.fetchQRData();
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <h3>Active QR Tokens</h3>
                         <div id="qr-tokens-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1402,12 +1509,12 @@
                             <p>Scanning system ready...</p>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'workload') {
             this.fetchWorkloadData();
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <h3>Cluster Workload Distribution</h3>
                         <div class="workload-stats" id="workload-stats-container">
@@ -1436,12 +1543,12 @@
                             <button class="btn-apply" onclick="creatorEnv.submitWorkloadTask()">Dispatch Cluster Task</button>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'mesh') {
             this.fetchMeshData();
             panel.innerHTML = `
-                <div class="mesh-container">
+                < div class="mesh-container" >
                     <div class="cockpit-card">
                         <h3>OmniWeb Mesh Network Health</h3>
                         <div style="display: flex; justify-content: space-between; font-size: 0.8rem; opacity: 0.6;">
@@ -1467,12 +1574,12 @@
                     <div class="mesh-map-sim" id="mesh-visual-map">
                         <div style="opacity: 0.2;">REAL-TIME MESH TOPOLOGY MAP (SIMULATED)</div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'autonomous') {
             this.fetchOfflineData();
             panel.innerHTML = `
-                <div class="autonomous-container">
+                < div class="autonomous-container" >
                     <div class="offline-status-banner" id="offline-banner">
                         <div class="sync-pulse" id="offline-pulse"></div>
                         <div>
@@ -1497,12 +1604,12 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'runtime') {
             this.fetchRuntimeData();
             panel.innerHTML = `
-                <div class="runtime-container">
+                < div class="runtime-container" >
                     <div class="boot-card">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
@@ -1537,12 +1644,12 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'storage') {
             this.fetchStorageData();
             panel.innerHTML = `
-                <div class="storage-container">
+                < div class="storage-container" >
                     <div class="storage-hero">
                         <div class="storage-stat-card">
                             <div class="label">GRID CAPACITY</div>
@@ -1576,12 +1683,12 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'governance') {
             this.fetchGovernanceData();
             panel.innerHTML = `
-                <div class="cockpit-grid">
+                < div class="cockpit-grid" >
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h3>ðŸ›ï¸ AI Governance Advisor</h3>
@@ -1620,8 +1727,8 @@
                             <p style="opacity: 0.5;">Enter a user ID to view their evolution timeline.</p>
                         </div>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         } else if (this.currentTab === 'copilot') {
             this.renderCopilotUI(panel);
         }
@@ -1706,7 +1813,7 @@
     async rollback(checkpointId) {
         if (await this.askPermission("ULTIMATE SECURITY OVERRIDE", "Are you sure? This will revert the entire system state. Current session will be lost.")) {
             this.triggerLightBurst();
-            const res = await fetch(`/api/v1/system/admin/rollback/${checkpointId}`, { method: 'POST' });
+            const res = await fetch(`/ api / v1 / system / admin / rollback / ${checkpointId} `, { method: 'POST' });
             const result = await res.json();
             if (result.status === 'success') {
                 alert("Rollback successful. System re-initialized.");
@@ -1762,7 +1869,7 @@
 
     async reviewSuggestion(sid, status) {
         if (await this.askPermission("Admin Review", `Confirm ${status} for ${sid} ? `)) {
-            await fetch(`/api/v1/system/admin/suggestions/${sid}/review?status=${status}`, { method: 'POST' });
+            await fetch(`/ api / v1 / system / admin / suggestions / ${sid} / review ? status = ${status} `, { method: 'POST' });
             this.fetchAdminData();
         }
     }
@@ -1773,7 +1880,7 @@
 
         if (await this.askPermission("System Checkpoint", "Create a full system snapshot? This includes the database and core state.")) {
             this.triggerLightBurst();
-            const res = await fetch(`/api/v1/system/admin/checkpoint/create?label=${encodeURIComponent(label)}`, { method: 'POST' });
+            const res = await fetch(`/ api / v1 / system / admin / checkpoint / create ? label = ${encodeURIComponent(label)} `, { method: 'POST' });
             const data = await res.json();
             alert(`Checkpoint Created: ${label} `);
             this.fetchAdminData();
@@ -1864,7 +1971,7 @@
     }
 
     async actionInsight(insightId) {
-        await fetch(`/api/v1/user/insights/action/${insightId}`, { method: 'POST' });
+        await fetch(`/ api / v1 / user / insights / action / ${insightId} `, { method: 'POST' });
         this.triggerLightBurst();
         alert("Insight actioned: Task queued in your logbook.");
     }
@@ -1879,7 +1986,7 @@
         resEl.innerHTML = '<p>Analyzing system structure...</p>';
 
         try {
-            const res = await fetch(`/api/v1/system/inspect?query=${query}`);
+            const res = await fetch(`/ api / v1 / system / inspect ? query = ${query} `);
             const data = await res.json();
             resEl.innerHTML = `
                 < div style = "margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;" >
@@ -1896,7 +2003,7 @@
     async applyFix(proposalId) {
         if (await this.askPermission("Confirm System Modification", `Apply auto - fix ${proposalId}? This will patch system files and reload modules.`)) {
             try {
-                const res = await fetch(`/api/v1/system/audit/fix/apply?proposal_id=${proposalId}`, { method: 'POST' });
+                const res = await fetch(`/ api / v1 / system / audit / fix / apply ? proposal_id = ${proposalId} `, { method: 'POST' });
                 const data = await res.json();
                 if (data.status === 'success') {
                     this.triggerLightBurst();
@@ -2307,16 +2414,15 @@
         const content = input.value;
         if (!content) return;
 
-        const res = await fetch('/api/v1/scaling/beta/feedback', {
+        const response = await fetch('/api/v1/ai/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: content })
+            body: JSON.stringify({ message: content, context: { source_surface: 'workspace' } })
         });
-
-        if (res.ok) {
-            alert("Feedback received. AI Optimization loop updated.");
-            input.value = '';
-        }
+        const data = await response.json();
+        this.forceSync(); // IMMEDIATE FEEDBACK (Block 16)
+        alert("Feedback received. AI Optimization loop updated.");
+        input.value = '';
     }
 
     async fetchStorageData() {

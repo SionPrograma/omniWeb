@@ -10,24 +10,24 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@200;400;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/shell/style.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/logbook.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/creator.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/cluster.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/workload.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/mesh.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/offline.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/runtime.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/storage.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/human_dev.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/ecosystem_collab.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/scaling_beta.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/creator_theme.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/builder.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/editor.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/workspace.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/audit_drawer.css?v=v5_chrome_hotfix">
-    <link rel="stylesheet" href="/shell/pizarron_vivo.css?v=v5_chrome_hotfix">
+    <link rel="stylesheet" href="/shell/style.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/logbook.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/creator.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/cluster.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/workload.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/mesh.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/offline.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/runtime.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/storage.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/human_dev.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/ecosystem_collab.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/scaling_beta.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/creator_theme.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/builder.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/editor.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/workspace.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/audit_drawer.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/pizarron_vivo.css?v=v6_mobile_fix">
     <link rel="manifest" href="/shell/manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -297,15 +297,26 @@
 
                 <!-- Panel 2: COPILOT (Bottom Left) -->
                 <section class="ws-panel active" id="ws-panel-copilot" data-panel="copilot">
-                    <div class="panel-label">COPILOT</div>
+                    <div class="panel-label">
+                        <span>COPILOT</span>
+                        <button class="ws-btn-mini" id="ws-copilot-mode-toggle" title="Switch to Megaprompt Mode"
+                            style="margin-left: auto; background: rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.3); color: var(--creator-gold); font-size: 0.6rem; padding: 2px 6px;">
+                            MEGAPROMPT
+                        </button>
+                    </div>
                     <div class="ws-panel-content copilot-inner">
                         <div class="copilot-output" id="ws-copilot-log">
                             <div class="copilot-msg system">Ready for analysis. Context: Active Editor File.</div>
                         </div>
-                        <div class="copilot-input-area">
+                        <div class="copilot-input-area" id="ws-copilot-input-container">
                             <textarea id="ws-copilot-input" placeholder="Ask Copilot (e.g. 'Analizá este archivo')"
                                 rows="2"></textarea>
-                            <button class="ws-btn-primary" id="ws-copilot-send">ASK</button>
+                            <div class="copilot-actions" style="display:flex; gap: 8px; margin-top: 8px;">
+                                <button class="ws-btn-primary" id="ws-copilot-send" style="flex:1;">ASK</button>
+                                <button class="ws-btn-primary" id="ws-copilot-compile"
+                                    style="flex:1; display:none; background: linear-gradient(135deg, var(--creator-gold), #b38f00); border:none; color:#000;">COMPILE
+                                    MISSION</button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -628,14 +639,14 @@
         </div>
     </div>
 
-    <script src="/shell/voice.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/builder.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/galaxy.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/creator.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/editor.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/logbook.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/pizarron_vivo.js?v=v5_chrome_hotfix"></script>
-    <script src="/shell/main.js?v=v5_chrome_hotfix"></script>
+    <script src="/shell/voice.js?v=v6_mobile_fix"></script>
+    <script src="/shell/builder.js?v=v6_mobile_fix"></script>
+    <script src="/shell/galaxy.js?v=v6_mobile_fix"></script>
+    <script src="/shell/creator.js?v=v6_mobile_fix"></script>
+    <script src="/shell/editor.js?v=v6_mobile_fix"></script>
+    <script src="/shell/logbook.js?v=v6_mobile_fix"></script>
+    <script src="/shell/pizarron_vivo.js?v=v6_mobile_fix"></script>
+    <script src="/shell/main.js?v=v6_mobile_fix"></script>
 
 </body>
 

@@ -13,6 +13,7 @@ from backend.core.permissions import set_chip_context
 from backend.core.creator_control.manager import creator_control_manager
 from backend.core.cluster.manager import cluster_manager
 from backend.core.ai_host.memory.mission_manager import mission_manager
+from backend.core.ai_host.shadow_swarm.shadow_constructor import shadow_constructor_manager
 from .models import SystemState, SystemHealth, ChipState, SystemMode
 
 logger = logging.getLogger(__name__)
@@ -184,12 +185,23 @@ class SystemStateEngine:
 
             # 6b. Active Mission (MissionState Integration)
             active_mission = None
+            proposals = []
             try:
                 mission = mission_manager.get_active_mission()
                 if mission:
                     active_mission = mission.model_dump()
-            except:
-                pass
+                    # 6c. Shadow Swarm Proposals for this mission (Phase 30 Saneamiento)
+                    shadows = shadow_constructor_manager.get_constructors_for_mission(mission.mission_id)
+                    for s in shadows:
+                         if s.proposal:
+                              prop = s.proposal.model_dump()
+                              # Adding metadata for UI buttons
+                              prop["proposal_id"] = s.shadow_id
+                              prop["action_type"] = "mutation"
+                              prop["targets"] = [s.proposal.target_file]
+                              proposals.append(prop)
+            except Exception as swarm_err:
+                logger.warning(f"[SYSTEM_STATE] Swarm sync failed: {swarm_err}")
 
             # 7. Build Unified State
             self._state = SystemState(
@@ -218,6 +230,7 @@ class SystemStateEngine:
                 cluster=cluster_info,
                 sync_status=self._get_sync_info(user_id) if user_id else None,
                 active_mission=active_mission,
+                proposals=proposals,
                 timestamp=time.time(),
                 uptime_seconds=time.time() - self._start_time
             )

@@ -12,7 +12,7 @@ class SessionContext(BaseModel):
     last_referenced_entity: Optional[str] = None # For 'eso', 'este'
     active_panel_id: Optional[str] = None # For 'ese panel', 'acá'
     active_swarm_id: Optional[str] = None
-    recent_messages: List[str] = []
+    history: List[Dict[str, str]] = [] # [{"role": "user", "content": "..."}, {"role": "omni", "content": "..."}]
     metadata: Dict[str, Any] = {}
     timestamp: datetime = datetime.now()
 
@@ -39,7 +39,9 @@ class ConversationTracker:
                 # Recover recent dialog buffer for 'Working Memory'
                 for item in list(semantic_memory.buffer)[-10:]:
                     if 'prompt' in item:
-                        ctx.recent_messages.append(item['prompt'])
+                        ctx.history.append({"role": "user", "content": item['prompt']})
+                    if 'response' in item:
+                        ctx.history.append({"role": "omni", "content": item['response']})
                 
                 # Reconstruct 'Mission Context' if the last interaction was an executive command
                 if ctx.last_intent in ["BUILD_INTENT", "REMEDIATION_INTENT", "SYSTEM_AUDIT_INTENT"]:
@@ -55,30 +57,34 @@ class ConversationTracker:
             self.sessions[session_id] = SessionContext()
         return self.sessions[session_id]
 
-    def update_context(self, session_id: str, message: str, intent: str, topic: Optional[str] = None):
-        print(f"DEBUG: [TRACKER] update_context called for {session_id} with msg: '{message}'")
+    def update_context(self, session_id: str, message: str, intent: str, topic: Optional[str] = None, role: str = "user"):
+        print(f"DEBUG: [TRACKER] update_context called for {session_id} with {role} msg: '{message[:30]}...'")
         ctx = self.get_context(session_id)
-        ctx.last_intent = intent
-        ctx.recent_messages.append(message)
-        if len(ctx.recent_messages) > 10:
-            ctx.recent_messages.pop(0)
         
-        # ENTITY SCANNING (Identify what the user is talking about right now)
-        msg_lower = message.lower()
-        entities = ["chip-finanzas", "chip-reparto", "chip-idiomas", "logbook", "context-panel", "system inspection", "dashboard", "creator", "editor"]
-        for ent in entities:
-             if ent in msg_lower:
-                  ctx.last_referenced_entity = ent
-                  print(f"DEBUG: [TRACKER] Entity detected: {ent}")
-                  if "panel" in ent or "logbook" in ent or "dashboard" in ent:
-                       ctx.active_panel_id = ent
-                  break
+        if role == "user":
+            ctx.last_intent = intent
+            
+        ctx.history.append({"role": role, "content": message})
+        if len(ctx.history) > 20: # Keep up to 10 turns (20 msgs)
+            ctx.history.pop(0)
+        
+        if role == "user":
+            # ENTITY SCANNING (Identify what the user is talking about right now)
+            msg_lower = message.lower()
+            entities = ["chip-finanzas", "chip-reparto", "chip-idiomas", "logbook", "context-panel", "system inspection", "dashboard", "creator", "editor"]
+            for ent in entities:
+                 if ent in msg_lower:
+                      ctx.last_referenced_entity = ent
+                      print(f"DEBUG: [TRACKER] Entity detected: {ent}")
+                      if "panel" in ent or "logbook" in ent or "dashboard" in ent:
+                           ctx.active_panel_id = ent
+                      break
 
-        if topic:
+        if topic and intent not in ["NATURAL_CHAT", "GREETING", "acknowledgment", "identity", "how_are_you", "greeting", "smalltalk"]:
             ctx.last_topic = topic
             
         ctx.timestamp = datetime.now()
-        logger.debug(f"[TRACKER] Updated context for {session_id}: {intent} | {topic} | Ref: {ctx.last_referenced_entity}")
+        logger.debug(f"[TRACKER] Updated context for {session_id}: {intent} | {ctx.last_topic} | Ref: {ctx.last_referenced_entity}")
 
     def set_mission(self, session_id: str, goal: str, swarm_id: Optional[str] = None):
         ctx = self.get_context(session_id)

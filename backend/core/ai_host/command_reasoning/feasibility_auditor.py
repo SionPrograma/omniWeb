@@ -82,7 +82,10 @@ class FeasibilityAuditor:
             interpreted_goal=plan.interpreted_goal,
             steps=new_steps,
             scale=plan.scale,
-            constraints=plan.constraints
+            constraints=plan.constraints,
+            risks=plan.risks,
+            success_criteria=plan.success_criteria,
+            affected_layers=plan.affected_layers
         )
 
 feasibility_auditor = FeasibilityAuditor()

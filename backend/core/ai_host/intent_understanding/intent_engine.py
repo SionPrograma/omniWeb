@@ -5,6 +5,7 @@ from .intent_patterns import INTENT_GROUPS
 from .semantic_context_builder import semantic_context_builder, SemanticContext
 from .human_input_interpreter import human_interpreter
 from .conversation_tracker import conversation_tracker
+from ..routing.intent_classifier import intent_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +29,24 @@ class IntentEngine:
         ctx.interpretation = interpretation # Attach interpretation to context
         
         # 2.5 SEMANTIC RECONSTRUCTION (Surgical context injection)
-        if clarity == "follow_up":
+        if clarity == "follow_up" or interpretation.get("intent") == "clarification":
             from ..memory.mission_manager import mission_manager
             active_mission = mission_manager.get_active_mission()
-            if active_mission:
+            last_omni_msg = next((m["content"] for m in reversed(ctx.history.history) if m["role"] == "omni"), None)
+            
+            if interpretation.get("intent") == "clarification" and last_omni_msg:
+                 refined_msg = f"Explica mejor esto que dijiste: {last_omni_msg}. Consulta: {refined_msg}"
+                 print(f"DEBUG: [RECONSTRUCTION] Clarification mapped to last Response: {last_omni_msg[:30]}...")
+            elif active_mission:
                 refined_msg = f"Continúa con la misión: {active_mission.active_goal}. Acción específica: {refined_msg}"
                 print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Mission: {active_mission.active_goal}")
-            elif ctx.history.last_topic:
+            elif ctx.history.last_topic and ctx.history.last_topic not in ["greeting", "smalltalk", "identity", "how_are_you"]:
                 refined_msg = f"Continúa hablando de/haciendo: {ctx.history.last_topic}. Acción específica: {refined_msg}"
                 print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Topic: {ctx.history.last_topic}")
+            elif last_omni_msg:
+                # Fallback to last thing said even if no topic was explicitly tagged
+                refined_msg = f"En relación a '{last_omni_msg[:50]}...': {refined_msg}"
+                print(f"DEBUG: [RECONSTRUCTION] Contextless Follow-up mapped to last Response")
 
         elif clarity == "vague":
             if ctx.history.last_referenced_entity:
@@ -50,17 +60,32 @@ class IntentEngine:
                 print(f"DEBUG: [RECONSTRUCTION] Spatial resolved to: {panel_name}")
 
         # 3. DETECT CORE INTENT GROUP & SPECIFIC INTENT
-        from ..routing.intent_classifier import intent_classifier
         specific_intent = intent_classifier.classify(refined_msg)
+        
+        # MISSION-FIRST OVERRIDE (Phase 18: Integrated Command Layer)
+        hii_intent = interpretation.get("intent")
+        if hii_intent in ["mission_approval", "mission_followup", "mission_control", "mission_adjustment", "audit_request", "new_mission_intent"]:
+             # Map HII to specific intents used by orchestrator
+             if hii_intent == "mission_approval": specific_intent = "mission_approve"
+             elif hii_intent == "mission_followup": specific_intent = "mission_followup"
+             elif hii_intent == "mission_control": specific_intent = "mission_cancel"
+             elif hii_intent == "mission_adjustment": specific_intent = "mission_adjust"
+             elif hii_intent == "audit_request": specific_intent = "mission_audit_only"
+             elif hii_intent == "new_mission_intent" and clarity == "clear": 
+                  specific_intent = "mission_new_natural"
+        
         detected_group = self._detect_semantic_group(refined_msg, ctx)
         
-        # Mapping specific intents back to groups if needed
+        # 3. MISSION GROUP HEURISTIC
+        if "mission:" in refined_msg or specific_intent in ["mission_approve", "mission_followup", "mission_adjust", "mission_new_natural", "mission_audit_only"]:
+             detected_group = "MISSION_INTENT"
+
+        # Mapping other specific intents back to groups
         if specific_intent == "healing":
             detected_group = "REMEDIATION_INTENT"
         elif specific_intent in ["creator_analysis", "creator_plan"]:
             detected_group = "ANALYSIS_INTENT" if specific_intent == "creator_analysis" else "BUILD_INTENT"
         elif specific_intent == "system_audit" and detected_group != "OPERATIONAL_DIAGNOSTIC":
-            # Only use system_audit group if we didn't already detect a concrete operational failure
             detected_group = "SYSTEM_AUDIT_INTENT"
         elif specific_intent == "copilot_proposal":
             detected_group = "COPILOT_PROPOSAL_INTENT"
@@ -69,19 +94,8 @@ class IntentEngine:
         elif specific_intent in ["memory_continuity", "memory_project"] and detected_group not in ["OPERATIONAL_DIAGNOSTIC", "REMEDIATION_INTENT"]:
             detected_group = "MEMORY_INTENT"
 
-        # 3. RECONSTRUCT INCOMPLETE PROMPTS (Context-Awareness)
-        if detected_group == "FOLLOW_UP_INTENT" and ctx.active_mission:
-            logger.info(f"[INTENT_ENGINE] Reconstructed follow-up for mission: {ctx.active_mission}")
-            if "build" in ctx.active_mission.lower() or "crea" in ctx.active_mission.lower():
-                detected_group = "BUILD_INTENT"
-            elif "arregla" in ctx.active_mission.lower() or "fix" in ctx.active_mission.lower():
-                detected_group = "REMEDIATION_INTENT"
-
         # 4. DECIDE ROUTING MODE
         mode = self._decide_mode(detected_group, msg, ctx)
-        
-        # 5. UPDATE TRACKER
-        conversation_tracker.update_context(session_id, message, detected_group)
         
         return {
             "intent_group": detected_group,
@@ -124,7 +138,7 @@ class IntentEngine:
             return "constrained_output"
         
         # 3. IF input is command -> action_execution
-        if group in ["BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"]:
+        if group in ["MISSION_INTENT", "BUILD_INTENT", "REMEDIATION_INTENT", "VOICE_COMMAND_INTENT", "EXPLORATION_INTENT", "SYSTEM_AUDIT_INTENT"]:
             return "action_execution"
             
         if group == "SYSTEM_AUDIT_INTENT":

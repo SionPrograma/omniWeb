@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniweb-shell-v2';
+const CACHE_NAME = 'omniweb-shell-v3';
 const ASSETS = [
     '/shell/',
     '/shell/index.html',

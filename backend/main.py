@@ -14,6 +14,11 @@ from backend.core.self_check import run_self_checks
 from backend.core.permissions import _current_chip_ctx, set_chip_context
 from starlette.middleware.base import BaseHTTPMiddleware
 
+# --- Initialize Persistence (Phase 42: Boot Priority) ---
+with set_chip_context("core"):
+    db_manager.init_db()
+    db_manager.run_migrations()
+
 # --- Import New Routers ---
 from backend.core.auth_router import router as auth_router
 from backend.core.system_router import router as system_router
@@ -156,10 +161,7 @@ async def startup_event():
         from backend.core.integration_layer import start_integration_layer
         await start_integration_layer()
 
-# Initialize Persistence
-with set_chip_context("core"):
-    db_manager.init_db()
-    db_manager.run_migrations()
+# Initialize Persistence (Already done at boot)
 
 # --- Dynamic Chip Loading (Plugin System) ---
 all_chips = module_registry.discover_all_chips()

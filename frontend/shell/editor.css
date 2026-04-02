@@ -222,3 +222,106 @@
 .editor-container {
     animation: fadeIn 0.4s ease-out;
 }
+
+/* --- Phase 31: Swarm Integration Styles --- */
+.change-banner {
+    animation: slideDown 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    /* Stack on mobile */
+    gap: 10px;
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--creator-gold);
+    border-bottom: 1px solid var(--creator-gold);
+    padding: 10px 15px;
+}
+
+@media (min-width: 768px) {
+    .change-banner {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 15px;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.btn-mini-action {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 8px 15px;
+    /* Bigger for mobile */
+    border-radius: 6px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    flex: 1;
+    /* Equal width on mobile */
+    text-align: center;
+}
+
+.btn-mini-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-mini-action.primary {
+    background: var(--creator-gold);
+    color: #000;
+    border: none;
+    font-weight: bold;
+}
+
+@media (max-width: 480px) {
+    .editor-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .editor-actions {
+        width: 100%;
+        display: flex;
+        gap: 5px;
+    }
+
+    .editor-actions button {
+        flex: 1;
+    }
+}
+
+.diff-overlay {
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.diff-line.removed {
+    background: rgba(255, 85, 85, 0.15);
+    color: #ff5555;
+    border-left: 2px solid #ff5555;
+}
+
+.diff-line.added {
+    background: rgba(50, 255, 150, 0.15);
+    color: #32ff96;
+    border-left: 2px solid #32ff96;
+}
+
+.diff-line.info {
+    color: #888;
+    font-size: 0.7rem;
+    opacity: 0.6;
+    padding: 2px 0;
+}

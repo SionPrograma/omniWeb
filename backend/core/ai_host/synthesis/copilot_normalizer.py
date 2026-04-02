@@ -1,6 +1,6 @@
 
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 class CopilotNormalizer:
     """
@@ -52,14 +52,15 @@ class CopilotNormalizer:
     # MEGAPROMPT: DISCIPLINED OUTPUT CONTRACT (CAPA 4)
     MEGAPROMPT_LABELS = {
         "es": {
-            "intent": "### MISIÓN ENTENDIDA",
-            "touch": "### LO QUE VOY A TOCAR",
-            "dont_touch": "### LO QUE NO VOY A TOCAR",
-            "risk": "### RIESGO Y SEGURIDAD",
-            "evidence": "### EVIDENCIA PREVIA",
-            "plan": "### ÁRBOL DE EJECUCIÓN",
-            "next": "### PRÓXIMO PASO",
-            "gate": "### REQUIERE APROBACIÓN"
+            "intent": "🎯 **MISIÓN / OBJETIVO**",
+            "touch": "📂 **ZONAS AFECTADAS**",
+            "dont_touch": "🔒 **ZONAS PROTEGIDAS**",
+            "risk": "🛡️ **SEGURIDAD Y RIESGO**",
+            "evidence": "🧪 **EVIDENCIA**",
+            "plan": "🗺️ **MAPA DE EJECUCIÓN**",
+            "next": "🚀 **PRÓXIMO PASO**",
+            "gate": "🛑 **APROBACIÓN REQUERIDA**",
+            "action": "⚡ **ACCIÓN RECOMENDADA**"
         }
     }
 
@@ -123,36 +124,84 @@ class CopilotNormalizer:
         # ... (conversational part follows)
     
     def _normalize_megaprompt(self, mission: Any, tree: Dict[str, Any], lang: str) -> str:
-        """Disciplined Workspace Output for Megaprompts (CAPA 4)"""
+        """Disciplined Workspace Output for Megaprompts - Hardened for Mobile (CAPA 4)"""
         labels = self.MEGAPROMPT_LABELS.get(lang, self.MEGAPROMPT_LABELS["es"])
         
-        narrative = f"{labels['intent']}\n{mission.mission_name}\n> {mission.primary_objective}\n\n"
+        # 1. Actionable Summary (For quick mobile glance)
+        risk_icon = "🟢" if not mission.is_ambiguous else "🟡"
+        narrative = f"{labels['intent']}\n**{mission.mission_name}**\n> {mission.primary_objective}\n\n"
         
+        # 2. Zones (Compact)
         touch_zones = ", ".join([f"`{f}`" for f in mission.critical_files]) or "Sistema Omnicore"
-        narrative += f"{labels['touch']}\n{touch_zones}\n\n"
+        narrative += f"{labels['touch']}: {touch_zones}\n"
         
-        forbidden = "\n".join([f"- {z}" for z in mission.forbidden_layers]) or "Ninguna zona explícita."
-        narrative += f"{labels['dont_touch']}\n{forbidden}\n\n"
+        if mission.forbidden_layers:
+            forbidden = ", ".join([f"`{z}`" for z in mission.forbidden_layers])
+            narrative += f"{labels['dont_touch']}: {forbidden}\n"
         
-        risk = "MÍNIMO" if not mission.is_ambiguous else "MODERADO"
-        narrative += f"{labels['risk']}\nNivel: {risk} | Criterio: Disciplina de Árbol Operativo\n\n"
-        
-        if mission.is_ambiguous:
-             narrative += f"> [!WARNING]\n> {mission.ambiguity_notes[0] if mission.ambiguity_notes else 'Ambigüedad detectada.'}\n\n"
+        narrative += "\n"
 
+        # 3. Execution Tree (Visible Trace)
         if tree and "root" in tree:
-            # We show a simplified tree for the report
             narrative += f"{labels['plan']}\n"
-            for phase in tree["root"].get("children", []):
-                narrative += f"- {phase['label']} ({phase['status']})\n"
+            # Get only active or relevant phases to save vertical space on mobile
+            phases = tree["root"].get("children", [])
+            for phase in phases:
+                phase_status = phase.get('status', 'PENDING')
+                if phase_status not in ["ACTIVE", "NEEDS_REVIEW", "FAILED"] and len(phases) > 3:
+                     # Skip completed/pending if too many to keep mobile view clean
+                     continue
+                
+                mark = "✅" if phase_status in ["COMPLETADO", "COMPLETED"] else "⚛️" if phase_status == "ACTIVE" else "⏳"
+                narrative += f"{mark} **{phase['label']}**\n"
                 for task in phase.get("children", []):
-                    narrative += f"    - [{ 'x' if task['status'] == 'COMPLETED' else ' ' }] {task['label']}\n"
+                    status = task.get('status', 'PENDING')
+                    icon = "✅" if status == "COMPLETED" else "🔥" if status == "ACTIVE" else "🚫" if status == "FAILED" else "⚠️" if status == "NEEDS_REVIEW" else "⏳"
+                    narrative += f"    {icon} {task['label']}\n"
             narrative += "\n"
         
-        narrative += f"{labels['next']}\nEjecución del primer nodo del árbol: `Fase 1: Auditar`.\n\n"
-        narrative += f"{labels['gate']}\nSe requiere aprobación para iniciar la misión disciplinada."
+        # 4. Critical Status / Gate
+        failed_node = self._find_failed(tree["root"].get("children", [])) if tree and "root" in tree else None
+        
+        if failed_node:
+             narrative += f"> [!CAUTION]\n> **BLOQUEO:** `{failed_node['label']}` falló.\n"
+             narrative += f"> **Motivo:** {failed_node.get('evidence', 'Sin evidencia física.')}\n\n"
+             
+             recovery = failed_node.get("metadata", {}).get("recovery_proposal")
+             if recovery:
+                 narrative += f"🛠️ **RECUPERACIÓN PROPUESTA**\n"
+                 narrative += f"**{recovery['tactic']}**: {recovery['action']}\n\n"
+                 narrative += f"{labels['action']}\nEscribí **'ejecutar recuperación'** o **'reintentá'**.\n\n"
+        else:
+             active_label = self._find_active_label(tree, "Siguiente microtarea")
+             narrative += f"{labels['next']}\n`{active_label}`\n\n"
+             
+             # Clear call to action for Mobile
+             narrative += f"{labels['action']}\nEscribí **'seguí'**, **'ok'** o **'adelante'** para proceder.\n\n"
+        
+        risk_level = "MÍNIMO" if not mission.is_ambiguous else "MODERADO"
+        narrative += f"--- \n{risk_icon} {labels['risk']}: {risk_level} | Disciplina Operativa v2.5"
         
         return narrative.strip()
+
+    def _find_failed(self, nodes: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        for n in nodes:
+            if n.get("status") in ["FAILED", "NEEDS_REVIEW"]: return n
+            found = self._find_failed(n.get("children", []))
+            if found: return found
+        return None
+
+    def _find_active_label(self, tree: Dict[str, Any], default: str) -> str:
+        active_id = tree.get("active_node_id")
+        if not active_id or "root" not in tree: return default
+        
+        def search(nodes):
+            for n in nodes:
+                if n.get("id") == active_id: return n.get("label")
+                res = search(n.get("children", []))
+                if res: return res
+            return None
+        return search(tree["root"].get("children", [])) or default
 
 
 copilot_normalizer = CopilotNormalizer()

@@ -1,7 +1,10 @@
-﻿document.addEventListener('DOMContentLoaded', () // Final test
-    => {
-    // --- OMNI SAFE-MODE CACHE CLEANUP (MISSION 36) ---
-    const CACHE_RESET_ID = "omni_v5_chrome_fix";
+﻿document.addEventListener('DOMContentLoaded', () => {
+    // --- Phase 0: Emergency UI Bootstrap (Mission 36) ---
+    const loadPlaceholder = document.getElementById('js-load-placeholder');
+    if (loadPlaceholder) loadPlaceholder.remove();
+
+    // --- OMNI SAFE-MODE CACHE CLEANUP ---
+    const CACHE_RESET_ID = "omni_v6_mobile_safe";
     try {
         if (localStorage.getItem("omni_cache_reset") !== CACHE_RESET_ID) {
             if (sessionStorage.getItem("omni_reset_attempted")) {
@@ -10,27 +13,20 @@
                 sessionStorage.setItem("omni_reset_attempted", "true");
                 console.warn("[SAFE_MODE] Cache/Storage inconsistency detected. Purging...");
 
-                // Clear Service Workers
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.getRegistrations().then(regs => {
                         for (let r of regs) r.unregister();
                     });
                 }
-
-                // Clear Cache API
                 if (window.caches) {
                     caches.keys().then(names => {
                         for (let n of names) caches.delete(n);
                     });
                 }
-
-                // Clear Chat history if corrupt or just to ensure clean state
                 localStorage.removeItem("omni_chat_history_v1");
-
                 localStorage.setItem("omni_cache_reset", CACHE_RESET_ID);
                 console.warn("[SAFE_MODE] Reset complete. Forcing clean reload...");
                 setTimeout(() => {
-                    // Force cache bypass reload
                     window.location.search = `?reset_v=${Date.now()}`;
                 }, 500);
                 return;
@@ -61,8 +57,6 @@
     const voiceBtn = document.getElementById('voice-command');
     const chatLog = document.getElementById('chat-log');
     const closeContextBtn = document.getElementById('close-context');
-    const loadPlaceholder = document.getElementById('js-load-placeholder');
-    if (loadPlaceholder) loadPlaceholder.remove();
 
     if (shellInput) {
         shellInput.addEventListener('input', () => {
@@ -88,7 +82,7 @@
         const fallback = "¿En qué puedo ayudarte hoy?";
         const urlParams = new URLSearchParams(window.location.search);
         const inviteToken = urlParams.get('invite') || urlParams.get('beta');
-        const browser_lang = navigator.language.split('-')[0] || 'es';
+        const browser_lang = (navigator.language || 'es').split('-')[0];
 
         // Una sola voz: Greeting oficial
         addMessage(fallback, 'ai');
@@ -143,7 +137,13 @@
     window.omniShell = {
         closeLauncher: () => setLauncherActive(false),
         toggleContext: toggleContext,
-        setLauncherActive: setLauncherActive
+        setLauncherActive: setLauncherActive,
+        addInput: (text) => {
+            if (shellInput) {
+                shellInput.value = text;
+                processCommand();
+            }
+        }
     };
 
     openLauncherBtn.addEventListener('click', () => {
@@ -265,6 +265,7 @@
         ctxCurrentX = 0;
     }, { passive: true });
 
+    let touchStartY = 0; // Guard for strict mode
     launcherOverlay.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
     }, { passive: true });

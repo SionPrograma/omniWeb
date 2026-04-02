@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Dict, Any, Optional, List
 from backend.core.ai_host.processors.base import AICommandResponse
 from backend.core.system_state.engine import state_engine
@@ -11,8 +12,10 @@ from backend.core.ai_host.observability.tracing_api import tracing_api
 from backend.core.ai_host.observability.self_correction import self_correction
 from backend.core.ai_host.orchestration.tool_definitions import tool_registry
 from backend.core.ai_host.orchestration.prompt_compiler import prompt_compiler
-from backend.core.ai_host.orchestration.execution_tree import tree_planner
+from backend.core.ai_host.orchestration.execution_tree import tree_planner, ExecutionTree, NodeStatus
 from backend.core.ai_host.orchestration.scope_lock import DeviationDetector
+from backend.core.ai_host.orchestration.evidence_loop import evidence_loop
+from backend.core.ai_host.synthesis.copilot_normalizer import copilot_normalizer
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,8 @@ class CognitiveOrchestrator:
         # 0. Tracing Initialization
         trace_id = tracing_api.start_trace(message)
         session_id = str(context.get("user_id", "default_user")) if context else "default_user"
+        intent_group = understanding.get("intent_group", "unknown")
+        is_technical = intent_group.startswith("MISSION") or intent_group.startswith("CREATOR") or "compiled_mission" in understanding
         
         # Populate initial trace metadata from understanding
         trace = tracing_api.get_trace(trace_id)
@@ -125,9 +130,73 @@ class CognitiveOrchestrator:
             # If we have a compiled mission, generate the Execution Tree (CAPA 3)
             megaprompt_tree = None
             if understanding.get("compiled_mission"):
-                logger.info("[MEGAPROMPT_LAYER] Generating Execution Tree.")
-                tree_obj = tree_planner.generate(understanding["compiled_mission"])
+                logger.info("[MEGAPROMPT_LAYER] Generating/Loading Execution Tree.")
+                # Connect with MissionManager (CAPA 3)
+                from backend.core.ai_host.memory.mission_manager import mission_manager
+                active_mission = mission_manager.get_active_mission()
+                
+                if active_mission and "tree" in active_mission.context_snap:
+                   # Resume existing tree
+                   tree_obj = ExecutionTree(**active_mission.context_snap["tree"])
+                   logger.info(f"[MEGAPROMPT_LAYER] Resuming mission Tree: {tree_obj.mission_id}")
+                else:
+                   # New mission
+                   tree_obj = tree_planner.generate(understanding["compiled_mission"])
+                
+                # --- SELF-VERIFICATION & RECOVERY LOOP (CAPA 2, 3, 4 & 5) ---
+                # Before synthesizing the next step, verify the last proposed task
+                if active_mission and tree_obj.active_node_id:
+                    def find_and_verify(node):
+                        if node.id == tree_obj.active_node_id:
+                             # DETECT RECOVERY INTENT: If currently FAILED but user wants to fix it
+                             msg_low = message.lower()
+                             is_recovery_intent = any(kw in msg_low for kw in ["reintenta", "arregla", "fix", "hazlo", "procede", "recupera"])
+                             
+                             if node.status == NodeStatus.FAILED and is_recovery_intent:
+                                 logger.info(f"[MEGAPROMPT_RECOVERY] Resetting node {node.id} for recovery tactic execution.")
+                                 tree_obj.activate_recovery(node.id)
+                             
+                             # VERIFICATION Logic
+                             if node.status in [NodeStatus.ACTIVE, NodeStatus.PENDING, NodeStatus.RECOVERING]:
+                                 # REAL VERIFICATION: Only assume success if the brain response matches the intent
+                                 execution_status = "success"
+                                 if brain_response and brain_response.intent == "ERROR":
+                                     execution_status = "failed"
+                                 
+                                 logger.info(f"[MEGAPROMPT_VERIFICATION] Triggering verification cycle for {node.id} ({node.status})")
+                                 evidence = evidence_loop.verify_node(node, context={"execution_status": execution_status})
+                                 evidence_loop.close_node(node, evidence)
+                                 
+                                 # ADVANCE ONLY IF VERIFIED (CAPA 3)
+                                 if evidence.passed:
+                                     tree_obj.advance_active_node()
+                                 
+                                 # CAPA 1 - Cognitive Telemetry (Block 16)
+                                 active_mission.telemetry_snap = {
+                                     "last_event": f"Verificación: {evidence.details}",
+                                     "active_phase": tree_obj.active_node_id,
+                                     "last_sync": datetime.now().strftime("%H:%M:%S"),
+                                     "status_color": "var(--pass-color)" if evidence.passed else "var(--creator-gold)"
+                                 }
+                             return True
+                        for child in node.children:
+                            if find_and_verify(child): return True
+                        return False
+                    find_and_verify(tree_obj.root)
+                
                 megaprompt_tree = tree_obj.model_dump()
+                # Persist updated status
+                if active_mission:
+                    active_mission.context_snap["tree"] = megaprompt_tree
+                    mission_manager.save_mission(active_mission)
+                else:
+                    # If it's a new compiled mission without a manager entry, create one
+                    active_mission = mission_manager.create_mission(
+                        goal=understanding["compiled_mission"],
+                        plan=tree_obj
+                    )
+                    active_mission.context_snap["tree"] = megaprompt_tree
+                    mission_manager.save_mission(active_mission)
             
             final_response = await self.synthesize_response(
                 message=message,
@@ -153,8 +222,10 @@ class CognitiveOrchestrator:
         except Exception as e:
             logger.error(f"[ORCHESTRATOR] Critical Failure in pipeline: {e}")
             tracing_api.finalize_trace(trace_id, str(e), final_status="error")
-            # Return stable fallback without crashing the user experience
-            return self.brain._generate_natural_fallback("es")
+            # Return stable honest fallback
+            from .executive_synthesis import executive_synthesis
+            lang = context.get("language", "es") if context else "es"
+            return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("critical_error", lang))
 
     async def interpret_intent(self, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """PIPELINE 1: Intent Understanding (Normalizes interpretation)"""
@@ -273,11 +344,12 @@ class CognitiveOrchestrator:
                 fallback_res = await chat_proc.process(message, context=context)
                 if fallback_res: brain_response = fallback_res
             
-            if not brain_response or not brain_response.message:
+                from .executive_synthesis import executive_synthesis
+                lang = context.get("language", "es") if context else "es"
                 brain_response = AICommandResponse(
                     intent="orchestrator_fallback", 
                     status="success", 
-                    message="Fallo en la unificación de respuesta"
+                    message=executive_synthesis.synthesize_honest_feedback("uncertainty", lang)
                 )
         return brain_response
 
@@ -395,6 +467,17 @@ class CognitiveOrchestrator:
                 query=message,
                 surface=source_surface
             )
+            
+            # --- COPILOT NORMALIZATION (Workspace Only) ---
+            if source_surface == "workspace" and is_technical:
+                # Apply high-quality technical formatting for Creator Cab
+                brain_response.message = copilot_normalizer.normalize(
+                    text=brain_response.message,
+                    understanding=understanding,
+                    lang="es", # Defaulting to es for workspace
+                    task_tree=task_tree,
+                    source_surface="workspace"
+                )
         
         # 6.2 Adaptation & Antimodal
         if not is_technical:

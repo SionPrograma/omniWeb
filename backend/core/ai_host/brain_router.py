@@ -67,7 +67,11 @@ class BrainRouter:
         # 0.5 MISSION CONTINUITY GUARD
         active_mission = mission_manager.get_active_mission()
         if active_mission and intent_group == "NATURAL_CHAT" and active_mission.status == MissionStatus.OPEN:
-             mission_manager.set_status(MissionStatus.PAUSED, reason="Interrupción por charla casual.")
+             if source_surface == "workspace":
+                  # In Workspace, we protect the mission flow from accidental "casual" misclassifications
+                  logger.info("[BRAIN_ROUTER] Shielding active mission from casual interruption in Workspace.")
+             else:
+                  mission_manager.set_status(MissionStatus.PAUSED, reason="Interrupción por charla casual.")
 
         # 0.7 CONVERSATION FAST-PATH (Bloque Modo Conversación)
         # For casual chat on the public chat surface, skip deliberation entirely.
@@ -75,7 +79,7 @@ class BrainRouter:
         if (
             source_surface == "chat" 
             and mode_hint == "conversational" 
-            and intent_group in ["NATURAL_CHAT", "GREETING"]
+            and intent_group in ["NATURAL_CHAT", "GREETING", "ONBOARDING"]
             and not self._is_complex_request(msg_clean, specific_intent or "")
         ):
             logger.info(f"[FAST_CONV] Conversation fast-path activated for: '{msg_clean[:40]}'")
@@ -85,6 +89,12 @@ class BrainRouter:
                     return await self._finalize_interaction(msg_clean, res, intent_group)
             except Exception as conv_err:
                 logger.warning(f"[FAST_CONV_FAIL] {conv_err}. Falling through to full pipeline.")
+
+        # 0.8 DIRECT HONESTY FAST-PATH (Anti-Evasive Guard)
+        if intent_group == "FACTUAL_UNCERTAINTY":
+            from .orchestration.executive_synthesis import executive_synthesis
+            logger.info(f"[HONESTY_FAST_PATH] Factual uncertainty detected for: '{msg_clean[:40]}'")
+            return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("not_knowable", lang))
 
         # 1. ASSEMBLE DELIBERATION CONTEXT (Protected Pipeline Entry)
         try:
@@ -97,10 +107,8 @@ class BrainRouter:
         except Exception as e:
             logger.error(f"[PIPELINE_ERROR] Deliberation context assembly failed: {e}. Bypassing to default.")
             # Simple fallback context
-            chat_proc = self.command_router.registry.get_processor("chat")
-            if chat_proc:
-                return await chat_proc.process(msg_clean, context=context)
-            return self._generate_natural_fallback(lang)
+            from .orchestration.executive_synthesis import executive_synthesis
+            return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("critical_error", lang))
             
         logger.info(f"[DIRECTOR] Mode: {mode_hint} | Intent: {intent_group}")
 
@@ -120,6 +128,14 @@ class BrainRouter:
                  return await self._finalize_interaction(msg_clean, res, "follow_up")
 
             # C. DEEP COGNITIVE PATH (El Cerebro Estructurado de OmniWeb)
+            # Prioridad 0: MISSION INTAKE & ADJUSTMENT (Phase 17-20)
+            if msg_clean.startswith("mission:") or intent_group == "MISSION_INTENT":
+                 if specific_intent == "mission_adjust":
+                      res = await self._handle_mission_adjustment(msg_clean)
+                      return await self._finalize_interaction(msg_clean, res, "mission_adjustment")
+                 res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
+                 return await self._finalize_interaction(msg_clean, res, "swarm_orchestration")
+
             # Prioridad 1: Puente L2 (Groq) si es habilitado y complejo.
             from .cognition.cognitive_bridge import cognitive_bridge
             if cognitive_bridge.enabled and self._is_complex_request(msg_clean, specific_intent):
@@ -148,12 +164,17 @@ class BrainRouter:
                  return await self._finalize_interaction(msg_clean, res, "technical_analysis")
 
             # D. CONVERSATIONAL PATH (Fallback Natural para charla orgánica)
+            if intent_group == "FACTUAL_UNCERTAINTY":
+                 from .orchestration.executive_synthesis import executive_synthesis
+                 return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("not_knowable", lang))
+                 
             res = await self._handle_natural_chat(msg_clean, delib_context, lang)
             return await self._finalize_interaction(msg_clean, res, intent_group)
 
         except Exception as route_err:
             logger.error(f"[ROUTER_FAULT] Error in Director flow: {route_err}")
-            return self._generate_natural_fallback(lang)
+            from .orchestration.executive_synthesis import executive_synthesis
+            return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("critical_error", lang))
 
 
     async def _finalize_interaction(self, msg: str, res: AICommandResponse, intent: str) -> AICommandResponse:
@@ -231,7 +252,8 @@ class BrainRouter:
              ctx_dict = (vars(ctx) if hasattr(ctx, '__dict__') else {}) if ctx else {}
              res = await chat_proc.process(msg, context={**ctx_dict, "tone": "natural_chatbot"})
              return res
-        return self._generate_natural_fallback(lang)
+        from .orchestration.executive_synthesis import executive_synthesis
+        return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("uncertainty", lang))
 
 
     async def _handle_swarm_orchestration(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
@@ -245,12 +267,45 @@ class BrainRouter:
         # 1. INTERPRET
         interpreted = await command_interpreter.interpret(msg)
         
+        # 1.5. ENRICH DELIBERATION CONTEXT (Phase 17: Mission Intake)
+        if hasattr(ctx, 'mission_intake'):
+             ctx.mission_intake = interpreted.dict()
+             logger.info(f"[INTAKE] Captured risks: {len(interpreted.risks)} | Criteria: {len(interpreted.success_criteria)}")
+
         # 2. PLAN
         plan = await mission_planner.create_plan(interpreted)
         
         # 3. AUDIT FEASIBILITY
         is_safe, refined_plan, risks = await feasibility_auditor.audit_plan(plan)
         
+        # 3.5 SYNC TO PERSISTENT MISSION STATE
+        from .memory.mission_manager import mission_manager
+        tree = plan.to_execution_tree()
+        mission = mission_manager.create_mission(
+            goal=plan.interpreted_goal,
+            plan_id=plan.title,
+            pending_steps=[str(s.id) for s in plan.steps],
+            plan=plan
+        )
+        # Populate operational parameters (Phase 18 & 19)
+        mission.parameters = {
+            "audit_only": interpreted.audit_only,
+            "conservative_mode": interpreted.conservative_mode,
+            "roadmap_first": interpreted.roadmap_first,
+            "constraints": interpreted.constraints,
+            "success_criteria": interpreted.success_criteria,
+            "forbidden_paths": interpreted.forbidden_paths,
+            "forbidden_layers": interpreted.forbidden_layers,
+            "allowed_paths": interpreted.allowed_paths,
+            "aggressiveness": interpreted.aggressiveness
+        }
+        
+        # Force tree injection if mission_manager didn't do it automatically from plan object
+        mission.context_snap["tree"] = tree
+        mission.related_targets = plan.affected_layers
+        mission.blocked_reasons = plan.risks
+        mission_manager.save_mission(mission)
+
         # 4. EXECUTE
         mission_result = await mission_executor.execute(refined_plan, vars(ctx))
         
@@ -268,6 +323,197 @@ class BrainRouter:
             payload=mission_result
         )
 
+    async def _handle_mission_adjustment(self, msg: str) -> AICommandResponse:
+        """
+        Handles mid-mission constitution changes (Phase 20).
+        """
+        from backend.core.ai_host.memory.mission_manager import mission_manager
+        from backend.core.ai_host.command_reasoning.command_interpreter import command_interpreter
+        
+        active = mission_manager.get_active_mission()
+        if not active:
+             return AICommandResponse(
+                 intent="mission_adjust",
+                 status="error",
+                 message="No hay ninguna misión activa para ajustar."
+             )
+
+        msg_lower = msg.lower()
+
+        # 0.0 CREATOR-ONLY PIN OVERRIDE (Phase 21: Authority Injection) - SHIELD PRIORITY
+        pin_pattern = r"(?:autoriz|override|confirm|valid|pin).+?(\d{4})"
+        pin_match = re.search(pin_pattern, msg_lower)
+        if pin_match:
+             pin = pin_match.group(1)
+             if pin == "1234": # Security PIN (Phase 21)
+                  active.parameters["hard_override_granted"] = True
+                  mission_manager.save_mission(active)
+                  return AICommandResponse(
+                      intent="mission_control",
+                      status="success",
+                      message="Autoridad reforzada confirmada. PIN validado. Barreras extremas levantadas temporalmente." if "es" in msg_lower else "Reinforced authority confirmed. PIN validated. Extreme barriers lifted.",
+                      payload={"hard_override": True}
+                  )
+             else:
+                  return AICommandResponse(
+                      intent="mission_control",
+                      status="failure",
+                      message="PIN incorrecto. Autoridad del Creador denegada." if "es" in msg_lower else "Incorrect PIN. Creator authority denied.",
+                      payload={"hard_override": False}
+                  )
+
+        # Interpret the NEW prompt in the context of adjustment
+        interpreted = await command_interpreter.interpret(msg)
+        
+        # SMART MERGE: Granular detection of what to ADD vs what to REMOVE
+        # 0. SNAPSHOT CAPTURE/RESTORE (Phase 21: Constitutional Snapshots)
+        save_pattern = r"(?:guard[áa]|salv[áa]|save) (?:este |el |)(?:perfil|preset|snapshot|configuraci[óo]n)(?: como|)? ([\w\s\-]+)"
+        restore_pattern = r"(?:restaur[áa]|carg[áa]|aplic[áa]|restore|load) (?:el |)(?:perfil|preset|snapshot|configuraci[óo]n) ([\w\s\-]+)"
+        
+        save_match = re.search(save_pattern, msg, re.IGNORECASE)
+        if save_match:
+             name = save_match.group(1).strip()
+             mission_manager.save_governance_snapshot(name, active.parameters)
+             return AICommandResponse(
+                 intent="mission_adjust",
+                 status="success",
+                 message=f"Constitución guardada como perfil: '{name}'" if "es" in msg_lower else f"Constitution saved as profile: '{name}'",
+                 payload={"snapshot_name": name}
+             )
+
+        restore_match = re.search(restore_pattern, msg, re.IGNORECASE)
+        if restore_match:
+             name = restore_match.group(1).strip()
+             params = mission_manager.get_governance_snapshot(name)
+             if params:
+                  mission_manager.update_mission_parameters(params)
+                  return AICommandResponse(
+                      intent="mission_adjust",
+                      status="success",
+                      message=f"Perfil '{name}' restaurado y aplicado." if "es" in msg_lower else f"Profile '{name}' restored and applied.",
+                      payload={"restored_params": params}
+                  )
+             else:
+                  return AICommandResponse(
+                      intent="mission_adjust",
+                      status="error",
+                      message=f"No se encontró el perfil '{name}'." if "es" in msg_lower else f"Profile '{name}' not found."
+                  )
+
+        # 0.1 STABILIZATION COMPLETION (Phase 21: Cooldown)
+        stabilization_pattern = r"(?:sistema |estado |)(?:estabilizado|enfriado|continu[áa] tras enfriamiento)"
+        if re.search(stabilization_pattern, msg_lower):
+             mission_manager.complete_stabilization()
+             return AICommandResponse(
+                 intent="mission_control",
+                 status="success",
+                 message="Fase de estabilización completada. Misión reanudada para la siguiente tanda." if "es" in msg_lower else "Stabilization complete. Mission resumed for the next wave.",
+                 payload={"cooldown_active": False}
+             )
+
+        # 0.1 GOVERNANCE MANUAL (Phase 21: Final Synthesis)
+        if any(k in msg_lower for k in ["manual de gobernanza", "guia de control", "governance manual"]):
+             manual = mission_manager.get_governance_manual()
+             return AICommandResponse(
+                 intent="mission_control",
+                 status="success",
+                 message=manual,
+                 payload={"manual_active": True}
+             )
+
+        # 0.1 AUTHORITY INJECTION (Phase 21: Autonomy Boundaries)
+        authority_pattern = r"(?:autoriz[áa]|inyect[áa]|ampli[áa]|continu[áa]|repon[áa]) (?:el |la |este |esta |)(?:riesgo|autonom[íi]a|presupuesto|autoridad|igual)"
+        if re.search(authority_pattern, msg_lower):
+             mission_manager.authorize_risk_extension(10.0)
+             return AICommandResponse(
+                 intent="mission_control",
+                 status="success",
+                 message="Inyección de autoridad recibida. Presupuesto de riesgo ampliado +10.0. Misión reanudada." if "es" in msg_lower else "Authority injection received. Risk budget extended +10.0. Mission resumed.",
+                 payload={"new_budget": active.parameters.get("risk_budget")}
+             )
+
+        # 1. Start with current state
+        new_forbidden_layers = list(active.parameters.get("forbidden_layers", []))
+        new_forbidden_paths = list(active.parameters.get("forbidden_paths", []))
+        new_allowed_paths = list(active.parameters.get("allowed_paths", []))
+        new_frozen_layers = list(active.parameters.get("frozen_layers", []))
+        new_frozen_paths = list(active.parameters.get("frozen_paths", []))
+        
+        # 2. Process ADDITIONS (bloqueá, no toques, congelá, pausá)
+        if interpreted.forbidden_layers:
+             for l in interpreted.forbidden_layers:
+                  if l not in new_forbidden_layers: new_forbidden_layers.append(l)
+        if interpreted.forbidden_paths:
+             for p in interpreted.forbidden_paths:
+                  if p not in new_forbidden_paths: new_forbidden_paths.append(p)
+        if interpreted.frozen_layers:
+             for l in interpreted.frozen_layers:
+                  if l not in new_frozen_layers: new_frozen_layers.append(l)
+        if interpreted.frozen_paths:
+             for p in interpreted.frozen_paths:
+                  if p not in new_frozen_paths: new_frozen_paths.append(p)
+        if interpreted.allowed_paths:
+             for p in interpreted.allowed_paths:
+                  if p not in new_allowed_paths: new_allowed_paths.append(p)
+
+        # 3. Process SUBTRACTIONS (permití, sacá, remove, except, descongelá)
+        # We re-run a mini-interpretation for removals
+        sub_patterns = [r"(?:permit[íi]|sac[áa]|de[j]a|(?<!no )toc[áa]|(?<!no )afect[áa]|remove|allow|descongel[áa]|unfreeze|liber[áa]|release) (?:el archivo |la ruta |el path |la carpeta |la capa |el |la |)([\w\./\-\*]+)"]
+        for p in sub_patterns:
+             for match in re.finditer(p, msg_lower):
+                  term = match.group(1).strip()
+                  # Try to find if this term is a layer
+                  layer_map = {"ui": ["ui", "interfaz"], "backend": ["backend", "api"], "shell": ["shell"], "css": ["css", "estilos"], "db": ["db", "base de datos"], "auth": ["auth"], "navigation": ["navegación"]}
+                  found_layer = None
+                  for l, keywords in layer_map.items():
+                       if any(k in term for k in keywords): found_layer = l; break
+                  
+                  if found_layer:
+                       if found_layer in new_forbidden_layers: new_forbidden_layers.remove(found_layer)
+                       if found_layer in new_frozen_layers: new_frozen_layers.remove(found_layer)
+                  else:
+                       if term in new_forbidden_paths: new_forbidden_paths.remove(term)
+                       if term in new_frozen_paths: new_frozen_paths.remove(term)
+                       if term in new_allowed_paths: new_allowed_paths.remove(term)
+
+        new_params = {
+            "forbidden_layers": new_forbidden_layers,
+            "forbidden_paths": new_forbidden_paths,
+            "allowed_paths": new_allowed_paths,
+            "frozen_layers": new_frozen_layers,
+            "frozen_paths": new_frozen_paths
+        }
+        
+        # Special case: "sacá el modo quirúrgico"
+        if "sacá el modo quirúrgico" in msg_lower or "remove surgical mode" in msg_lower or "permití todo" in msg_lower:
+             new_params["aggressiveness"] = "balanced"
+        elif interpreted.aggressiveness != "balanced":
+             new_params["aggressiveness"] = interpreted.aggressiveness
+        
+        # 4. Process FLAGS
+        if "audit" in msg_lower: new_params["audit_only"] = interpreted.audit_only
+        if "conservador" in msg_lower or "conservative" in msg_lower: new_params["conservative_mode"] = interpreted.conservative_mode
+        if "roadmap" in msg_lower: new_params["roadmap_first"] = interpreted.roadmap_first
+
+        mission_manager.update_mission_parameters(new_params)
+        
+        # Feedback message
+        changes_desc = []
+        if "frozen_layers" in new_params and new_frozen_layers: changes_desc.append(f"Zonas Congeladas: {new_frozen_layers}")
+        if "forbidden_layers" in new_params and new_forbidden_layers: changes_desc.append(f"Capas Bloqueadas: {new_forbidden_layers}")
+        if "aggressiveness" in new_params: changes_desc.append(f"Modo: {new_params['aggressiveness']}")
+        
+        body = "Control sectorial actualizado." if "es" in msg_lower else "Sectorial control updated."
+        if changes_desc:
+             body += f" ({', '.join(changes_desc)})"
+
+        return AICommandResponse(
+            intent="mission_adjust",
+            status="success",
+            message=body,
+            payload={"updates": new_params}
+        )
+
     def _normalize_request(self, msg: str) -> str:
         """Cleans up conversational noise for the reasoning layer."""
         noise = ["oye omni", "escucha", "puedes", "hey omni", "tell me", "can you"]
@@ -280,8 +526,12 @@ class BrainRouter:
         if any(g in msg for g in greetings):
             return False
             
-        short_prompts = ["perfecto", "seguimos", "y ahora?", "vale", "ok", "dale", "seguí", "continuemos", "perfect", "keep going", "and now?", "go on", "por qué?", "por que?", "why?"]
-        return msg in short_prompts or len(msg.split()) < 3
+        short_prompts = [
+            "perfecto", "seguimos", "y ahora?", "vale", "ok", "dale", "seguí", "continuemos", 
+            "perfect", "keep going", "and now?", "go on", "por qué?", "por que?", "why?",
+            "reintentá", "reintenta", "retry", "arreglalo", "fix it", "listo", "hacelo", "hazlo", "eso"
+        ]
+        return msg in short_prompts or (len(msg.split()) < 3 and source_surface == "workspace")
 
     async def _handle_short_prompt(self, msg: str, ctx: Any, lang: str, system_state: Optional[Any] = None) -> AICommandResponse:
         mission = mission_manager.get_active_mission()
@@ -603,27 +853,9 @@ class BrainRouter:
         return "Comparar tiempos de respuesta con el benchmark actual del sistema." if lang == "es" else "Compare response times with the current system benchmark."
 
     def _generate_natural_fallback(self, lang: str) -> AICommandResponse:
-        """Generates a randomized natural language reply for conversational continuity."""
-        import random
-        if lang == "es":
-            options = [
-                "Acá estoy, contame. ¿En qué te puedo ayudar?",
-                "Dale, te escucho. ¿Qué necesitás?",
-                "Contame, ¿qué tenés en mente?",
-                "Claro, decime. ¿Qué hacemos?",
-                "Estoy listo. ¿Qué querés saber o hacer?",
-                "Sí, decime. ¿En qué andás?"
-            ]
-        else:
-            options = [
-                "I'm here, what's up? How can I help?",
-                "Sure thing, I'm listening. What do you need?",
-                "Tell me, what's on your mind?",
-                "Alright, go ahead. What are we doing?",
-                "Ready. What do you want to know or do?",
-                "Yes, tell me. What are you working on?"
-            ]
-        return AICommandResponse(intent="chat", status="success", message=random.choice(options))
+        """DEPRECATED: Use executive_synthesis.synthesize_honest_feedback instead."""
+        from .orchestration.executive_synthesis import executive_synthesis
+        return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("uncertainty", lang))
 
     def _detect_cognitive_query(self, msg: str) -> bool:
         """Detects requests for the shared cognitive core state."""
@@ -814,6 +1046,15 @@ class BrainRouter:
 
     def _detect_mode(self, msg: str, intent: str, source_surface: str = "chat") -> str:
         """Detects if we should be in Conversational or Technical reasoning mode."""
+        
+        # 0. Workspace Bias: If in cockpit/workspace, we default to technical unless pure smalltalk
+        if source_surface == "workspace":
+             active = mission_manager.get_active_mission()
+             if active and active.status == MissionStatus.OPEN:
+                  smalltalk_full = {"hola", "quien eres", "quién eres", "gracias", "chau", "adiós"}
+                  if msg in smalltalk_full and len(msg.split()) == 1:
+                       return "conversational"
+                  return "technical"
         
         # 1. Surface Override (Chat demands clean voice)
         if source_surface == "chat":

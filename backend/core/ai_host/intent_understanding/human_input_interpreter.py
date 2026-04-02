@@ -66,15 +66,36 @@ class HumanInputInterpreter:
         return text
 
     def _extract_intent(self, msg: str) -> str:
-        # Continuity / Flow
+        # MISSION - Approval / Completion
+        if any(w in msg.split() for w in ["aprobado", "listo", "aprobá", "aproba", "perfecto", "looks good", "se ve bien"]):
+            return "mission_approval"
+            
+        # MISSION - Continuity / Flow
         if any(w in msg for w in ["seguí", "segui", "dale", "continuá", "keep", "next", "ahora", "y?", "que mas"]):
-            return "follow_up"
+            return "mission_followup"
         
+        # MISSION - Control / Retries
+        if any(w in msg for w in ["reintentá", "reintenta", "abortá", "abortar", "cancelá", "cancelar", "reset", "detener"]):
+            return "mission_control"
+        
+        # MISSION - Adjustment (Constitución Dinámica + Sectorial Freeze + Snapshots)
+        if any(w in msg for w in ["ajustá", "ajusta", "corregí", "corregi", "mejorá", "mejora", "quise decir", "ahora", "bloqueá", "bloquea", "permití", "permiti", "sacá", "saca", "volvé", "volve", "congelá", "congela", "freeze", "pausá", "pausa", "descongelá", "descongela", "unfreeze", "restringí", "restringi", "guardá perfil", "guarda perfil", "restaurá perfil", "restaura perfil", "cargá el preset", "carga el preset", "snapshot"]):
+            return "mission_adjustment"
+
+        # MISSION - Audit Request
+        if any(w in msg for w in ["auditá", "audita", "auditar", "solo auditá", "solo audita", "revisa", "revisá", "inspecciona", "inspeccioná"]):
+            return "audit_request"
+
+        # MISSION - Identification (New Mission intent)
+        # We look for action verbs but we'll double confirm later with clarity
+        if any(w in msg for w in ["implementá", "implementa", "arreglá", "arregla", "creá", "crea", "build", "hacé", "hace", "desarrollá"]):
+             return "new_mission_intent"
+
         # Debug/Fix triggers
         if any(w in msg for w in ["anda", "falla", "raro", "mal", "funciona", "arregla", "bug", "error"]):
             return "debug"
         # Creation triggers
-        if any(w in msg for w in ["crea", "hace", "build", "pon", "agregá", "implementa"]):
+        if any(w in msg for w in ["crea", "hace", "build", "pon", "agregá", "implementa", "nueva"]):
             return "create"
         # Decision triggers
         if any(w in msg for w in ["decidi", "decidí", "elegí", "elige", "elegir", "cuál", "prioriza", "qué hago", "choice", "choose"]):
@@ -82,6 +103,10 @@ class HumanInputInterpreter:
         # Exploration/Question
         if any(w in msg for w in ["qué onda", "fijate", "mirá", "qué es"]):
             return "explore"
+        
+        # Clarification triggers
+        if any(w in msg for w in ["explicá", "explica", "entendi", "entendí", "cómo así", "como asi", "qué es esto", "que es esto", "o sea", "osea"]):
+            return "clarification"
         
         return "neutral_query"
 
@@ -102,39 +127,55 @@ class HumanInputInterpreter:
         return "general_system"
 
     def _extract_signals(self, msg: str) -> List[str]:
-        # Extract meaningful nouns or concepts
+        # Extract meaningful nouns or concepts + operational signals
         signals = []
+        
+        # Operational Mode Signals
+        if any(w in msg for w in ["conservador", "prudente", "despacio", "con cuidado", "sin romper"]):
+             signals.append("conservative_mode")
+        if any(w in msg for w in ["auditá primero", "solo auditá", "revisá primero", "inspeccioná", "audit_only"]):
+             signals.append("audit_only")
+        if any(w in msg for w in ["roadmap", "antes del plan", "primero el plan", "ver pasos"]):
+             signals.append("roadmap_first")
+        if any(w in msg for w in ["sin romper", "no rompas", "sin afectar"]):
+             signals.append("has_constraints")
+             
         key_terms = [
             "chat", "tono", "bug", "mobile", "interfaz", "log", "latency", "tarda",
             "lento", "latencia", "video", "responde", "vínculo", "link",
             "velocidad", "natural", "robot", "creador", "omni", "estilo",
             "ux", "ui", "arquitectura", "backend", "frontend", "lógica", "logic",
             "base", "núcleo", "core", "estado", "state", "buffer", "memoria",
-            "mem", "cpu", "performance", "rendimiento", "estabilidad"
+            "mem", "cpu", "performance", "rendimiento", "estabilidad",
+            "swarm", "agentes", "shadow", "auth", "login", "permisos", "database"
         ]
         for term in key_terms:
             if term in msg:
                 signals.append(term)
-        return signals
+        return list(set(signals)) # Deduplicate
 
     def _assess_clarity(self, msg: str) -> str:
+        import unicodedata
+        def normalize(s):
+            return "".join(c for c in unicodedata.normalize('NFD', s.lower()))
+            
         words = msg.split()
-        msg_lower = msg.lower()
+        msg_norm = normalize(msg)
         
-        # Follow-up markers (Continuity)
-        followup_bullets = ["seguí", "segui", "dale", "y ahora", "and now", "seguimos", "keep going", "continuemos", "go on", "continuar"]
-        if any(f in msg_lower for f in followup_bullets):
+        # Follow-up / Clarification markers (Continuity)
+        followup_bullets = ["seguí", "segui", "dale", "y ahora", "and now", "seguimos", "keep going", "continuemos", "go on", "continuar", "explicá", "explica", "cómo así", "como asi", "entendi", "entendí"]
+        if any(normalize(f) in msg_norm for f in followup_bullets):
              return "follow_up"
         
         # Vague References (Eso, lo otro)
         references = ["lo otro", "eso", "aquello", "ese", "esa", "este", "esta", "ahí", "ahi", "allá", "alla", "acá", "aca"]
-        if any(r == word for r in references for word in words) or re.search(r"\w+(lo|la|los|las|lo|la)$", msg_lower):
+        if any(normalize(r) == normalize(word) for r in references for word in words) or re.search(r"\w+(lo|la|los|las|lo|la)$", msg_norm):
              return "vague"
 
-        if len(words) < 3: # Even shorter threshold
+        if len(words) < 3 and not any(normalize(f) in msg_norm for f in followup_bullets):
             return "ambiguous"
         
-        if any(w in msg for w in ["algo", "onda", "medio", "tipo", "coso"]):
+        if any(normalize(w) in msg_norm for w in ["algo", "onda", "medio", "tipo", "coso"]):
             return "partial"
         return "clear"
 
