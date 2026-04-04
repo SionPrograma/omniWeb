@@ -65,11 +65,13 @@ class CommandRouter:
         from ..processors.governance_advisor_processor import GovernanceAdvisorProcessor
         from ..processors.communication_processor import CommunicationProcessor
         from ..processors.music_processor import MusicProcessor
+        from ..processors.multimodal_processor import MultimodalProcessor
         from ..processors.audit_processor import AuditProcessor
         from ..processors.proposal_processor import ProposalProcessor
 
         # Register in priority order
         self.registry.register("operational", OperationalProcessor())
+        self.registry.register("multimodal", MultimodalProcessor())
         self.registry.register("diagnostic", DiagnosticProcessor())
         self.registry.register("status", StatusProcessor())
         self.registry.register("chat", GeneralChatProcessor())
@@ -143,7 +145,11 @@ class CommandRouter:
             "mission_followup": self._handle_mission_task,
             "mission_cancel": self._handle_mission_task,
             "mission_approve": self._handle_mission_task,
-            "mission_status": self._handle_mission_task,
+            "visual_mission": self._handle_visual_mission,
+            "mission_status": self._handle_mission_status,
+            "mission_reorient": self._handle_visual_mission,
+            "mission_close": self._handle_mission_task,
+            "mission_branch": self._handle_mission_task,
             "identity": self._handle_chat_task # Map identity to chat
         }
 
@@ -352,7 +358,7 @@ class CommandRouter:
                     proposal_intents = ["copilot_proposal"]
                     
                     priority_intents = system_intents + chip_intents + nav_intents + memory_intents + builder_intents + brain_intents + proposal_intents + \
-                                       ["mission_followup", "mission_cancel", "mission_approve", "mission_status"]
+                                       ["mission_followup", "mission_cancel", "mission_approve", "mission_status", "mission_reorient", "mission_close", "mission_branch"]
                     
                     if intent in priority_intents and intent in self.intents and intent not in brain_intents:
                         logger.info(f"[COMMAND_ROUTED] Priority Routing to intent handler: {intent}")
@@ -416,9 +422,15 @@ class CommandRouter:
         # Actually, let's do it in the route method itself before returning.
         return res
 
-    async def _handle_chat_task(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        chat_proc = self.registry.get_processor("chat")
-        return await chat_proc.process(msg, context=context)
+    async def _handle_visual_mission(self, command: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        logger.info(f"[ROUTER] Handling visual mission request...")
+        proc = self.registry.get_processor("multimodal")
+        return await proc.process(command, context=context)
+
+    async def _handle_mission_status(self, command: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
+        logger.info(f"[ROUTER] Handling mission status check...")
+        proc = self.registry.get_processor("status")
+        return await proc.process(command, context=context)
 
     async def _handle_open_chip(self, msg: str) -> AICommandResponse:
         from backend.core.module_registry import module_registry
@@ -835,6 +847,10 @@ class CommandRouter:
             
         return AICommandResponse(intent="builder_error", status="error", message="No pude procesar la tarea del constructor.")
 
+    async def _handle_chat_task(self, msg: str) -> AICommandResponse:
+        chat_proc = self.registry.get_processor("chat")
+        return await chat_proc.process(msg)
+
     async def _handle_acknowledgment(self, msg: str) -> AICommandResponse:
         chat_proc = self.registry.get_processor("chat")
         return await chat_proc.process(msg)
@@ -859,84 +875,112 @@ class CommandRouter:
         return await processor.process(msg, context=context)
 
     async def _handle_mission_task(self, msg: str, context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
-        """Handels mission-specific operational intents (followup, cancel, approve)."""
-        from ..memory.mission_manager import MissionManager, MissionStatus
+        """Handels mission-specific operational intents (followup, cancel, approve, close, branch)."""
+        from ..memory.mission_manager import mission_manager, MissionStatus
+        from ..routing.patterns import any_pattern_matches, INTENT_PATTERNS
         
         intent = "mission_action"
         step_id = None
-        if "rescue job" in msg or "reintentar" in msg:
+        msg_clean = msg.lower()
+
+        # 1. EXPLICIT ERGONOMICS: CLOSE / BRANCH
+        if any_pattern_matches(msg_clean, INTENT_PATTERNS["mission_close"]):
+             logger.info("[ROUTER] Explicit mission close requested.")
+             mission_manager.close_current_mission("Finalizado por comando del Creador.")
+             return AICommandResponse(
+                 intent="mission_close", status="success",
+                 message="✅ Misión cerrada. OmniWeb queda en standby para tu próximo objetivo."
+             )
+        
+        if any_pattern_matches(msg_clean, INTENT_PATTERNS["mission_branch"]):
+             logger.info("[ROUTER] Mission branch requested.")
+             active = mission_manager.get_active_mission()
+             if active:
+                  mission_manager.close_current_mission("Ramificando hacia nueva misión separada.")
+             
+             # Create new one immediately to carry the 'BRANCH' context to UI
+             new_m = mission_manager.create_mission("Misión ramificada: " + msg_clean)
+             new_m.context_snap["operational_context"] = "BRANCH"
+             mission_manager.save_mission(new_m)
+
+             return AICommandResponse(
+                 intent="mission_branch", status="success",
+                 message="🌿 Misión ramificada. OmniWeb está listo para recibir el nuevo objetivo de forma independiente."
+             )
+
+        # 2. STANDARD MISSION ACTIONS
+        if "rescue job" in msg_clean or "reintentar" in msg_clean:
             intent = "mission_rescue"
-            # Extract ID if present (e.g. rescue job 1)
-            parts = msg.split()
+            parts = msg_clean.split()
             for p in parts:
                 if p.isdigit(): step_id = p; break
-        elif "cancel" in msg or "abort" in msg or "detener" in msg:
+        elif "cancel" in msg_clean or "abort" in msg_clean or "detener" in msg_clean:
             intent = "mission_cancel"
-        elif "aprob" in msg or "listo" in msg or "aplicá" in msg:
+        elif "aprob" in msg_clean or "listo" in msg_clean or "aplicá" in msg_clean or "apply" in msg_clean:
             intent = "mission_approve"
-        elif "checkpoint mission" in msg or "crear punto" in msg:
-            intent = "mission_checkpoint"
-            from ..memory.mission_manager import mission_manager
-            id = mission_manager.get_active_mission().mission_id
-            cp_id = mission_manager.create_checkpoint(id, f"Manual: {msg}")
-            return AICommandResponse(
-                intent=intent,
-                status="success",
-                message=f"🔒 Checkpoint '{cp_id}' creado con éxito. Estado de archivos y misión asegurado.",
-                payload={"action": "checkpoint", "checkpoint_id": cp_id}
-            )
-        elif "rollback mission" in msg or "volver al punto" in msg:
-            intent = "mission_rollback"
-            parts = msg.split()
-            cp_id = None
+        elif "reject" in msg_clean or "rechaza" in msg_clean:
+            intent = "mission_reject"
+            parts = msg_clean.split()
             for p in parts:
-                if p.startswith("cp_"): cp_id = p; break
+                if p.isdigit(): step_id = p; break
             
-            if cp_id:
-                from ..memory.mission_manager import mission_manager
-                mission_id = mission_manager.get_active_mission().mission_id
-                mission_manager.rollback_mission(mission_id, cp_id)
+            if step_id:
+                mission_manager.update_step_status(step_id, "FAILED", f"Rechazado por el Creador: {msg}")
                 return AICommandResponse(
-                    intent=intent,
-                    status="success",
-                    message=f"🔄 Rollback total a '{cp_id}' completado. El sistema ha vuelto al estado anterior.",
-                    payload={"action": "rollback", "checkpoint_id": cp_id}
+                    intent="mission_reject", status="success",
+                    message=f"❌ Propuesta de subtarea {step_id} rechazada. El sistema ha registrado el disenso.",
+                    payload={"action": "reject", "step_id": step_id}
                 )
 
-        elif "approve rescue" in msg or "aprobar rescate" in msg:
-            intent = "mission_rescue_approve"
-            parts = msg.split()
+        elif "reorient" in msg_clean or "re-anota" in msg_clean:
+            # Multi-path re-orientation handling
+            parts = msg_clean.split()
             for p in parts:
                 if p.isdigit(): step_id = p; break
             if step_id:
-                from ..memory.mission_manager import mission_manager
-                # Update status to completed after human approval
-                mission_manager.update_step_status(step_id, "COMPLETED", f"Rescate aprovado por Creador para {step_id}.")
+                 mission_manager.update_step_status(step_id, "RECOVERING", f"RE-ORIENTACIÓN VISUAL: {msg}")
+                 return await self._handle_brain_task(msg)
+
+        elif "checkpoint mission" in msg_clean or "crear punto" in msg_clean:
+            intent = "mission_checkpoint"
+            id = mission_manager.get_active_mission().mission_id
+            cp_id = mission_manager.create_checkpoint(id, f"Manual: {msg}")
+            return AICommandResponse(
+                intent=intent, status="success",
+                message=f"🔒 Checkpoint '{cp_id}' creado con éxito.",
+                payload={"action": "checkpoint", "checkpoint_id": cp_id}
+            )
+        elif "rollback mission" in msg_clean or "volver al punto" in msg_clean:
+            intent = "mission_rollback"
+            parts = msg_clean.split()
+            cp_id = None
+            for p in parts:
+                if p.startswith("cp_"): cp_id = p; break
+            if cp_id:
+                mission_id = mission_manager.get_active_mission().mission_id
+                mission_manager.rollback_mission(mission_id, cp_id)
                 return AICommandResponse(
-                    intent=intent,
-                    status="success",
-                    message=f"✅ Rescate para subtarea {step_id} aprobado y aplicado. Misión estabilizada.",
-                    payload={"action": "approve_rescue", "step_id": step_id}
+                    intent=intent, status="success",
+                    message=f"🔄 Rollback total a '{cp_id}' completado.",
+                    payload={"action": "rollback", "checkpoint_id": cp_id}
                 )
 
+        # 3. MISSION RESCUE EXECUTION
         if intent == "mission_rescue" and step_id:
             from ..shadow_swarm.shadow_orchestrator import shadow_orchestrator
-            # Execute rescue in background task if needed, or await for validation
-            # For UI responsiveness, we return quickly and let the tree update via telemetry
             import asyncio
             asyncio.create_task(shadow_orchestrator.rescue_step(step_id))
             return AICommandResponse(
-                intent=intent,
-                status="success",
-                message=f"Rescate para subtarea {step_id} iniciado. Observá el Pizarrón para ver la recuperación en tiempo real.",
+                intent=intent, status="success",
+                message=f"Rescate para subtarea {step_id} iniciado. Ver Pizarrón.",
                 payload={"action": "rescue", "step_id": step_id}
             )
 
         return AICommandResponse(
             intent=intent,
             status="success",
-            message="Procesando instrucción de misión..." if "es" in msg else "Processing mission instruction...",
-            payload={"action": intent, "original_command": msg}
+            message="Procesando instrucción de misión..." if "es" in msg_clean else "Processing mission instruction...",
+            payload={"action": intent, "original_command": msg_clean}
         )
 
 ai_command_router = CommandRouter()

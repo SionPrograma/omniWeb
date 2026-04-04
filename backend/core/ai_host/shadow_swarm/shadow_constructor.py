@@ -64,6 +64,7 @@ class ShadowConstructor(BaseModel):
     proposal: Optional[ShadowConstructorProposal] = None
     auditor_note: Optional[str] = None # Cross-validation note from ShadowAuditor
     was_redrafted: bool = False
+    visual_context: Optional[Dict[str, Any]] = None # Visual pulse (PHASE 21)
     context: Dict[str, Any] = {} # Metadata and operation results
 
     def assign(self, microtask: str, layer: str, file: str = None):
@@ -92,6 +93,29 @@ class ShadowConstructor(BaseModel):
                 strategy = "[CONSERVADOR] Ajuste mínimo de validación para evitar impacto en capa compartida."
                 risk_assessment = f"RIESGO DETECTADO: {audit_report.risk_level}. Afecta a {', '.join(audit_report.affected_components)}"
                 requires_approval = True # Hard enforce
+                
+        # 3. VISUAL & COGNITIVE RESCUE SYNC (CAPA 2 & 4)
+        if self.visual_context:
+            v_hyp = self.visual_context.get("hypothesis", {})
+            v_desc = v_hyp.get("description", "Anomalía visual")
+            v_layer = v_hyp.get("layer")
+            v_route = v_hyp.get("route")
+            v_confidence = v_hyp.get("confidence", "low")
+            
+            # Narrow Target if route was inferred but not set yet
+            if not self.target_file and v_route:
+                 self.target_file = v_route
+                 logger.info(f"[SHADOW-CONST] Narrowing target to inferred route: {v_route}")
+
+            strategy = f"[MULTIMODAL-RESCUE] Corregir en {v_layer}: {v_desc}"
+            risk_assessment = f"COGNITIVE PATCH ({v_confidence}): Orientado por evidencia visual refinada."
+            
+            if self.visual_context.get("annotations"):
+                strategy += f" (Foco en {len(self.visual_context['annotations'])} puntos señalados)."
+            
+            # If confidence is high, use more direct strategy
+            if v_confidence == "high":
+                 strategy = f"[SURGICAL-FIX] Patch directo en {v_layer}/{v_hyp.get('component')}: {v_desc}"
 
         proposal = ShadowConstructorProposal(
             microtask=self.assigned_microtask,

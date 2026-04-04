@@ -165,9 +165,20 @@
             if (item.classList.contains('disabled')) return;
 
             const url = item.getAttribute('data-url');
+            const view = item.getAttribute('data-view');
             const title = item.getAttribute('data-chip');
-            launchChip(url, title);
+
+            if (view && window.creatorEnv) {
+                window.creatorEnv.switchView(view);
+                if (view === 'mission') {
+                    window.creatorEnv.currentTab = 'copilot'; // Preference for Copilot chip
+                    window.creatorEnv.renderCockpit();
+                }
+            } else if (url) {
+                launchChip(url, title);
+            }
             setLauncherActive(false);
+
         });
     });
 
@@ -317,7 +328,7 @@
         }
     }
 
-    function addMessage(text, sender = 'ai', forceScroll = false, shouldSave = true) {
+    function addMessage(text, sender = 'ai', forceScroll = false, shouldSave = true, payload = null) {
         if (!text) return;
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}`;
@@ -589,8 +600,8 @@
         });
     }
 
-    async function processCommand() {
-        const cmd = shellInput.value.trim();
+    async function processCommand(explicitCmd = null) {
+        const cmd = (explicitCmd !== null) ? explicitCmd : shellInput.value.trim();
         if (!cmd) return;
 
         addMessage(cmd, 'user', true); // Force scroll for user message
@@ -614,6 +625,20 @@
         const evidence = [];
         if (window.creatorEditor && window.creatorEditor.currentPath) {
             evidence.push({ type: 'current_file', path: window.creatorEditor.currentPath });
+        }
+
+        // Phase 21: Multimodal Evidence Integration
+        if (window.creatorEnv && window.creatorEnv.sessionMedia && window.creatorEnv.sessionMedia.length > 0) {
+            window.creatorEnv.sessionMedia.forEach(m => {
+                evidence.push({
+                    type: 'image_capture',
+                    url: m.data,
+                    name: m.name,
+                    annotations: m.annotations || []
+                });
+            });
+            // Auto-clear after sending to avoid duplication
+            window.creatorEnv.clearMedia();
         }
 
         try {
@@ -644,7 +669,7 @@
 
             if (data.message) {
                 console.log("[EXECUTION_SUCCESS] Response received.");
-                addMessage(data.message, 'ai');
+                addMessage(data.message, 'ai', false, true, data.payload);
                 console.log("[RESPONSE_RENDERED] Message displayed in UI.");
 
                 // Update Audit Drawer if in Creator Mode
@@ -830,6 +855,29 @@
 
         content += `</div>`;
         msgDiv.innerHTML = content;
+
+        // Visual Diff Mini-Preview in Chat (Phase 21)
+        if (payload && payload.visual_diff && payload.visual_context) {
+            const vCtx = payload.visual_context;
+            const diff = payload.visual_diff;
+            const diffEl = document.createElement('div');
+            diffEl.className = "visual-diff-preview";
+            diffEl.style.cssText = "margin-top: 10px; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,170,0,0.2); border-left: 3px solid #ffaa00; border-radius: 8px; padding: 12px; display: flex; gap: 12px; align-items: center; overflow: hidden;";
+
+            diffEl.innerHTML = `
+                <div style="position: relative; width: 60px; height: 60px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+                    <img src="${vCtx.source_image}" style="width:100%; height:100%; object-fit: cover; opacity: 0.6;">
+                    ${(diff.removed_regions || []).map(r => `<div style="position:absolute; left:${r.x}%; top:${r.y}%; width:4px; height:4px; background:#ff4444; border-radius:50%; transform:translate(-50%, -50%);"></div>`).join('')}
+                    ${(diff.added_regions || []).map(r => `<div style="position:absolute; left:${r.x}%; top:${r.y}%; width:6px; height:6px; background:#00ff88; border-radius:50%; transform:translate(-50%, -50%); border: 1px solid #fff;"></div>`).join('')}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 0.65rem; color: #ffaa00; font-weight: bold; letter-spacing: 0.5px;">DIAGNÓSTICO RE-ORIENTADO</div>
+                    <div style="font-size: 0.6rem; opacity: 0.7; margin-top: 2px;">Detectado cambio en el foco visual. Ver Pizarrón para detalles.</div>
+                </div>
+            `;
+            msgDiv.appendChild(diffEl);
+        }
+
         chatLog.appendChild(msgDiv);
         scrollToBottom();
     }
@@ -1047,6 +1095,10 @@
     window.updateCapabilities = updateCapabilities;
     updateCapabilities(); // Initial check
     setInterval(updateCapabilities, 8000); // Polling status
+
+    // window.omniShell is already defined above with full methods.
+    // addInput is globally available via the first definition.
+
 
 });
 

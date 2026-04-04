@@ -2,10 +2,17 @@ from fastapi import APIRouter, Depends, Security
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 from backend.core.auth import get_current_user, OmniUser
+from backend.core.ai_host.memory.resource_lock_manager import resource_lock_manager
 from .command_router import CommandRouter
 
 ai_host_router = APIRouter()
 ai_router = CommandRouter()
+
+from ..execution.router import router as copilot_router
+from ..execution.editor_router import router as editor_router
+ai_host_router.include_router(copilot_router, prefix="/copilot", tags=["copilot"])
+ai_host_router.include_router(copilot_router, prefix="/execution", tags=["execution"])
+ai_host_router.include_router(editor_router, prefix="/editor", tags=["editor"])
 
 class ProcessRequest(BaseModel):
     message: str
@@ -35,12 +42,6 @@ async def process_message(request: ProcessRequest, current_user: OmniUser = Depe
     
     return formatted
 
-from ..execution.router import router as copilot_router
-from ..execution.editor_router import router as editor_router
-ai_host_router.include_router(copilot_router, prefix="/copilot", tags=["copilot"])
-ai_host_router.include_router(copilot_router, prefix="/execution", tags=["execution"])
-ai_host_router.include_router(editor_router, prefix="/editor", tags=["editor"])
-
 @ai_host_router.get("/status")
 async def get_host_status():
     """Returns the current status and mode of the AI Host."""
@@ -49,3 +50,24 @@ async def get_host_status():
         "identity": "OmniWeb Host",
         "mode": "hybrid"
     }
+
+@ai_host_router.get("/locks")
+async def get_active_locks():
+    """Returns all active resource locks for parallelism governance."""
+    return resource_lock_manager.get_all_active_locks()
+
+@ai_host_router.get("/execution/portfolio/drift/health")
+async def get_portfolio_drift_health(
+    limit: int = 20,
+    current_user: OmniUser = Depends(get_current_user)
+):
+    """
+    PHASE 82: REAL-TIME PORTFOLIO DRIFT ANALYTICS.
+    Aggregate cognitive health across all active missions.
+    """
+    from backend.core.ai_host.memory.mission_manager import mission_manager
+    from backend.core.permissions import enforce_permission
+    with set_chip_context("ai-host", current_user.id):
+        enforce_permission("creator_access")
+        health = mission_manager.get_portfolio_cognitive_health(limit=limit)
+        return {"status": "success", "portfolio": health}

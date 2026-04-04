@@ -17,6 +17,8 @@ class DriftType:
     SCOPE = "SCOPE_DRIFT"             # Expanding beyond allowed_paths
     EXTERNAL = "EXTERNAL_DRIFT"       # File changed outside OmniWeb flow
     GOVERNANCE = "GOVERNANCE_DRIFT"   # Rules not being followed
+    RESCUE = "AUTO_RESCUE"           # Strategic auto-alignment
+    COGNITIVE = "COGNITIVE_DRIFT"     # Cognitive map misalignment
 
 class DriftAlert:
     def __init__(self, type: str, severity: str, message: str, targets: List[str] = [], suggestion: str = ""):

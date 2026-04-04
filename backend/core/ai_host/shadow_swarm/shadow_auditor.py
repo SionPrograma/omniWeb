@@ -50,6 +50,7 @@ class ShadowAuditor(BaseModel):
     state: ShadowState = ShadowState.IDLE
     current_report: Optional[ShadowAuditorReport] = None
     trace_id: Optional[str] = None
+    visual_context: Optional[Dict[str, Any]] = None # Pulse of multimodal evidence
 
     def assign(self, microtask: str, layer: str):
         self.assigned_microtask = microtask
@@ -85,6 +86,29 @@ class ShadowAuditor(BaseModel):
         if "ui" in self.assigned_microtask.lower() or "frontend" in self.target_layer:
             risks.append(RiskCategory.UI_SYNC_RISK)
             findings.append("Riesgo de desincronización de estado en UI real-time.")
+            
+        # 3. MULTIMODAL VERIFICATION (PHASE 21)
+        if self.visual_context:
+            anns = self.visual_context.get("annotations", [])
+            points = [a for a in anns if a.get('type') == 'point']
+            hyp = self.visual_context.get("hypothesis", {})
+            
+            if points:
+                findings.append(f"VERIFICACIÓN VISUAL: Priorizando análisis en {len(points)} puntos señalados por el Creator.")
+            
+            if hyp.get("roadmap_hint"):
+                findings.append(f"ORIENTACIÓN TÉCNICA: {hyp['roadmap_hint']}")
+            
+            if hyp.get("component") and hyp["component"] != "unknown":
+                components.append(hyp["component"])
+                findings.append(f"COMPONENTE SOSPECHOSO: {hyp['component']}")
+            
+            if hyp.get("issue_type"):
+                 findings.append(f"TIPO DE INCIDENTE ESTIMADO: {hyp['issue_type']}")
+
+            for ann in anns:
+                if ann.get('comment'):
+                    findings.append(f"FOCO ANOTADO: {ann['comment']}")
 
         # Elevate risk if historical friction is present
         base_level = "HIGH" if len(risks) > 1 else ("MEDIUM" if risks else "LOW")

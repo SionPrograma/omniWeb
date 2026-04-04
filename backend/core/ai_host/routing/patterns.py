@@ -11,6 +11,10 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
         "inspect", "inspeccionar", "inspecciona", "inspeccioná", 
         "detalles de", "ver chip", "audita chip", "auditá chip", "auditar chip"
     ],
+    "visual_mission": [
+        "visual_evidence", "screenshot", "captura", "imagen", "mirá esto", "mira esto", 
+        "fijate acá", "analizá esta zona", "esto está roto", "visual analysis"
+    ],
     "list_chips": [
         "lista de chips", "ver chips", "mostrar chips", "mostrá chips", 
         "list chips", "active chips", "chips activos", "what chips", "chips instalados"
@@ -146,6 +150,18 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
     "mission_status": [
         "cómo va la misión", "estado de la misión", "qué falta", "mission status",
         "what is pending", "cuánto falta"
+    ],
+    "mission_reorient": [
+        "reorient", "re-anota", "corregí el foco", "corregí el punto", "no es ahí",
+        "es acá", "mirá de nuevo", "re-analizá", "reorient job", "reorient mission"
+    ],
+    "mission_close": [
+        "cerrar misión", "terminar misión", "fin de misión", "misión terminada", 
+        "finish mission", "close mission", "cerrar todo", "finalizar misión"
+    ],
+    "mission_branch": [
+        "nueva misión", "misión separada", "otra misión para esto", "abrí otra misión", 
+        "separar misión", "new mission", "separate mission", "otra misión"
     ]
 }
 
@@ -154,7 +170,11 @@ MISSION_INTENT_PATTERNS: Dict[str, List[str]] = {
     "mission_followup": INTENT_PATTERNS["mission_followup"],
     "mission_cancel": INTENT_PATTERNS["mission_cancel"],
     "mission_approve": INTENT_PATTERNS["mission_approve"],
-    "mission_status": INTENT_PATTERNS["mission_status"]
+    "mission_status": INTENT_PATTERNS["mission_status"],
+    "visual_mission": INTENT_PATTERNS["visual_mission"],
+    "mission_reorient": INTENT_PATTERNS["mission_reorient"],
+    "mission_close": INTENT_PATTERNS["mission_close"],
+    "mission_branch": INTENT_PATTERNS["mission_branch"]
 }
 
 # Helper to avoid repetitive loops

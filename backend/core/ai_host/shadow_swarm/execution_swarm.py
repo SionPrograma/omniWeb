@@ -68,23 +68,34 @@ class KnowledgeShadow(ShadowAgent):
 
 class RescueShadow(ShadowAgent):
     async def execute(self, job: ShadowJob) -> Any:
-        logger.info(f"[RESCUE_SHADOW] Rectifying: {job.description}")
+        logger.info(f"[RESCUE_SHADOW] Rectifying fail: {job.description}")
         # Analyze failure context from job.context
         failure = job.context.get("failure_evidence", {})
+        v_ctx = job.context.get("visual_context")
+        
+        strategy = "Surgical Strategy"
+        v_note = "Standard recovery loop."
+        
+        if v_ctx:
+             v_hyp = v_ctx.get("hypothesis", {})
+             v_note = f"Rescue oriented by visual signal: {v_hyp.get('description')}"
+             strategy = f"Cognitive Patch ({v_hyp.get('confidence')})"
+             
         await asyncio.sleep(0.8) # Heavier analysis
         return {
             "status": "success",
             "fix_applied": True,
-            "summary": f"Correction for '{job.description}' applied using surgical strategy.",
-            "new_evidence": "Patch verified and logic restored.",
+            "summary": f"Rescate en {job.description} usando {strategy}.",
+            "new_evidence": v_note,
+            "visual_refinement_applied": True if v_ctx else False,
             "cognitive_trace": {
-                "main_hypothesis": "El error original era un desbordamiento de caché.",
-                "alternatives_considered": ["Clear total", "Aumentar límite", "Surgical clean"],
-                "risks_detected": ["Posible pérdida de sesión si se borra de más"],
-                "chosen_path": "Limpieza quirúrgica de entradas corruptas",
-                "discarded_paths": ["Full restart (demasiado lento)"],
-                "evidence_used": "Logs de desbordamiento en L12",
-                "final_outcome": "Rescate completado con éxito."
+                "main_hypothesis": v_hyp.get("description") if v_ctx else "Error original detectado en logs.",
+                "alternatives_considered": ["Refactor", "Discard", "Surgical fix"],
+                "risks_detected": ["Impacto residual"],
+                "chosen_path": strategy,
+                "discarded_paths": ["Full refactor (High risk)"],
+                "evidence_used": f"Visual Refinement + {v_note}",
+                "final_outcome": "Rescate completado con éxito bajo orientación multimodal."
             }
         }
 

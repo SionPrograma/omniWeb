@@ -392,6 +392,122 @@
             background: #ff4444;
         }
 
+        /* Cognitive Drift Live Dashboard (Phase 83) */
+        .drift-panel {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            width: 380px;
+            background: rgba(10, 15, 30, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            backdrop-filter: blur(25px);
+            padding: 1.5rem;
+            z-index: 60;
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.15);
+            transition: all 0.4s ease;
+            max-height: 50vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drift-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.8rem;
+        }
+
+        .drift-mission-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+            transition: 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drift-mission-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            transform: translateX(5px);
+        }
+
+        .drift-badge {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 100px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .drift-badge.aligned {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+        }
+
+        .drift-badge.warning {
+            background: rgba(255, 187, 0, 0.1);
+            color: #ffbb00;
+        }
+
+        .drift-badge.attention_required {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+        }
+
+        .drift-badge.critical {
+            background: rgba(255, 68, 68, 0.1);
+            color: #ff4444;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+            }
+        }
+
+        .drift-score-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 8px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .drift-score-fill {
+            height: 100%;
+            transition: width 1s ease;
+        }
+
+        .trend-icon {
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+
+        .trend-up {
+            color: #ff4444;
+        }
+
+        .trend-down {
+            color: #00ff88;
+        }
+
         /* Knowledge Graph Panel */
         .knowledge-graph-panel {
             position: fixed;
@@ -1394,6 +1510,25 @@
             style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
             <div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 8px;">TARGET OPPORTUNITIES</div>
             <div id="opps-list"></div>
+        </div>
+    </div>
+
+    <!-- Real-Time Cognitive Drift Dashboard (Phase 81) -->
+    <div class="drift-panel glass-panel" id="drift-dashboard">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot" id="drift-pulse"></div>
+                <span style="font-weight: bold; font-size: 0.9rem; letter-spacing: 1px;">COGNITIVE HEALTH</span>
+            </div>
+            <span id="drift-count-badge" style="font-size: 0.7rem; opacity: 0.5;">0 ACTIVE MISSIONS</span>
+        </div>
+        <div id="drift-missions-container" style="overflow-y: auto; flex: 1; scrollbar-width: none;">
+            <div style="font-size: 0.8rem; opacity: 0.5; text-align: center; padding: 20px;">Escaneando salud de
+                misiones...</div>
+        </div>
+        <div style="margin-top: 10px; font-size: 0.65rem; opacity: 0.4; display: flex; justify-content: space-between;">
+            <span>UPDATED: <span id="drift-last-update">--:--</span></span>
+            <span style="cursor: pointer; color: var(--accent-color);" onclick="loadDriftHealth()">REFRESH</span>
         </div>
     </div>
 
@@ -2753,6 +2888,86 @@
                 </div>
             `).join('');
         }
+
+        // CAPA 3 (PHASE 83): LIVE DASHBOARD LOGIC
+        async function loadDriftHealth() {
+            try {
+                const response = await fetch('/api/v1/ai-host/execution/portfolio/drift/health');
+                if (!response.ok) return;
+                const data = await response.json();
+                const portfolio = data.portfolio || [];
+
+                const container = document.getElementById('drift-missions-container');
+                const countBadge = document.getElementById('drift-count-badge');
+                const lastUpdate = document.getElementById('drift-last-update');
+
+                if (!container) return;
+
+                countBadge.innerText = `${portfolio.length} ACTIVE MISSIONS`;
+                lastUpdate.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                if (portfolio.length === 0) {
+                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.5; text-align: center; padding: 20px;">Sin derivas detectadas. Sistema alineado.</div>';
+                    return;
+                }
+
+                container.innerHTML = portfolio.map(m => {
+                    const driftClass = m.drift_class.toLowerCase().includes('critical') ? 'critical' :
+                        m.drift_class.toLowerCase().includes('warning') ? 'warning' :
+                            m.drift_class.toLowerCase().includes('attention') ? 'attention_required' : 'aligned';
+                    const scoreColor = driftClass === 'critical' ? '#ff4444' : driftClass === 'warning' ? '#ffbb00' : driftClass === 'attention_required' ? '#00d4ff' : '#00ff88';
+                    const trendIcon = m.drift_trend === 'UP' ? '<span class="trend-up">▲</span>' :
+                        m.drift_trend === 'DOWN' ? '<span class="trend-down">▼</span>' : '●';
+
+                    const recoveryTag = m.healing_state === 'HEALING_ACTIVE' ?
+                        `<span style="font-size: 0.55rem; color: #00ff88; margin-left: 5px; border: 1px solid #00ff88; padding: 0 4px; border-radius: 4px;">HEALING</span>` : '';
+
+                    const governanceIcon = m.governance_state === 'GREEN' ? '🛡️' : '⚠️';
+
+                    return `
+                        <div class="drift-mission-card" onclick="window.location.href='/shell/?view=mission&id=${m.mission_id}'">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <div style="flex: 1; overflow: hidden;">
+                                    <div style="font-size: 0.8rem; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                                        ${governanceIcon} ${m.mission_name}
+                                    </div>
+                                    <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 2px;">ID: ${m.mission_id.substring(0, 8)} ${recoveryTag}</div>
+                                </div>
+                                <div class="drift-badge ${driftClass}">${m.drift_class.replace('_', ' ')}</div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem;">
+                                <span>Drift Score: <strong style="color: ${scoreColor}">${m.drift_score.toFixed(0)}</strong> ${trendIcon}</span>
+                                <span style="opacity: 0.6;">Consensus: ${m.consensus_state}</span>
+                            </div>
+                            
+                            <div class="drift-score-bar">
+                                <div class="drift-score-fill" style="width: ${Math.min(m.drift_score, 100)}%; background: ${scoreColor}"></div>
+                            </div>
+                            
+                            <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <span style="font-size: 0.55rem; opacity: 0.4;">GOV: ${m.governance_state}</span>
+                                <span style="font-size: 0.55rem; opacity: 0.4;">STATUS: ${m.recovery_status}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Visual Pulse
+                const pulse = document.getElementById('drift-pulse');
+                if (pulse) {
+                    pulse.style.background = portfolio.some(m => m.drift_score > 60) ? '#ff4444' : '#00ff88';
+                    pulse.style.boxShadow = `0 0 10px ${pulse.style.background}`;
+                }
+
+            } catch (error) {
+                console.warn('Drift monitoring failed:', error);
+            }
+        }
+
+        // Polling loop
+        setInterval(loadDriftHealth, 5000);
+        setTimeout(loadDriftHealth, 1000);
 
         // Event Listeners
         sendBtn.addEventListener('click', sendToAI);

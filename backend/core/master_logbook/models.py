@@ -19,6 +19,7 @@ class EntryType(str, Enum):
     ROADMAP = "roadmap"
     SYSTEM_EVENT = "system_event"
     USER_ACTION = "user_action"
+    MISSION_HANDOFF = "mission_handoff"
 
 class Priority(str, Enum):
     LOW = "low"

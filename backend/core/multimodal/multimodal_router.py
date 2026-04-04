@@ -25,6 +25,14 @@ class MultimodalRouter:
         if input_data.modality == "voice":
             return self.voice.normalize(input_data.raw_data)
         
+        if input_data.modality == "image":
+            # Phase 21: Visual Mission Input
+            # Normalizes image evidence into a descriptive prompt for the AI Host
+            image_desc = input_data.raw_data.get("description", "Captura de pantalla recibida.")
+            annotations = input_data.raw_data.get("annotations", [])
+            ann_text = f" con anotaciones en: {', '.join(annotations)}" if annotations else ""
+            return f"[VISUAL_EVIDENCE] {image_desc}{ann_text}"
+
         if input_data.modality == "gesture":
             logger.info("Gesture detected: %s", input_data.raw_data)
             return f"Execute gesture {input_data.raw_data}"

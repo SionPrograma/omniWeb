@@ -8,6 +8,7 @@ from typing import List, Dict, Optional, Any
 from enum import Enum
 from pydantic import BaseModel, Field
 from backend.core.database import db_manager
+from backend.core.ai_host.memory.resource_lock_manager import resource_lock_manager, LockType
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +58,29 @@ class FileMutationEngine:
         Executes a batch of file operations atomically.
         If any fails, rolls back the entire batch.
         """
-        logger.info(f"[MUTATION_ENGINE] Executing batch {batch.id} with {len(batch.operations)} ops")
+        logger.info(f"[MUTATION_ENGINE] Executing batch {batch.id} with {len(batch.operations)} ops (Mission: {batch.task_id})")
         
+        # 0. CONFLICT RESOLUTION (RESOURCE LOCKS - Phase: MISSION CONFLICT RESOLVER)
+        if batch.task_id:
+            affected_paths = [op.path for op in batch.operations]
+            conflict = resource_lock_manager.check_conflict(affected_paths, batch.task_id)
+            if conflict:
+                msg = f"CONFLICT: Resource {conflict['resource_key']} locked by mission {conflict['mission_id']}"
+                logger.error(f"[MUTATION_CONFLICT] {msg}")
+                await self._log_mutation(batch, "CONFLICT", error=msg)
+                return False, []
+
+            # Auto-acquire locks for this batch if not already held
+            for path in affected_paths:
+                success = resource_lock_manager.acquire_lock(
+                    path, batch.task_id, lock_type=LockType.EXCLUSIVE, reason=f"Mutation Batch {batch.id}"
+                )
+                if not success:
+                    msg = f"CONFLICT: Failed to acquire lock for {path} (Locked by other mission)"
+                    logger.error(f"[MUTATION_CONFLICT] {msg}")
+                    await self._log_mutation(batch, "CONFLICT", error=msg)
+                    return False, []
+
         # 1. Verification & Safety
         for op in batch.operations:
             if not self._is_safe(op.path):

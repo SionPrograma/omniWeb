@@ -41,9 +41,18 @@ class SystemState(BaseModel):
     is_healing: bool = False
     memory_usage: Dict[str, Any] = {}
     flow_data: Dict[str, Any] = {}
-    timestamp: float
+    timestamp: Any
     uptime_seconds: float
     sync_status: Optional[Dict[str, Any]] = None
     cluster: Optional[Dict[str, Any]] = None
     active_mission: Optional[Dict[str, Any]] = None
+    last_handoff: Optional[Dict[str, Any]] = None
+    mission_hierarchy: Optional[Dict[str, Any]] = None # New for Phase 21: Mission Graph
+    parallel_missions: List[Dict[str, Any]] = [] # Block 21: Focus/Parallelism
     proposals: List[Dict[str, Any]] = [] # Block 30: Swarm Visibility
+    resource_locks: List[Dict[str, Any]] = [] # MISSION CONFLICT RESOLVER
+    archived_missions: List[Dict[str, Any]] = [] # MISSION PORTFOLIO
+    completed_missions: List[Dict[str, Any]] = [] # MISSION PORTFOLIO
+    mission_events: List[Dict[str, Any]] = [] # MISSION CRITICAL TELEMETRY
+    portfolio_pulse: List[Dict[str, Any]] = [] # MISSION CRITICAL TELEMETRY
+    recommended_focus: Optional[Dict[str, Any]] = None # Phase 22: Mission Scheduling

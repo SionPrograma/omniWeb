@@ -4,6 +4,7 @@ from enum import Enum
 from pydantic import BaseModel
 from .shadow_constructor import ShadowConstructor, ConstructorState, ShadowConstructorProposal
 from .shadow_auditor import ShadowState
+from backend.core.ai_host.memory.mission_telemetry import mission_telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class ApprovalGateDecision(BaseModel):
     audit_confirmed: bool = False
     human_approval_required: bool = True
     checkpoint_required: bool = True
+    visual_context: Optional[Dict[str, Any]] = None # Phase 21: Evidence for human review
     result_summary: str
 
 class ApprovalGate:
@@ -54,7 +56,8 @@ class ApprovalGate:
                  intent=constructor.assigned_microtask,
                  targets=[constructor.target_layer or "shadow"],
                  action_type="shadow_draft",
-                 risk_hint="UNKNOWN"
+                 risk_hint="UNKNOWN",
+                 visual_context=constructor.visual_context
              )
         
         return self.execute_governance_check(
@@ -63,10 +66,19 @@ class ApprovalGate:
             action_type="mutation",
             risk_hint=proposal.risk_assessment,
             proposal_id=constructor.shadow_id,
-            audit_confirmed=constructor.auditor_note is not None
+            audit_confirmed=constructor.auditor_note is not None,
+            visual_context=constructor.visual_context
         )
 
-    def execute_governance_check(self, intent: str, targets: List[str], action_type: str, risk_hint: str = "MEDIUM", proposal_id: str = "gen_action", audit_confirmed: bool = False) -> ApprovalGateDecision:
+    def execute_governance_check(self, 
+                                 intent: str, 
+                                 targets: List[str], 
+                                 action_type: str, 
+                                 risk_hint: str = "MEDIUM", 
+                                 proposal_id: str = "gen_action", 
+                                 audit_confirmed: bool = False, 
+                                 visual_context: Optional[Dict[str, Any]] = None,
+                                 active_mission: Optional[Any] = None) -> ApprovalGateDecision:
         """
         Unified Governance Entry Point for ALL sensitive actions (Bloque 3).
         """
@@ -79,10 +91,12 @@ class ApprovalGate:
         
         # 2.1 CONSERVATIVE MODE ELEVATION (Phase 18)
         is_conservative = False
-        active_mission = None
+        # active_mission might be injected for testing or sub-flows
         try:
-             from backend.core.ai_host.memory.mission_manager import mission_manager
-             active_mission = mission_manager.get_active_mission()
+             if not active_mission:
+                 from backend.core.ai_host.memory.mission_manager import mission_manager
+                 active_mission = mission_manager.get_active_mission()
+             
              if active_mission and active_mission.parameters.get("conservative_mode"):
                   is_conservative = True
                   logger.info("[APPROVAL_GATE] Creator Conservative Mode: Elevating risk thresholds.")
@@ -102,9 +116,8 @@ class ApprovalGate:
         is_safe = True
         
         try:
-            if not active_mission:
-                 from backend.core.ai_host.memory.mission_manager import mission_manager
-                 active_mission = mission_manager.get_active_mission()
+            # Already initialized above
+            pass
 
             from backend.core.ai_host.orchestration.scope_lock import ScopeLock
             
@@ -267,7 +280,7 @@ class ApprovalGate:
                             mission_manager.save_mission(mission)
              except: pass
 
-        return ApprovalGateDecision(
+        decision = ApprovalGateDecision(
             proposal_id=proposal_id,
             status=status,
             requires_approval=True,
@@ -279,8 +292,54 @@ class ApprovalGate:
             audit_confirmed=audit_confirmed,
             human_approval_required=True,
             checkpoint_required=True,
+            visual_context=visual_context,
             result_summary=summary
         )
+
+        # PHASE 21: RECORD MULTIMODAL HISTORY SNAPSHOT
+        if active_mission and visual_context:
+            from datetime import datetime
+            snapshot = {
+                "timestamp": datetime.now().isoformat(),
+                "event": "GATE_DECISION",
+                "status": status.value,
+                "media_id": visual_context.get("media_id", "unknown"),
+                "annotations": visual_context.get("annotations", []),
+                "hypothesis": visual_context.get("hypothesis", {}),
+                "outcome": summary,
+                "proposal_id": proposal_id,
+                "reason": blocking_reason or "Evaluación de gobernanza completada.",
+                "visual_diff": visual_context.get("visual_diff")
+            }
+            # Only append if not already identical to the last one (avoid spam)
+            if not active_mission.multimodal_history or \
+               active_mission.multimodal_history[-1].get("proposal_id") != proposal_id or \
+               active_mission.multimodal_history[-1].get("event") != "GATE_DECISION":
+                active_mission.multimodal_history.append(snapshot)
+                mission_manager.save_mission(active_mission)
+
+        # 6. Telemetry (PHASE: GOVERNANCE & AUDIT OVERLAY)
+        if active_mission:
+            telemetry_severity = "INFO"
+            if status == GateStatus.BLOCKED_BY_RISK: telemetry_severity = "ERROR"
+            elif status in [GateStatus.AWAITING_HUMAN, GateStatus.ESCALATED, GateStatus.AWAITING_PIN]: telemetry_severity = "WARNING"
+            
+            mission_telemetry.record_event(
+                active_mission.mission_id,
+                f"gate_{status.value}",
+                f"Gobernanza: {summary}" + (f" - {blocking_reason}" if blocking_reason else ""),
+                severity=telemetry_severity,
+                details={
+                    "status": status.value,
+                    "danger": danger_level,
+                    "targets": targets,
+                    "reason": blocking_reason,
+                    "is_safe": is_safe
+                },
+                source_actor="ApprovalGate"
+            )
+
+        return decision
 
 
     def _trigger_drift_check(self, mission: Any, target: str, reason: str):
@@ -321,6 +380,7 @@ class ApprovalGate:
         health = {
             "status": "STEADY",
             "color": "#00ff88",
+            "score": 1.0,
             "recommendation": "Continuar con la misión normal.",
             "active_blocks": []
         }
@@ -328,33 +388,33 @@ class ApprovalGate:
         # PIN Required (Top Priority)
         if params.get("hard_override_granted") is False and mission.status == MissionStatus.PAUSED:
              # Check if blocked by PIN
-             if any("PIN" in r for r in mission.blocked_reasons):
-                  health.update({"status": "LOCKDOWN", "color": "#ff0055", "recommendation": "INYECTAR PIN de autoridad para reanudar núcleo."})
-                  health["active_blocks"].append("Creator PIN")
+              if any("PIN" in r for r in mission.blocked_reasons):
+                   health.update({"status": "LOCKDOWN", "color": "#ff0055", "score": 0.1, "recommendation": "INYECTAR PIN de autoridad para reanudar núcleo."})
+                   health["active_blocks"].append("Creator PIN")
         
         # Drift Critical
         elif any(a.get("severity") == "CRITICAL" for a in alerts):
-             health.update({"status": "EROSIÓN CRÍTICA", "color": "#ff0055", "recommendation": "Auditar deriva arquitectónica inmediatamente."})
+             health.update({"status": "EROSIÓN CRÍTICA", "color": "#ff0055", "score": 0.2, "recommendation": "Auditar deriva arquitectónica inmediatamente."})
              health["active_blocks"].append("Drift Detector")
 
         # Risk Exceeded
         elif risk_consumed >= risk_budget:
-             health.update({"status": "AUTONOMÍA AGOTADA", "color": "#ffaa00", "recommendation": "Ampliar presupuesto de riesgo o finalizar tanda."})
+             health.update({"status": "AUTONOMÍA AGOTADA", "color": "#ffaa00", "score": 0.3, "recommendation": "Ampliar presupuesto de riesgo o finalizar tanda."})
              health["active_blocks"].append("Autonomy Boundary")
 
         # Stabilization / Cooldown
         elif params.get("cooldown_active"):
-             health.update({"status": "ENFRIAMIENTO", "color": "#00e5ff", "recommendation": "Asegurar estabilidad antes de la siguiente wave."})
+             health.update({"status": "ENFRIAMIENTO", "color": "#00e5ff", "score": 0.6, "recommendation": "Asegurar estabilidad antes de la siguiente wave."})
              health["active_blocks"].append("Shadow Cooldown")
 
         # Drift Warning
         elif any(a.get("severity") == "WARNING" for a in alerts):
-             health.update({"status": "DESVIACIÓN LEVE", "color": "#ffcc00", "recommendation": "Revisar políticas de acceso o snapshots."})
+             health.update({"status": "DESVIACIÓN LEVE", "color": "#ffcc00", "score": 0.7, "recommendation": "Revisar políticas de acceso o snapshots."})
              health["active_blocks"].append("Drift Warning")
 
         # Guarded (Any constraints active)
         elif params.get("forbidden_paths") or params.get("frozen_paths"):
-             health.update({"status": "BAJO GUARDIA", "color": "#00ffcc", "recommendation": "Misión operando bajo restricciones constitucionales."})
+             health.update({"status": "BAJO GUARDIA", "color": "#00ffcc", "score": 0.9, "recommendation": "Misión operando bajo restricciones constitucionales."})
              health["active_blocks"].append("Constraint Mapping")
         
         return health

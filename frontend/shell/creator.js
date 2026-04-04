@@ -8,8 +8,15 @@
         this.auditIssues = [];
         this.correctionProposals = [];
         this.sessionMedia = [];
-        this.sessionMediaAnnotations = [];
         this.lastCopilotResponse = null;
+
+        // Phase 21: Visual Annotation Layer State
+        this.currentAnnotatingMediaId = null;
+        this.annotatorTool = 'point'; // 'point' | 'box'
+        this.tempAnnotations = [];
+        this.currentCorrectionStepId = null; // Phase 21: Track if we're correcting a rejected job
+        this._pendingWorkspacePanel = null; // Fix for navigation loop
+        this._navigationGuard = false;
     }
 
     init() {
@@ -18,6 +25,7 @@
         this.startStatusPolling();
         this.setupPermissionModal();
         this.setupMissionControl();
+        this.setupVisualAnnotator();
         this.bindAIVisual();
         this.setupQRScanner();
         this.setupAuditDrawer();
@@ -46,10 +54,16 @@
 
         setTimeout(() => {
             const hasAdminToken = localStorage.getItem('omni_token') || localStorage.getItem('omni_session');
-            if (document.body.classList.contains('creator-authenticated') || hasAdminToken || !document.body.classList.contains('user-mode')) {
-                console.log("Restoring Creator session...");
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewRequest = urlParams.get('view');
+
+            // Only auto-switch to mission if we are authenticated AND no specific view was requested via URL
+            if (!viewRequest && (document.body.classList.contains('creator-authenticated') || hasAdminToken || !document.body.classList.contains('user-mode'))) {
+                console.log("[CREATOR_BOOT] Restoring default Creator session (Mission)...");
                 this.switchView('mission');
                 if (window.masterLogbook) window.masterLogbook.toggle(true);
+            } else if (viewRequest) {
+                console.log("[CREATOR_BOOT] Respecting Deep Link view:", viewRequest);
             }
         }, 1500);
     }
@@ -89,9 +103,11 @@
                 ['OPEN', 'ACTIVE', 'RECOVERING'].includes(this.systemState.active_mission.status);
             const isWorkspaceVisible = document.getElementById('creator-workspace-view').classList.contains('active');
 
-            if (isWorkspaceVisible && isMissionActive) {
-                interval = 2000; // Fast sync during operations
-            } else if (!isWorkspaceVisible) {
+            if (isMissionActive) {
+                interval = 1000; // FLUID SYNC (Matched with Adaptive Backend TTL)
+            } else if (isWorkspaceVisible) {
+                interval = 3000; // Normal Workspace
+            } else {
                 interval = 10000; // Low power background
             }
 
@@ -176,6 +192,7 @@
 
         // Render Creator Dashboard components (MissionState, etc.)
         this.renderWorkspaceMissionDashboard(state);
+        this.renderMissionPortfolio(state);
 
         // Update Editor with Swarm info
         if (window.creatorEditor) {
@@ -187,7 +204,19 @@
         const mount = document.getElementById('ws-mission-mount');
         const panel = document.getElementById('ws-panel-mission');
         if (mount && panel && panel.classList.contains('active') && window.pizarronUI) {
-            window.pizarronUI.renderInto(mount, { active_mission: state.active_mission });
+            window.pizarronUI.renderInto(mount, {
+                active_mission: state.active_mission,
+                parallel_missions: state.parallel_missions,
+                resource_locks: state.resource_locks
+            });
+        }
+    }
+
+    renderMissionPortfolio(state) {
+        const mount = document.getElementById('ws-portfolio-mount');
+        const panel = document.getElementById('ws-panel-portfolio');
+        if (mount && panel && panel.classList.contains('active') && window.pizarronUI && window.pizarronUI.renderPortfolio) {
+            window.pizarronUI.renderPortfolio(mount, state);
         }
     }
 
@@ -222,83 +251,97 @@
             };
         });
 
-        // Nav link
-        const missionNav = document.querySelector('[data-view="mission"]');
-        if (missionNav) {
-            missionNav.onclick = () => {
-                this.switchView('mission');
-                this.renderCockpit();
-            };
-        }
+        // Nav link is now handled globally in main.js via .nav-item listener
+
     }
 
     switchView(viewName) {
         // --- GLOBAL VISUAL STATE MACHINE ---
-        console.log("[OMNI_NAV] Switching to view:", viewName);
+        if (this._navigationGuard) {
+            console.warn("[OMNI_NAV] Blocked recursive navigation to:", viewName);
+            return;
+        }
+        this._navigationGuard = true;
 
-        // 1. Context Drawer (Overlay) Toggle Logic
-        if (viewName === 'context') {
-            if (window.omniShell && window.omniShell.toggleContext) {
-                // Determine if it should be toggled open
-                const panel = document.getElementById('context-panel');
-                const isCurrentlyActive = panel && panel.classList.contains('active');
-                window.omniShell.toggleContext(!isCurrentlyActive);
+        try {
+            console.log("[OMNI_NAV] Switching to view:", viewName);
+
+            // 1. Overlay Toggles (Launcher & Context)
+            if (viewName === 'context') {
+                if (window.omniShell && window.omniShell.toggleContext) {
+                    const panel = document.getElementById('context-panel');
+                    const isCurrentlyActive = panel && panel.classList.contains('active');
+                    window.omniShell.toggleContext(!isCurrentlyActive);
+                }
+                const navBtn = document.querySelector('[data-view="context"]');
+                if (navBtn) {
+                    const panel = document.getElementById('context-panel');
+                    const isActive = panel && panel.classList.contains('active');
+                    navBtn.classList.toggle('active', isActive);
+                }
+                return;
             }
-            // Keep the underlying active nav items and main views untouched
-            const navBtn = document.querySelector('[data-view="context"]');
-            if (navBtn) {
-                const panel = document.getElementById('context-panel');
-                navBtn.classList.toggle('active', panel && panel.classList.contains('active'));
+
+            if (viewName === 'launcher') {
+                if (window.omniShell && window.omniShell.setLauncherActive) window.omniShell.setLauncherActive();
+                return;
             }
-            return;
+
+            // Close all overlays/chip views when switching to a primary view
+            if (window.omniShell) {
+                if (window.omniShell.closeLauncher) window.omniShell.closeLauncher();
+                if (window.omniShell.toggleContext) window.omniShell.toggleContext(false);
+            }
+            const chipView = document.getElementById('active-chip-view');
+            if (viewName === 'chip-view-active') {
+                this._clearPrimaryViews();
+                return;
+            } else if (chipView) {
+                chipView.classList.remove('active');
+            }
+
+            // --- PRIMARY VIEW ACTIVATION ---
+            this._clearPrimaryViews();
+
+            const inputBar = document.querySelector('.input-bar');
+            if (inputBar) inputBar.style.display = (viewName === 'chat') ? 'flex' : 'none';
+
+            // Creator Toolbar / Badge Logic (Persistence vs Contextual focus)
+            const toolbar = document.getElementById('creator-toolbar');
+            const badge = document.querySelector('.creator-badge');
+            const showCreatorTools = (viewName !== 'chat');
+            if (toolbar) toolbar.style.display = showCreatorTools ? 'flex' : 'none';
+            if (badge) badge.style.display = showCreatorTools ? 'block' : 'none';
+
+            if (viewName === 'workspace') {
+                const view = document.getElementById('creator-workspace-view');
+                const navBtn = document.querySelector('[data-view="workspace"]');
+                if (view) view.classList.add('active');
+                if (navBtn) navBtn.classList.add('active');
+                document.body.classList.add('workspace-active');
+                this.openWorkspace(this._pendingWorkspacePanel || 'editor', true); // skipSwitch = true to break loop
+                this._pendingWorkspacePanel = null;
+            } else if (viewName === 'mission') {
+                const view = document.getElementById('mission-control-view');
+                if (view) view.classList.add('active');
+                const navBtn = document.querySelector('[data-view="mission"]');
+                if (navBtn) navBtn.classList.add('active');
+                this.renderCockpit(); // Ensure cockpit is fresh
+            } else if (viewName === 'chat') {
+                const view = document.getElementById('ai-host-view');
+                if (view) view.classList.add('active');
+                const navBtn = document.querySelector('[data-view="chat"]');
+                if (navBtn) navBtn.classList.add('active');
+            }
+        } finally {
+            this._navigationGuard = false;
         }
+    }
 
-        // 2. Launcher (Overlay) Toggle Logic
-        if (viewName === 'launcher') {
-            if (window.omniShell && window.omniShell.setLauncherActive) window.omniShell.setLauncherActive();
-            return;
-        }
-
-        // 3. Clear all Overlays when switching to a Primary View
-        if (window.omniShell) {
-            if (window.omniShell.closeLauncher) window.omniShell.closeLauncher();
-            if (window.omniShell.toggleContext) window.omniShell.toggleContext(false);
-        }
-
-        // Manage Input Bar Visibility
-        const inputBar = document.querySelector('.input-bar');
-        if (inputBar) inputBar.style.display = (viewName === 'chat') ? 'flex' : 'none';
-
-        // 4. Handle Iframe Chip View (Overlay)
-        const chipView = document.getElementById('active-chip-view');
-        if (viewName === 'chip-view-active') {
-            // Leave it to main.js to actually launch it, we just clean the others
-            document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.body.classList.remove('workspace-active');
-            return;
-        } else if (chipView) {
-            chipView.classList.remove('active'); // Close if we navigate to a Primary View
-        }
-
-        // 5. Normal Primary Views
+    _clearPrimaryViews() {
         document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.body.classList.remove('workspace-active');
-
-        if (viewName === 'mission') {
-            document.getElementById('mission-control-view').classList.add('active');
-            const navBtn = document.querySelector('[data-view="mission"]');
-            if (navBtn) navBtn.classList.add('active');
-        } else if (viewName === 'chat') {
-            document.getElementById('ai-host-view').classList.add('active');
-            const navBtn = document.querySelector('[data-view="chat"]');
-            if (navBtn) navBtn.classList.add('active');
-        } else if (viewName === 'workspace') {
-            document.getElementById('creator-workspace-view').classList.add('active');
-            document.body.classList.add('workspace-active');
-            if (inputBar) inputBar.style.display = 'none'; // Ensured by CSS too
-        }
     }
 
     closeWorkspaceAndGoToMain() {
@@ -534,7 +577,7 @@
             `;
     }
 
-    openWorkspace(targetPanel = 'editor') {
+    openWorkspace(targetPanel = 'editor', skipSwitch = false) {
         this.setupWorkspace();
         const wsView = document.getElementById('creator-workspace-view');
         if (!wsView) return;
@@ -542,14 +585,16 @@
         const isAlreadyActive = wsView.classList.contains('active');
 
         // Ensure workspace is the active view
-        if (!isAlreadyActive) {
+        if (!isAlreadyActive && !skipSwitch) {
+            this._pendingWorkspacePanel = targetPanel;
             this.switchView('workspace');
+            return;
         }
 
         // Initialize all panels as active ONLY if opening for the first time
         if (!this.workspaceHasBeenOpenedBefore) {
             this.workspaceHasBeenOpenedBefore = true;
-            ['editor', 'copilot', 'changes', 'backend', 'mission'].forEach(pId => {
+            ['editor', 'copilot', 'changes', 'backend', 'mission', 'portfolio'].forEach(pId => {
                 const panel = document.getElementById(`ws-panel-${pId}`);
                 const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
                 if (panel) panel.classList.add('active');
@@ -604,7 +649,7 @@
         // Reset classes
         grid.className = 'workspace-grid';
         if (activePanels > 0) {
-            grid.classList.add(`panels - ${activePanels} `);
+            grid.classList.add(`panels-${activePanels}`);
         }
     }
 
@@ -636,17 +681,15 @@
             });
             const data = await res.json();
             this.lastCopilotResponse = data;
-            if (data.message) {
-                this.addCopilotMsg(data.message, 'ai');
-            }
 
             // --- AUTO TRIGGER PATCH PREVIEW ---
             if (data.payload && data.payload.preview_id && window.builderUI) {
                 console.log("[CREATOR] Proposal with preview detected. Launching preview UI:", data.payload.preview_id);
                 window.builderUI.showPreview(data.payload.preview_id);
             }
+
             if (data.message) {
-                this.addCopilotMsg(data.message, 'ai');
+                this.addCopilotMsg(data.message, 'ai', data.payload);
                 this.forceSync(); // IMMEDIATE FEEDBACK (Block 16)
             }
             if (data.audit && this.updateAuditResult) {
@@ -657,12 +700,12 @@
         }
     }
 
-    addCopilotMsg(text, type) {
+    addCopilotMsg(text, type, payload = null) {
         const log = document.getElementById('ws-copilot-log');
         if (!log) return;
 
         const msg = document.createElement('div');
-        msg.className = `copilot - msg ${type} `;
+        msg.className = `copilot-msg ${type}`;
 
         // --- VISUAL DIFF RENDERER (CREATOR MODE) ---
         const renderDiff = (raw) => {
@@ -701,6 +744,34 @@
         };
 
         msg.innerHTML = renderDiff(text);
+
+        // --- PHASE 21: VISUAL DIFF OVERLAY RENDERER ---
+        if (payload && payload.visual_diff && payload.visual_context) {
+            const vCtx = payload.visual_context;
+            const diff = payload.visual_diff;
+
+            const diffEl = document.createElement('div');
+            diffEl.className = "visual-diff-chat-container";
+            diffEl.style.cssText = "margin-top: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,170,0,0.2); padding: 10px; display: flex; gap: 12px; align-items: center;";
+
+            diffEl.innerHTML = `
+                <div style="position: relative; width: 80px; height: 80px; background: #000; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,170,0,0.3); flex-shrink: 0;">
+                    <img src="${vCtx.source_image}" style="width:100%; height:100%; object-fit: cover; opacity: 0.5;">
+                    ${(diff.removed_regions || []).map(r => `<div style="position:absolute; left:${r.x}%; top:${r.y}%; width:4px; height:4px; background:#ff4444; border-radius:50%; transform:translate(-50%, -50%); box-shadow: 0 0 5px #ff4444;"></div>`).join('')}
+                    ${(diff.persistent_regions || []).map(r => `<div style="position:absolute; left:${r.x}%; top:${r.y}%; width:2px; height:2px; background:#ffaa00; border-radius:50%; transform:translate(-50%, -50%);"></div>`).join('')}
+                    ${(diff.added_regions || []).map(r => `<div style="position:absolute; left:${r.x}%; top:${r.y}%; width:6px; height:6px; background:#00ff88; border-radius:50%; transform:translate(-50%, -50%); border: 1px solid #fff; box-shadow: 0 0 8px #00ff88;"></div>`).join('')}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 0.65rem; color: #ffaa00; font-weight: bold; margin-bottom: 2px;">Δ VISUAL DETECTADO</div>
+                    <div style="font-size: 0.6rem; color: #aaa; line-height: 1.2;">
+                        <span style="color: #00ff88;">+${diff.added_count} puntos de foco</span><br/>
+                        <span style="color: #ff4444;">-${diff.removed_count} regiones descartadas</span>
+                    </div>
+                </div>
+            `;
+            msg.appendChild(diffEl);
+        }
+
         log.appendChild(msg);
         log.scrollTop = log.scrollHeight;
     }
@@ -708,7 +779,7 @@
     addWorkspaceLog(text, type = 'info') {
         const log = document.getElementById('ws-monitor-logs');
         const entry = document.createElement('div');
-        entry.className = `log - entry ${type} `;
+        entry.className = `log-entry ${type}`;
         entry.innerText = `[${new Date().toLocaleTimeString()}] ${text} `;
         log.appendChild(entry);
         log.scrollTop = log.scrollHeight;
@@ -745,7 +816,7 @@
         if (this.currentTab === 'health') {
             const audit = this.systemState.auditor_summary || {};
             panel.innerHTML = `
-                < div class="cockpit-grid" >
+                <div class="cockpit-grid">
                     <div class="cockpit-card">
                         <h3>System Health [${this.systemState.health.toUpperCase()}]</h3>
                         <div class="health-metric">
@@ -778,7 +849,7 @@
                     '<p style="opacity: 0.5; font-size: 0.8rem;">No filesystem issues detected.</p>'
                 }
                     </div>
-                </div >
+                </div>
                 `;
         } else if (this.currentTab === 'operations') {
             // --- PIZARRON VIVO INTEGRATION ---
@@ -789,11 +860,11 @@
             // Re-use Pizarrón Logic as an embedded Dashboard
             if (window.pizarronUI) {
                 // Ensure panel has base structure for Pizarrón
-                panel.innerHTML = `< div id = "pizarron-dashboard-mount" class="pizarron-dashboard-panel" ></div > `;
+                panel.innerHTML = `<div id="pizarron-dashboard-mount" class="pizarron-dashboard-panel"></div>`;
                 const mount = document.getElementById('pizarron-dashboard-mount');
                 window.pizarronUI.renderInto(mount, missionData);
             } else {
-                panel.innerHTML = `< div class="error-msg" > Pizarrón Module not initialized.</div > `;
+                panel.innerHTML = `<div class="error-msg">Pizarrón Module not initialized.</div>`;
             }
         } else if (this.currentTab === 'evidence') {
             const sessionMedia = this.sessionMedia || [];
@@ -807,7 +878,7 @@
             });
             // Renderizado principal
             panel.innerHTML = `
-                < div class="evidence-viewer-panel" >
+                <div class="evidence-viewer-panel">
                     <h3>Evidence Viewer <span style='font-size:0.8em;opacity:0.6;'>(Session Media)</span></h3>
                     <div class="evidence-batch-list">
                         ${Object.keys(batches).map(batchNum => `
@@ -816,7 +887,7 @@
                                 <div class="evidence-media-list">
                                     ${batches[batchNum].map(media => {
                 const annotation = annotations.find(a => a.media_id === media.id);
-                const typeIcon = media.type === 'video' ? 'ðŸŽ¬' : 'ðŸ–¼ï¸';
+                const typeIcon = media.type === 'video' ? '🎬' : '🖼️';
                 return `
                                             <div class="evidence-media-card" data-media-id="${media.id}">
                                                 <div class="media-preview">
@@ -839,28 +910,28 @@
                             </div>
                         `).join('')}
                     </div>
-                </div >
+                </div>
                 `;
             // IntegraciÃ³n con lÃ­nea de tiempo (eventos)
             if (this.systemState && this.systemState.timeline) {
                 const timelinePanel = document.getElementById('timeline-panel');
                 if (timelinePanel) {
                     const mediaEvents = this.systemState.timeline.filter(e => e.type === 'MEDIA_UPLOADED' || e.type === 'MEDIA_ANNOTATED');
-                    timelinePanel.innerHTML = mediaEvents.map(e => `< div class="timeline-event ${e.type}" >
+                    timelinePanel.innerHTML = mediaEvents.map(e => `<div class="timeline-event ${e.type}">
                         <span class="event-type">${e.type}</span>
                         <span class="event-ts">${new Date(e.timestamp).toLocaleString()}</span>
                         <span class="event-detail">${e.detail || ''}</span>
-                    </div > `).join('');
+                    </div>`).join('');
                 }
             }
             return;
         } else if (this.currentTab === 'map') {
             panel.innerHTML = `
-                < div class="cockpit-card" style = "padding: 0;" >
+                <div class="cockpit-card" style="padding: 0;">
                     <div class="galaxy-container" id="galaxy-map-mount">
                         <div class="loading-indicator">Mapping galactic nodes...</div>
                     </div>
-                </div >
+                </div>
                 `;
             setTimeout(() => {
                 if (window.galaxyMap) {
@@ -872,13 +943,13 @@
             }, 50);
         } else if (this.currentTab === 'fixes') {
             panel.innerHTML = `
-                < div class="cockpit-card" >
+                <div class="cockpit-card">
                     <h3>Pending Auto-Fixes (${this.systemState.pending_fixes})</h3>
-                    ${this.systemState.is_healing ? '<p class="healing-pulse">âœ¨ System is actively healing...</p>' : ''}
+                    ${this.systemState.is_healing ? '<p class="healing-pulse">✨ System is actively healing...</p>' : ''}
             <p style="text-align: center; padding: 20px; opacity: 0.5;">
                 ${this.systemState.pending_fixes > 0 ? 'Repairs are queued. Approve them via AI Host.' : 'Stable. No pending fixes.'}
             </p>
-                </div >
+                </div>
                 `;
         } else if (this.currentTab === 'editor') {
             if (window.creatorEditor) {
@@ -1332,10 +1403,10 @@
         } else if (this.currentTab === 'communication') {
             this.fetchCommunicationData();
             panel.innerHTML = `
-                < div class="cockpit-grid" >
+                <div class="cockpit-grid">
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h3>ðŸ“¡ Natural Communication Layer</h3>
+                            <h3>📡 Natural Communication Layer</h3>
                             <div style="display: flex; gap: 8px;">
                                 <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 12px; font-size: 0.7rem;" onclick="creatorEnv.switchView('chat'); window.addMessage && window.addMessage('Communication mode active. Try: write to [name] that [message]', 'ai');">Open in Chat</button>
                             </div>
@@ -1356,12 +1427,12 @@
                     </div>
 
                     <div class="cockpit-card">
-                        <h3>ðŸŒ Translation Monitor</h3>
+                        <h3>🌐 Translation Monitor</h3>
                         <div style="background: #000; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.75rem; max-height: 220px; overflow-y: auto;" id="comm-translation-feed">
                             <p style="color: #00ff88;">[SYSTEM] Translation adapter connected.</p>
-                            <p>[ES â†’ EN] Active bridge operational.</p>
-                            <p>[ES â†’ FR] Active bridge operational.</p>
-                            <p>[ES â†’ DE] Active bridge operational.</p>
+                            <p>[ES → EN] Active bridge operational.</p>
+                            <p>[ES → FR] Active bridge operational.</p>
+                            <p>[ES → DE] Active bridge operational.</p>
                         </div>
                     </div>
 
@@ -1371,37 +1442,37 @@
                             <div class="loading-indicator">Fetching message logs...</div>
                         </div>
                     </div>
-                </div >
+                </div>
                 `;
 
         } else if (this.currentTab === 'accessibility') {
             panel.innerHTML = `
-                < div class="access-container" >
+                <div class="access-container">
                     <h3>Accessibility Settings</h3>
                     <div class="access-toggle"><span>Voice Navigation</span><input type="checkbox"></div>
                     <div class="access-toggle"><span>Braille Output Scaffolding</span><input type="checkbox"></div>
                     <div class="access-toggle"><span>Cognitive Simplification</span><input type="range" min="0" max="2"></div>
-                </div >
+                </div>
                 `;
         } else if (this.currentTab === 'music') {
             this.fetchMusicData();
             panel.innerHTML = `
-                < div class="cockpit-grid" >
+                <div class="cockpit-grid">
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h3>ðŸŽµ Music Intelligence Domain</h3>
+                            <h3>🎵 Music Intelligence Domain</h3>
                             <div style="display: flex; gap: 8px;">
-                                <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 12px; font-size: 0.7rem;" onclick="creatorEnv.switchView('chat'); window.addMessage && window.addMessage('Music mode active. Try: analyze this song on YouTube', 'ai');">Open in Chat</button>
+                                <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 12px; font-size: 0.7rem;" onclick="creatorEnv.switchView('chat'); window.addMessage && window.addMessage('Show me the active groove analysis', 'ai');">Analyze Groove</button>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 20px; margin-top: 15px;">
-                            <div class="metric"><span class="label">PITCH PRECISION</span><span class="value">Â±1 cent</span></div>
-                            <div class="metric"><span class="label">GROOVE MODE</span><span class="value">Active</span></div>
-                            <div class="metric"><span class="label">INSTRUMENTS</span><span class="value">4</span></div>
-                            <div class="metric"><span class="label">TRAINER</span><span class="value" style="color: #00ff88;">READY</span></div>
+                        <div style="font-family: monospace; padding: 12px; background: #08080c; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem; color: #00ff88; letter-spacing: 2px; margin-top: 15px;" id="music-groove-timeline">
+                            [----|----|----|----]
+                        </div>
+                        <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span id="music-detected-bpm">120.0 BPM</span>
+                            <span id="music-detected-swing" style="color: #00ff88;">Straight</span>
                         </div>
                     </div>
-
                     <div class="cockpit-card">
                         <div style="display: flex; justify-content: space-between;">
                             <h3>Sonic Map</h3>
@@ -3166,15 +3237,186 @@
         if (copilotCount) copilotCount.innerText = total;
 
         const html = this.sessionMedia.map(m => `
-            <div class="evidence-item" title="${m.name}">
+            <div class="evidence-item ${m.annotations && m.annotations.length > 0 ? 'annotated' : ''}" 
+                 onclick="creatorEnv.openAnnotator('${m.id}')" title="Clic para anotar: ${m.name}">
                 ${m.type === 'image'
                 ? `<img src="${m.data}" alt="Evidence">`
                 : `<video src="${m.data}"></video><div class="type-tag">VIDEO</div>`}
+                ${m.annotations && m.annotations.length > 0 ? '<div class="annotation-badge">📍</div>' : ''}
             </div>
         `).join('');
 
         if (shellGrid) shellGrid.innerHTML = html;
         if (copilotGrid) copilotGrid.innerHTML = html;
+    }
+
+    // --- VISUAL ANNOTATOR CORE (Phase 21) ---
+    setupVisualAnnotator() {
+        const container = document.getElementById('annotator-container');
+        if (container) {
+            container.addEventListener('click', (e) => this.handleAnnotatorClick(e));
+        }
+    }
+
+    // New: Handle iterative feedback (PHASE 21)
+    openReAnnotation(mediaId, stepId) {
+        this.currentCorrectionStepId = stepId;
+
+        // If not in sessionMedia, try to recover from history (PHASE 21)
+        if (!this.sessionMedia.find(m => m.id === mediaId)) {
+            const mission = this.systemState?.active_mission;
+            if (mission) {
+                // Check current context
+                let found = null;
+                if (mission.visual_context && mission.visual_context.media_id === mediaId) {
+                    found = mission.visual_context;
+                } else if (mission.multimodal_history) {
+                    // Check history snapshots
+                    const snap = mission.multimodal_history.find(h => h.visual_context && h.visual_context.media_id === mediaId);
+                    if (snap) found = snap.visual_context;
+                }
+
+                if (found) {
+                    this.sessionMedia.push({
+                        id: mediaId,
+                        name: "Captura Histórica",
+                        type: 'image',
+                        data: found.source_image,
+                        annotations: JSON.parse(JSON.stringify(found.annotations || [])),
+                        timestamp: new Date().toISOString()
+                    });
+                    this.renderMediaPreviews();
+                }
+            }
+        }
+
+        this.openAnnotator(mediaId);
+
+        const title = document.querySelector('#visual-annotator h3');
+        if (title) title.innerText = "RE-ORIENTACIÓN DE EVIDENCIA";
+        if (window.showToast) window.showToast("RE-ANOTACIÓN: Marcá el punto exacto de la falla.", 'info');
+    }
+
+    openAnnotator(mediaId) {
+        const media = this.sessionMedia.find(m => m.id === mediaId);
+        if (!media || media.type !== 'image') return;
+
+        this.currentAnnotatingMediaId = mediaId;
+        this.tempAnnotations = media.annotations ? JSON.parse(JSON.stringify(media.annotations)) : [];
+
+        const overlay = document.getElementById('visual-annotator');
+        const img = document.getElementById('annotator-img');
+        const commentInput = document.getElementById('annotator-comment');
+
+        if (overlay && img) {
+            img.src = media.data;
+            overlay.classList.add('active');
+            commentInput.value = "";
+            this.renderTempAnnotations();
+        }
+    }
+
+    closeAnnotator() {
+        const overlay = document.getElementById('visual-annotator');
+        if (overlay) overlay.classList.remove('active');
+
+        const title = document.querySelector('#visual-annotator h3');
+        if (title) title.innerText = "ANOTACIÓN DE EVIDENCIA VISUAL";
+
+        this.currentAnnotatingMediaId = null;
+        this.tempAnnotations = [];
+        this.currentCorrectionStepId = null;
+    }
+
+    setAnnotatorTool(tool) {
+        this.annotatorTool = tool;
+        document.querySelectorAll('.annotator-btn').forEach(btn => btn.classList.remove('active'));
+        const btnId = tool === 'point' ? 'tool-point' : 'tool-box';
+        const btn = document.getElementById(btnId);
+        if (btn) btn.classList.add('active');
+    }
+
+    handleAnnotatorClick(e) {
+        if (!this.currentAnnotatingMediaId) return;
+        const container = document.getElementById('annotator-container');
+        const rect = container.getBoundingClientRect();
+
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        const comment = document.getElementById('annotator-comment').value.trim();
+
+        if (this.annotatorTool === 'point') {
+            this.tempAnnotations.push({
+                type: 'point',
+                x, y,
+                comment: comment || "Punto de interés"
+            });
+            document.getElementById('annotator-comment').value = ""; // Clear for next point
+            this.renderTempAnnotations();
+        } else if (this.annotatorTool === 'box') {
+            // Simple box: constant size for now, centered at click
+            this.tempAnnotations.push({
+                type: 'box',
+                x: x - 5, y: y - 5,
+                w: 10, h: 10,
+                comment: comment || "Zona problemática"
+            });
+            document.getElementById('annotator-comment').value = "";
+            this.renderTempAnnotations();
+        }
+    }
+
+    renderTempAnnotations() {
+        const container = document.getElementById('annotator-container');
+        // Remove existing overlays
+        container.querySelectorAll('.annotation-pin, .annotation-box').forEach(el => el.remove());
+
+        this.tempAnnotations.forEach((ann, idx) => {
+            if (ann.type === 'point') {
+                const pin = document.createElement('div');
+                pin.className = 'annotation-pin';
+                pin.style.left = `${ann.x}%`;
+                pin.style.top = `${ann.y}%`;
+                pin.innerText = idx + 1;
+                pin.title = ann.comment;
+                container.appendChild(pin);
+            } else {
+                const box = document.createElement('div');
+                box.className = 'annotation-box';
+                box.style.left = `${ann.x}%`;
+                box.style.top = `${ann.y}%`;
+                box.style.width = `${ann.w}%`;
+                box.style.height = `${ann.h}%`;
+                box.title = ann.comment;
+                container.appendChild(box);
+            }
+        });
+    }
+
+    saveAnnotations() {
+        const media = this.sessionMedia.find(m => m.id === this.currentAnnotatingMediaId);
+        if (media) {
+            media.annotations = JSON.parse(JSON.stringify(this.tempAnnotations));
+
+            // Integrate global comment into annotations if not already linked
+            const finalComment = document.getElementById('annotator-comment').value.trim();
+            if (finalComment && this.tempAnnotations.length === 0) {
+                // If no points, create a general context/correction one
+                media.annotations.push({ type: this.currentCorrectionStepId ? 'correction' : 'context', comment: finalComment });
+            }
+        }
+
+        // Handle iterative re-orientation (PHASE 21)
+        if (this.currentCorrectionStepId) {
+            const comment = document.getElementById('annotator-comment').value.trim() || "Re-anotación correctiva aplicada";
+            const cmd = `reorient job ${this.currentCorrectionStepId} with evidence: ${comment}`;
+            if (window.omniShell) window.omniShell.addInput(cmd);
+        }
+
+        this.renderMediaPreviews();
+        this.closeAnnotator();
+
+        if (window.showToast) window.showToast(this.currentCorrectionStepId ? "Foco reorientado. Reiniciando diagnóstico." : "Anotaciones vinculadas.", 'success');
     }
 
     clearMedia() {

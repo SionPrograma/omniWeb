@@ -1,6 +1,7 @@
 import time
 import logging
 import asyncio
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from backend.core.config import settings
 from backend.core.module_registry import module_registry
@@ -13,6 +14,8 @@ from backend.core.permissions import set_chip_context
 from backend.core.creator_control.manager import creator_control_manager
 from backend.core.cluster.manager import cluster_manager
 from backend.core.ai_host.memory.mission_manager import mission_manager
+from backend.core.ai_host.memory.resource_lock_manager import resource_lock_manager
+from backend.core.ai_host.memory.mission_telemetry import mission_telemetry
 from backend.core.ai_host.shadow_swarm.shadow_constructor import shadow_constructor_manager
 from .models import SystemState, SystemHealth, ChipState, SystemMode
 
@@ -38,12 +41,33 @@ class SystemStateEngine:
         self._git_info["commit"] = snapshot.get("last_commit", "unknown")
 
     async def get_state(self, force_refresh: bool = False, user_id: Optional[str] = None):
-        if force_refresh or not self._state or (time.time() - self._last_update > self._cache_ttl):
+        # Adaptive TTL (Phase 21: Orchestration Fluidity)
+        # If we have an active mission, we want faster updates (1s) instead of the default 5s
+        is_mission_active = False
+        if self._state and self._state.active_mission:
+             status = self._state.active_mission.get("status")
+             if status in ["OPEN", "ACTIVE", "RECOVERING"]:
+                  is_mission_active = True
+
+        current_ttl = 1.0 if is_mission_active else self._cache_ttl
+        
+        if force_refresh or not self._state or (time.time() - self._last_update > current_ttl):
             await self.update_state(user_id=user_id)
         return self._state
 
     async def update_state(self, user_id: Optional[str] = None):
         """Aggregates status from all subsystems into a unified state object."""
+        # Telemetry & Agregation Defaults
+        mission_events = []
+        portfolio_pulse = []
+        parallel_missions = []
+        archived_missions = []
+        completed_missions = []
+        proposals = []
+        resource_locks = []
+        active_mission = None
+        last_handoff_data = None
+        
         try:
             # 1. Database Status
             db_ok = False
@@ -184,10 +208,21 @@ class SystemStateEngine:
             }
 
             # 6b. Active Mission (MissionState Integration)
-            active_mission = None
+            # 6. Active Mission Context (Phase 18: MISSION STATE)
+            mission = mission_manager.get_active_mission()
+            active_mission_id = mission.mission_id if mission else None
+            
+            # Aggregation defaults (CRITICAL TELEMETRY)
+            parallel_missions = []
+            archived_missions = []
+            completed_missions = []
+            mission_events = []
+            portfolio_pulse = []
             proposals = []
+            resource_locks = []
+            
+            active_mission = None
             try:
-                mission = mission_manager.get_active_mission()
                 if mission:
                     active_mission = mission.model_dump()
                     # 6c. Shadow Swarm Proposals for this mission (Phase 30 Saneamiento)
@@ -200,10 +235,96 @@ class SystemStateEngine:
                               prop["action_type"] = "mutation"
                               prop["targets"] = [s.proposal.target_file]
                               proposals.append(prop)
+                    
+                    # 6d. Extract Mission Hierarchy (Phase 21: MISSION HIERARCHY)
+                    hierarchy = {
+                        "parent": None,
+                        "sub_missions": [],
+                        "dependencies": []
+                    }
+                    if mission.parent_id:
+                        p = mission_manager.get_mission_by_id(mission.parent_id)
+                        if p: hierarchy["parent"] = {"id": p.mission_id, "goal": p.active_goal, "status": p.status.value}
+                    
+                    subs = mission_manager.get_sub_missions(mission.mission_id)
+                    hierarchy["sub_missions"] = [{"id": s.mission_id, "goal": s.active_goal, "status": s.status.value} for s in subs]
+                    
+                    for dep_id in mission.dependency_ids:
+                        d = mission_manager.get_mission_by_id(dep_id)
+                        if d: hierarchy["dependencies"].append({"id": d.mission_id, "goal": d.active_goal, "status": d.status.value})
+                    
+                    if mission.retried_from:
+                        r = mission_manager.get_mission_by_id(mission.retried_from)
+                        if r: hierarchy["retried_from"] = {"id": r.mission_id, "goal": r.active_goal, "status": r.status.value}
+                    
+                    if mission.branched_from:
+                        b = mission_manager.get_mission_by_id(mission.branched_from)
+                        if b: hierarchy["branched_from"] = {"id": b.mission_id, "goal": b.active_goal, "status": b.status.value}
+
+                    active_mission["hierarchy"] = hierarchy
+                
+                # 6e. Extract Parallel Running Missions (Phase 21: MISSION PARALLELISM & SCHEDULING)
+                running = mission_manager.get_parallel_running_missions()
+                parallel_missions = [{
+                    "id": m.mission_id, 
+                    "goal": m.active_goal, 
+                    "status": m.status.value, 
+                    "last_focused": m.last_focused_at.isoformat(),
+                    "priority_score": m.priority_score,
+                    "priority_class": m.priority_class,
+                    "readiness_state": m.readiness_state,
+                    "compact_digest": m.compact_digest.model_dump() if m.compact_digest else None
+                } for m in running if not mission or m.mission_id != mission.mission_id]
+                
+                # Recommendation Logic (Phase 22: MISSION SCHEDULING)
+                # If current focus is low priority but others are high, suggest focus.
+                recommended_focus = None
+                if running:
+                    top_mission = running[0] # Already sorted by PriorityEngine
+                    if not mission or top_mission.mission_id != mission.mission_id:
+                        recommended_focus = {
+                            "id": top_mission.mission_id,
+                            "goal": top_mission.active_goal,
+                            "reason": f"Misión con prioridad {top_mission.priority_class} ({top_mission.readiness_state})"
+                        }
+                
+                # 6f. Portfolio Summary (Phase: MISSION PORTFOLIO)
+                archived = mission_manager.get_archived_missions(limit=10)
+                archived_missions = [{"id": m.mission_id, "goal": m.active_goal, "status": m.status.value, "updated": m.updated_at.isoformat()} for m in archived]
+                
+                completed = mission_manager.get_completed_recent_missions(limit=5)
+                completed_missions = [{"id": m.mission_id, "goal": m.active_goal, "status": m.status.value, "updated": m.updated_at.isoformat()} for m in completed]
+                
+                # 6g. Telemetry Events (Phase: MISSION CRITICAL TELEMETRY)
+                mission_events = []
+                if active_mission_id:
+                    events = mission_telemetry.get_recent_events(active_mission_id, limit=10)
+                    mission_events = [e.model_dump(mode='json') for e in events]
+                
+                pulse = mission_telemetry.get_portfolio_pulse(limit=10)
+                portfolio_pulse = [e.model_dump(mode='json') for e in pulse]
+                
             except Exception as swarm_err:
                 logger.warning(f"[SYSTEM_STATE] Swarm sync failed: {swarm_err}")
 
-            # 7. Build Unified State
+            # 8. Extract Recent Handoff (Ergonomics Phase 21)
+            last_handoff_data = None
+            try:
+                filters = MasterLogbookFilter(type=EntryType.MISSION_HANDOFF)
+                recent_handoffs = master_logbook_manager.get_entries(filters=filters, limit=1)
+                if recent_handoffs:
+                    last_handoff_data = recent_handoffs[0].metadata
+            except Exception as e:
+                logger.warning(f"[SYSTEM_STATE_ENGINE] Could not fetch last handoff: {e}")
+            
+            # Phase: MISSION CONFLICT RESOLVER - Resource Locks
+            resource_locks = []
+            try:
+                resource_locks = resource_lock_manager.get_all_active_locks()
+            except Exception as lock_err:
+                logger.warning(f"[SYSTEM_STATE_ENGINE] Could not fetch locks: {lock_err}")
+
+            # 9. Build Unified State
             self._state = SystemState(
                 version=settings.VERSION,
                 system_mode=mode,
@@ -230,8 +351,17 @@ class SystemStateEngine:
                 cluster=cluster_info,
                 sync_status=self._get_sync_info(user_id) if user_id else None,
                 active_mission=active_mission,
+                last_handoff=last_handoff_data,
+                mission_hierarchy=active_mission.get("hierarchy") if active_mission else None,
+                parallel_missions=parallel_missions,
+                archived_missions=archived_missions,
+                completed_missions=completed_missions,
+                mission_events=mission_events,
+                portfolio_pulse=portfolio_pulse,
                 proposals=proposals,
-                timestamp=time.time(),
+                resource_locks=resource_locks,
+                recommended_focus=recommended_focus,
+                timestamp=datetime.now().isoformat(),
                 uptime_seconds=time.time() - self._start_time
             )
             self._last_update = time.time()

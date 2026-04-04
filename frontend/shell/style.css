@@ -24,7 +24,7 @@ body {
     font-family: 'Inter', sans-serif;
     height: 100vh;
     height: 100dvh;
-    /* Dynamic viewport height for mobile */
+    /* Dynamic viewport height for modern mobile browsers */
     width: 100vw;
     overflow: hidden;
     position: relative;
@@ -87,8 +87,17 @@ body {
     z-index: 0;
 }
 
-#ai-host-view:not(.active) {
-    display: none;
+/* Unified View Container Visibility (Block 21: Shared UI Hardening) */
+#ai-host-view:not(.active),
+#mission-control-view:not(.active),
+#creator-workspace-view:not(.active) {
+    display: none !important;
+}
+
+#ai-host-view.active,
+#mission-control-view.active,
+#creator-workspace-view.active {
+    display: flex !important;
 }
 
 .ai-core-container {

@@ -78,6 +78,16 @@ class DatabaseManager:
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS system_locks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    resource_key TEXT UNIQUE NOT NULL,
+                    mission_id TEXT NOT NULL,
+                    lock_type TEXT DEFAULT 'WRITE', -- WRITE, READ
+                    reason TEXT,
+                    acquired_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
         logger.info("System core tables initialized.")
 

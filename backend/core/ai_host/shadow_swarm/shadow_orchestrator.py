@@ -71,13 +71,16 @@ class ShadowOrchestrator:
         self.active_swarms[swarm_id] = jobs
         
         # 1.1 SAFETY CHECKPOINT (Bloque: Mission Checkpoints)
+        from ..memory.mission_manager import mission_manager
+        active = mission_manager.get_active_mission()
+        
         try:
-            from ..memory.mission_manager import mission_manager
-            active = mission_manager.get_active_mission()
             if active:
                  mission_manager.create_checkpoint(active.mission_id, f"Auto: Antes de Swarm {swarm_id}")
+                 # Ensure roadmap is visible and persistent immediately
+                 mission_manager.propagate_roadmap(active.mission_id, jobs)
         except Exception as e:
-            logger.warning(f"[ORCHESTRATOR] Failed to create auto-checkpoint: {e}")
+            logger.warning(f"[ORCHESTRATOR] Failed to create auto-checkpoint or roadmap: {e}")
         
         # Track mission in conversation context
         from ..intent_understanding.conversation_tracker import conversation_tracker
@@ -85,70 +88,78 @@ class ShadowOrchestrator:
         conversation_tracker.set_mission(session_id, goal, swarm_id)
         
         # 1.5. SPAWN SHADOW AUDITORS & CONSTRUCTORS (Phase 11: Constructor Shadows)
-        shadows = []
-        constructors = []
+        shadow_pairs = []
         is_audit_only = context.get("audit_only", False)
         
-        for job in jobs:
-            # 1. Spawn Auditor (Always observational)
-            if job.type in [MicrotaskType.BUSINESS_LOGIC, MicrotaskType.UI_ARCHITECTURE, MicrotaskType.DATA_MODEL, MicrotaskType.INTEGRATION]:
-                auditor = shadow_auditor_manager.spawn_auditor(
-                    mission_id=swarm_id,
-                    microtask=job.description,
-                    layer=job.context.get("primary_layer", "core/backend")
-                )
-                shadows.append(auditor)
-                
-                # 2. Spawn Constructor for constructive tasks (Phase 11)
-                # But SKIP if this is an audit-only mission (Phase 18)
-                if not is_audit_only:
-                    constructor = shadow_constructor_manager.spawn_constructor(
-                        mission_id=swarm_id,
-                        microtask=job.description,
-                        layer=job.context.get("primary_layer", "core/backend"),
-                        file=job.context.get("target_file", "core/module.py")
-                    )
-                    constructors.append(constructor)
+        v_ctx = context.get("visual_context")
         
-        # Run Audit Phase
-        for s in shadows:
-            await s.audit()
+        for job in jobs:
+            layer = job.context.get("primary_layer", "core/backend")
+            # 1. Spawn Auditor (Always observational)
+            auditor = shadow_auditor_manager.spawn_auditor(mission_id=swarm_id, microtask=job.description, layer=layer)
+            auditor.visual_context = v_ctx
             
-        # Run Construction Phase (Drafting Only - No Apply!)
-        # Skip if audit_only
-        if not is_audit_only:
-            for c in constructors:
-                # Cross-validation: Find the auditor for the same task
-                matching_auditor = next((s for s in shadows if s.assigned_microtask == c.assigned_microtask), None)
+            # 2. Spawn Constructor for constructive tasks (Phase 11)
+            constructor = None
+            if not is_audit_only and job.type in [MicrotaskType.BUSINESS_LOGIC, MicrotaskType.UI_ARCHITECTURE, MicrotaskType.DATA_MODEL, MicrotaskType.INTEGRATION]:
+                constructor = shadow_constructor_manager.spawn_constructor(
+                    mission_id=swarm_id, 
+                    microtask=job.description, 
+                    layer=layer,
+                    file=job.context.get("target_file", "core/module.py")
+                )
+                constructor.visual_context = v_ctx
+            
+            shadow_pairs.append({
+                "job": job,
+                "auditor": auditor,
+                "constructor": constructor
+            })
+
+        # --- OPTIMIZED PARALLEL EXECUTION (Phase 21: Orchestration Flow) ---
+        async def run_pair(pair):
+            job = pair["job"]
+            auditor = pair["auditor"]
+            constructor = pair["constructor"]
+            
+            # 1. Audit (Parallel)
+            await auditor.audit()
+            
+            # 2. Construction (Parallel, Depends on specific audit)
+            if constructor:
+                audit_report = auditor.current_report
+                proposal = await constructor.draft_proposal(audit_report=audit_report)
                 
-                # PROACTIVE INTEGRATION: Pass the audit report to the constructor BEFORE drafting
-                audit_report = matching_auditor.current_report if matching_auditor else None
-                proposal = await c.draft_proposal(audit_report=audit_report)
-                
-                if matching_auditor and matching_auditor.current_report:
-                    c.auditor_note = f"Auditor Review: {matching_auditor.current_report.findings[0]} (Risk: {matching_auditor.current_report.risk_level})"
+                if audit_report:
+                    constructor.auditor_note = f"Auditor Review: {audit_report.findings[0]} (Risk: {audit_report.risk_level})"
                 
                 # 3. APPROVAL GATE (Phase 12: Approval/Apply Gate)
-                # If conservative_mode is on, we can artificially increase risk here or in the gate itself
-                gate_decision = approval_gate.evaluate_proposal(c)
-                # Map GateStatus value to ConstructorState (Pydantic will convert string to member)
-                c.state = ConstructorState(gate_decision.status.value)
+                gate_decision = approval_gate.evaluate_proposal(constructor)
+                constructor.state = ConstructorState(gate_decision.status.value)
                 
-                # Store in job context for deep evidence tracking (Phase 17 Visibility)
-                job.context["constructor_proposal"] = c.proposal.model_dump() if c.proposal else None
+                # Store evidence
+                job.context["constructor_proposal"] = constructor.proposal.model_dump() if constructor.proposal else None
                 job.context["gate_decision"] = gate_decision.dict()
-                if matching_auditor and matching_auditor.current_report:
-                    job.context["audit_findings"] = matching_auditor.current_report.dict()
+                job.context["audit_findings"] = audit_report.dict() if audit_report else None
 
                 # Sync to Mission Tree if human intervention is needed
                 if gate_decision.status == GateStatus.AWAITING_HUMAN:
                      from ..memory.mission_manager import mission_manager
-                     mission_manager.update_step_status(job.id, "NEEDS_REVIEW", f"Bloqueado para revisión: {job.id}", evidence=f"Riesgo: {gate_decision.risk_score}", deep_evidence=job.context)
+                     mission_manager.update_step_status(job.id, "NEEDS_REVIEW", f"Bloqueado para revisión: {job.id}", evidence=f"Riesgo: {gate_decision.danger_level}", deep_evidence=job.context)
 
-                # 4. MANUAL APPLY LOOP (Phase 13: Manual Apply Loop)
-                if gate_decision.status == GateStatus.AWAITING_HUMAN and context.get("force_apply", False):
-                    logger.info(f"[ORCHESTRATOR] Triggering manual apply for {c.shadow_id}")
-                    await manual_apply_loop.run_apply_cycle(c, approver="Creator/Testing")
+        # Dispatch all pairs in parallel
+        await asyncio.gather(*[run_pair(p) for p in shadow_pairs])
+        
+        # Extract shadows and constructors for the legacy return format
+        shadows = [p["auditor"] for p in shadow_pairs]
+        constructors = [p["constructor"] for p in shadow_pairs if p["constructor"]]
+
+        # 4. MANUAL APPLY LOOP (Phase 13: Manual Apply Loop)
+        for p in shadow_pairs:
+            c = p["constructor"]
+            if c and c.state == ConstructorState.AWAITING_HUMAN and context.get("force_apply", False):
+                logger.info(f"[ORCHESTRATOR] Triggering manual apply for {c.shadow_id}")
+                await manual_apply_loop.run_apply_cycle(c, approver="Creator/Testing")
         else:
              logger.info("[ORCHESTRATOR] Skipping construction due to AUDIT_ONLY mode.")
 
@@ -162,12 +173,16 @@ class ShadowOrchestrator:
                 logger.warning(f"[ORCHESTRATOR] Detected {len(conflicts)} Multi-Agent Conflicts in swarm {swarm_id}")
                 
                 # TRIGGER SELF-CORRECTION LOOP (NUEVO BLOQUE)
-                logger.info(f"[ORCHESTRATOR] Triggering SELF-CORRECTION LOOP for swarm {swarm_id}")
+                logger.info(f"[ORCHESTRATOR] Triggering SELF-CORRECTION LOOP (Parallel) for swarm {swarm_id}")
+                correction_tasks = []
                 for conf in conflicts:
                     for sid in conf.shadow_ids:
                         c = next((cons for cons in constructors if cons.shadow_id == sid), None)
                         if c and not c.was_redrafted:
-                            await c.redraft_proposal(feedback=f"CONFLICTO {conf.type.value}: {conf.explanation[:50]}")
+                            correction_tasks.append(c.redraft_proposal(feedback=f"CONFLICTO {conf.type.value}: {conf.explanation[:50]}"))
+                
+                if correction_tasks:
+                    await asyncio.gather(*correction_tasks)
                 
                 # Re-verify conflicts after redraft (Pass 2)
                 conflicts = conflict_resolver.detect_conflicts(constructors)
@@ -184,7 +199,13 @@ class ShadowOrchestrator:
                             job.context["self_correction_applied"] = True
                             # Update mission status to reflect conflict
                             from ..memory.mission_manager import mission_manager
-                            mission_manager.update_step_status(job.id, "NEEDS_REVIEW", f"CONFLICTO TRAS REDRAFT: {job.id}", evidence=f"Choque: {conf.type.value}", deep_evidence=job.context)
+                            mission_manager.update_step_status(
+                                job.id, "NEEDS_REVIEW", 
+                                f"CONFLICTO TRAS REDRAFT: {job.id}", 
+                                evidence=f"Choque: {conf.type.value}", 
+                                deep_evidence=job.context,
+                                source_actor="ConflictResolver"
+                            )
                 
                 # MEMORY WRITEBACK: Record conflict in historical memory
                 for conf in conflicts:
@@ -230,8 +251,12 @@ class ShadowOrchestrator:
                 
             logger.info(f"[ORCHESTRATOR] Dispatching Wave: {[j.id for j in ready_jobs]}")
             
-            # Execute current wave in parallel
-            await asyncio.gather(*[self._process_job(j) for j in ready_jobs])
+            # Execute current wave in parallel (OPTIMIZED: Async batching)
+            await asyncio.gather(*[self._process_job(j, save=False) for j in ready_jobs])
+            
+            # Perform a SINGLE DB Sync after the wave finishes (Higher efficiency)
+            if active:
+                mission_manager.save_mission(active)
             
             # Move to next wave
             for j in ready_jobs:
@@ -264,10 +289,12 @@ class ShadowOrchestrator:
             }
         }
 
-    async def _process_job(self, job: ShadowJob):
+    async def _process_job(self, job: ShadowJob, save: bool = True):
         job.status = "executing"
         from ..memory.mission_manager import mission_manager
-        mission_manager.update_step_status(job.id, "ACTIVE", f"Shadow '{job.id}' iniciado...")
+        
+        job_actor = "ShadowConstructor" if job.type != MicrotaskType.AUDIT else "ShadowAuditor"
+        mission_manager.update_step_status(job.id, "ACTIVE", f"Shadow '{job.id}' iniciado...", save=save, source_actor=job_actor)
         
         try:
             # Special handling for Audit/Sync could go here or inside swarm
@@ -283,12 +310,15 @@ class ShadowOrchestrator:
             if isinstance(result, dict): deep_ev.update(result)
             else: deep_ev["output"] = str(result)
             
-            mission_manager.update_step_status(job.id, "COMPLETED", f"Shadow '{job.id}' termin con xito.", evidence=ev, deep_evidence=deep_ev)
+            # Determine actor for this job (AUDITOR or CONSTRUCTOR)
+            job_actor = "ShadowConstructor" if job.type != MicrotaskType.AUDIT else "ShadowAuditor"
+        
+            mission_manager.update_step_status(job.id, "COMPLETED", f"Shadow '{job.id}' terminó con éxito.", evidence=ev, deep_evidence=deep_ev, save=save, source_actor=job_actor)
         except Exception as e:
             logger.error(f"[ORCHESTRATOR] Job {job.id} failed: {e}")
             job.status = "failed"
             job.result = {"error": str(e)}
-            mission_manager.update_step_status(job.id, "FAILED", f"Shadow '{job.id}' fall: {str(e)[:50]}...", evidence=f"Error: {str(e)[:40]}", deep_evidence={"error": str(e)})
+            mission_manager.update_step_status(job.id, "FAILED", f"Shadow '{job.id}' falló: {str(e)[:50]}...", evidence=f"Error: {str(e)[:40]}", deep_evidence={"error": str(e)}, save=save, source_actor="ShadowSwarm")
             
             # MEMORY WRITEBACK: Record job failure
             shadow_memory_manager.record_incident(TechnicalIncident(
@@ -327,10 +357,14 @@ class ShadowOrchestrator:
         logger.info(f"[ORCHESTRATOR] Initiating RESCUE for step {step_id}: {node['label']}")
         mission_manager.update_step_status(step_id, "RECOVERING", f"Iniciando RECOVERY para '{node['label']}'...")
         
-        # 2. Build Rescue Job with Context
+        # 2. Build Rescue Job with Context (Cognitive Audit Rescue)
         from .task_decomposer import ShadowJob, MicrotaskType
         evidence = node.get("deep_evidence", {})
         error_info = evidence.get("error", evidence.get("output", "Unknown error"))
+        
+        # Inject Multimodal Precision data if available
+        v_ctx = mission.visual_context
+        refined_targets = mission.related_targets or []
         
         rescue_job = ShadowJob(
             id=f"rescue_{step_id}_{id(node)}",
@@ -340,7 +374,9 @@ class ShadowOrchestrator:
             context={
                 "original_step_id": step_id,
                 "failure_evidence": evidence,
-                "strategy": "SURGICAL_FIX"
+                "strategy": "SURGICAL_FIX",
+                "visual_context": v_ctx,
+                "related_targets": refined_targets
             }
         )
         
@@ -381,7 +417,8 @@ class ShadowOrchestrator:
                     "rescue_result": result, 
                     "gate_decision": json.loads(gate_decision.model_dump_json()) if gate_decision else None,
                     "status": "repaired_pending" if final_status == "NEEDS_REVIEW" else "repaired"
-                }
+                },
+                source_actor="RescueShadow"
             )
             # MEMORY WRITEBACK: Record successful or review-pending rescue
             shadow_memory_manager.record_incident(TechnicalIncident(

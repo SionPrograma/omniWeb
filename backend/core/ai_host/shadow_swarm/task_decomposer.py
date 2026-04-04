@@ -54,7 +54,7 @@ class TaskDecomposer:
         jobs.append(sim_job)
         
         # 2. ANALYZE GOAL FOR EXECUTION DOMAINS
-        domains = self._analyze_domains(goal)
+        domains = self._analyze_domains(goal, context)
         exec_jobs = []
         for domain in domains:
             job = self._create_job(domain, goal, context)
@@ -110,11 +110,16 @@ class TaskDecomposer:
         
         for step in plan.get("steps", []):
             mtype = type_map.get(step.get("type"), MicrotaskType.BUSINESS_LOGIC)
+            # Merge main context with step-specific context if provided
+            job_ctx = context.copy()
+            if "context" in step:
+                job_ctx.update(step["context"])
+
             job = ShadowJob(
                 id=f"plan_job_{step.get('id')}",
                 type=mtype,
                 description=step.get("description"),
-                context=context,
+                context=job_ctx,
                 dependencies=[f"plan_job_{d}" for d in step.get("dependencies", [])]
             )
             jobs.append(job)
@@ -131,13 +136,25 @@ class TaskDecomposer:
         
         return jobs
 
-    def _analyze_domains(self, goal: str) -> List[MicrotaskType]:
-        # Simplified logic: pick domains based on keywords
+    def _analyze_domains(self, goal: str, context: Optional[Dict[str, Any]] = None) -> List[MicrotaskType]:
+        # Improved logic: pick domains based on keywords and visual context (Phase 21)
         domains = []
         g = goal.lower()
+        context = context or {}
+        v_ctx = context.get("visual_context", {})
+        hyp = v_ctx.get("hypothesis", {})
         
+        # 1. Visual Context Priority
+        if hyp:
+            layer = hyp.get("layer", "").lower()
+            if "ui" in layer or "frontend" in layer:
+                if MicrotaskType.UI_ARCHITECTURE not in domains:
+                    domains.append(MicrotaskType.UI_ARCHITECTURE)
+            
+        # 2. Text Keyword Priority
         if "crea" in g or "app" in g or "interfaz" in g or "ui" in g:
-            domains.append(MicrotaskType.UI_ARCHITECTURE)
+            if MicrotaskType.UI_ARCHITECTURE not in domains:
+                domains.append(MicrotaskType.UI_ARCHITECTURE)
         if "datos" in g or "db" in g or "model" in g:
             domains.append(MicrotaskType.DATA_MODEL)
         if "lógica" in g or "logic" in g or "proceso" in g:
@@ -159,11 +176,21 @@ class TaskDecomposer:
             MicrotaskType.INTEGRATION: f"Plan external integrations and API endpoints for {goal}",
         }
         
+        # Phase 21: Auto-Targeting via Visual Hypothesis
+        v_ctx = context.get("visual_context", {})
+        hyp = v_ctx.get("hypothesis", {})
+        suggested = hyp.get("suggested_paths", [])
+        
+        job_ctx = context.copy()
+        if suggested and mtype in [MicrotaskType.UI_ARCHITECTURE, MicrotaskType.AUDIT]:
+            job_ctx["target_file"] = suggested[0] # Focus on first relevant path
+            job_ctx["radius"] = "localized"
+        
         return ShadowJob(
             id=f"job_{self._next_id()}",
             type=mtype,
             description=descriptions.get(mtype, f"Process {mtype.value} for {goal}"),
-            context=context
+            context=job_ctx
         )
 
     def _next_id(self) -> int:

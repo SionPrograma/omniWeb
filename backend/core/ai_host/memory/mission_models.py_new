@@ -1,0 +1,122 @@
+import uuid
+import json
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, ConfigDict
+from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
+
+# --- ENUMS ---
+
+class MissionStatus(str, Enum):
+    OPEN = "OPEN"           # Active mission (Ready to focus or Background ready)
+    RUNNING = "RUNNING"     # Parallel executing in background
+    PAUSED = "PAUSED"       # Human interrupted or switched context
+    BLOCKED = "BLOCKED"     # Stuck on an issue or verification failure
+    COMPLETED = "COMPLETED" # Mission objective reached
+    FAILED = "FAILED"       # Critical error or goal unreachable
+    
+    # MISSION HIERARCHY & BRANCHING (Phase 21)
+    ARCHIVED = "ARCHIVED"   # Hidden from active UI but preserved
+    ROLLED_BACK = "ROLLED_BACK" # Reverted branch
+    SUPERSEDED = "SUPERSEDED" # Replaced by a retry link
+    SUSPENDED = "SUSPENDED" # Auto-paused by priority engine
+
+# --- MODELS ---
+
+class StrategicPostMortem(BaseModel):
+    """
+    CAPA 1 (PHASE 69): STRATEGIC KNOWLEDGE SYNTHESIS.
+    Captures high-level lessons learned from the mission diagnostic cycle.
+    """
+    summary: str
+    dominant_pattern: str
+    best_action: str
+    avg_roi: float
+    reusable_lesson: str
+    confidence: float
+
+class MissionHandoff(BaseModel):
+    """
+    Structured deep summary of a mission for audit, continuity and handoff.
+    """
+    mission_id: str
+    briefing_title: str = "Mission Executive Briefing"
+    goal: str
+    executive_summary: str
+    key_decisions: List[str] = Field(default_factory=list) 
+    technical_impact: str = "TDB" 
+    timeline_milestones: List[str]
+    governance_footprint: Dict[str, Any] 
+    multimodal_evidence_refs: List[str]
+    recovery_events: List[str]
+    final_status: MissionStatus
+    next_steps: List[str]
+    post_mortem: Optional[StrategicPostMortem] = None # PHASE 69
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    def to_markdown(self) -> str:
+        """Generates a professional executive briefing in Markdown."""
+        md = f"# 📋 {self.briefing_title}\n\n"
+        md += f"**Mission ID:** `{self.mission_id}` | **Status:** `{self.final_status.value}`\n"
+        md += f"**Timestamp:** {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        
+        md += f"## 🎯 Goal & Scope\n{self.goal}\n\n"
+        
+        md += f"## 📝 Executive Summary\n{self.executive_summary}\n\n"
+        
+        if self.post_mortem:
+            pm = self.post_mortem
+            md += "## 🧠 Strategic Post-Mortem & Lessons Learned\n"
+            md += f"> **Patrón Detectado:** {pm.dominant_pattern}\n"
+            md += f"> **Lección Reutilizable:** {pm.reusable_lesson}\n"
+            md += f"> **Eficacia de Rescate:** ROI Promedio de {pm.avg_roi:.1f} en la acción '{pm.best_action}'.\n\n"
+            md += f"{pm.summary}\n\n"
+
+        if self.key_decisions:
+            md += "## ⚖️ Key Decisions\n"
+            for d in self.key_decisions:
+                md += f"- {d}\n"
+            md += "\n"
+            
+        md += f"## 🛠️ Technical Impact & Results\n{self.technical_impact}\n\n"
+        
+        md += "## 🛡️ Governance & Integrity\n"
+        gov = self.governance_footprint
+        md += f"- **Health Score:** {(gov.get('score', 1.0)*100):.0f}%\n"
+        if self.recovery_events:
+            md += "- **Recovery Events:**\n"
+            for r in self.recovery_events:
+                md += f"  - ⚠️ {r}\n"
+        md += "\n"
+        
+        md += "## 🛣️ Timeline & Milestones\n"
+        for m in self.timeline_milestones:
+            md += f"- {m}\n"
+        md += "\n"
+        
+        md += "## 🚀 Next Steps & Continuous Actions\n"
+        for s in self.next_steps:
+            md += f"- {s}\n"
+        
+        return md
+
+class MissionCompactDigest(BaseModel):
+    """
+    High-density operational summary for fast context switching (Bloque 22).
+    """
+    mission_id: str
+    goal_compact: str
+    status_label: str
+    active_constraints: List[str] = Field(default_factory=list)
+    governance_score: float = 1.0 # 0.0 to 1.0
+    latest_incident: Optional[str] = None
+    next_step_hint: str = "Continuar ejecución"
+    multimodal_summary: Optional[str] = None
+    readiness: str = "READY"
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+class MissionState(BaseModel):

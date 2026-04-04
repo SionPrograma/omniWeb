@@ -380,3 +380,303 @@
         grid-row: span 1 !important;
     }
 }
+
+/* ============================================================
+   MULTIMODAL MISSION REPORT TIMELINE — CAPA 4 CSS
+   Aditivo. No sobreescribe estilos previos.
+   ============================================================ */
+
+.mm-report-container {
+    animation: fadeInPizarron 0.35s ease-out;
+}
+
+.mm-report-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(212, 175, 55, 0.06);
+    border: 1px solid rgba(212, 175, 55, 0.18);
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+
+.mm-report-header h4 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    color: var(--pizarron-accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mm-report-goal {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mm-report-btn {
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    color: var(--pizarron-accent);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.6rem;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    font-family: 'Outfit', sans-serif;
+}
+
+.mm-report-btn:hover {
+    background: rgba(212, 175, 55, 0.25);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+}
+
+.mm-report-btn.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* TIMELINE RAIL */
+.mm-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 28px;
+}
+
+.mm-timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(212, 175, 55, 0.5), rgba(255, 255, 255, 0.05));
+}
+
+/* TIMELINE NODE */
+.mm-node {
+    position: relative;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    padding: 8px 10px;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: default;
+}
+
+.mm-node:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(212, 175, 55, 0.2);
+}
+
+/* Node type color accents */
+.mm-node.type-input {
+    border-left: 2px solid #00e5ff;
+}
+
+.mm-node.type-correction {
+    border-left: 2px solid #00ff88;
+}
+
+.mm-node.type-technical {
+    border-left: 2px solid #ffaa00;
+}
+
+.mm-node.type-rescue {
+    border-left: 2px solid #32ff96;
+}
+
+.mm-node.type-governance {
+    border-left: 2px solid #ff6b6b;
+}
+
+.mm-node.type-empty {
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    opacity: 0.5;
+}
+
+/* Timeline dot */
+.mm-node-dot {
+    position: absolute;
+    left: -22px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    background: #111;
+}
+
+.mm-node.type-input .mm-node-dot {
+    background: #00e5ff;
+    border-color: #00e5ff;
+    box-shadow: 0 0 6px #00e5ff66;
+}
+
+.mm-node.type-correction .mm-node-dot {
+    background: #00ff88;
+    border-color: #00ff88;
+    box-shadow: 0 0 6px #00ff8866;
+}
+
+.mm-node.type-technical .mm-node-dot {
+    background: #ffaa00;
+    border-color: #ffaa00;
+    box-shadow: 0 0 6px #ffaa0066;
+}
+
+.mm-node.type-rescue .mm-node-dot {
+    background: #32ff96;
+    border-color: #32ff96;
+    box-shadow: 0 0 6px #32ff9666;
+}
+
+.mm-node.type-governance .mm-node-dot {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    box-shadow: 0 0 6px #ff6b6b66;
+}
+
+/* Node header */
+.mm-node-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.mm-node-title {
+    font-size: 0.62rem;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mm-node-ts {
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.3);
+    font-family: 'Courier New', monospace;
+}
+
+/* Node body text */
+.mm-node-body {
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.35;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Diff pill inside a node */
+.mm-diff-pill {
+    display: inline-flex;
+    gap: 8px;
+    font-size: 0.5rem;
+    margin-top: 5px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mm-diff-added {
+    color: #00ff88;
+}
+
+.mm-diff-removed {
+    color: #ff4444;
+}
+
+.mm-diff-pers {
+    color: #ffaa00;
+}
+
+/* Hypothesis shift badge */
+.mm-shift-badge {
+    display: inline-block;
+    font-size: 0.5rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: rgba(0, 255, 136, 0.08);
+    color: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.15);
+    margin-top: 4px;
+}
+
+/* Governance compact bar */
+.mm-governance-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(255, 107, 107, 0.05);
+    border: 1px solid rgba(255, 107, 107, 0.15);
+    margin-top: 8px;
+    font-size: 0.58rem;
+}
+
+.mm-governance-bar .gov-label {
+    color: #ff6b6b;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.mm-governance-bar .gov-val {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Empty / loading state */
+.mm-empty-state {
+    text-align: center;
+    padding: 20px;
+    opacity: 0.4;
+    font-size: 0.7rem;
+    font-family: 'Outfit';
+}
+
+/* Technical refinement box */
+.mm-tech-box {
+    background: rgba(255, 170, 0, 0.05);
+    border: 1px solid rgba(255, 170, 0, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    font-size: 0.6rem;
+}
+
+.mm-tech-box .tech-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    align-items: baseline;
+}
+
+.mm-tech-box .tech-key {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.52rem;
+    letter-spacing: 0.5px;
+}
+
+.mm-tech-box .tech-val {
+    color: #ffaa00;
+    font-family: 'Courier New', monospace;
+    font-size: 0.58rem;
+}

@@ -99,6 +99,46 @@ app.add_middleware(ChipContextMiddleware)
 async def root():
     return FileResponse("frontend/shell/index.html")
 
+@app.get("/api/mission/{mission_id}/briefing")
+async def get_mission_briefing(mission_id: str):
+    """
+    CAPA 1 (PHASE 70): STRATEGIC BRIEFING API.
+    Provides preventive wisdom for a mission.
+    """
+    with set_chip_context("core"):
+        mission = mission_manager.get_mission(mission_id)
+        if not mission:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        return mission.generate_pre_mission_briefing()
+
+@app.get("/api/mission/{mission_id}/replay")
+async def get_mission_replay(mission_id: str):
+    """
+    CAPA 2 (PHASE 71): FORENSIC REPLAY API.
+    Provides a chronological event trace for a mission.
+    """
+    with set_chip_context("core"):
+        mission = mission_manager.get_mission(mission_id)
+        if not mission:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        return mission.generate_cognitive_replay_trace()
+
+@app.get("/api/mission/{mission_id}/simulate")
+async def get_mission_simulation(mission_id: str):
+    """
+    CAPA 2 (PHASE 72): COGNITIVE FORESIGHT API.
+    Provides comparative "What-If" scenarios for drift mitigation.
+    """
+    with set_chip_context("core"):
+        mission = mission_manager.get_mission(mission_id)
+        if not mission:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        return mission.generate_mitigation_scenarios()
+
+@app.get("/api/mission/{mission_id}")
+async def get_mission_details(mission_id: str):
+    return FileResponse("frontend/dashboard/index.html")
+
 @app.get("/dashboard")
 async def dashboard():
     return FileResponse("frontend/dashboard/index.html")
