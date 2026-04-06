@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "mock_secret")
     # Creator Security Fortress (Phase 16)
     CREATOR_ID: str = os.getenv("OMNIWEB_CREATOR_ID", "1") # Default to admin user '1'
+    CREATOR_PIN: str = os.getenv("OMNIWEB_CREATOR_PIN", "1234") # PIN for critical operations
     REQUIRE_TRUSTED_DEVICE: bool = True
     REQUIRE_HARDWARE_AUTH: bool = False # Set to true for high-security environments
 

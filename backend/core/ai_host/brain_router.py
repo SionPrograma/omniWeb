@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional, List
 import logging
 import re
+from datetime import datetime, timedelta
 from .processors.base import AICommandResponse
 from .routing.intent_classifier import intent_classifier
 from .sessions import session_state
@@ -58,6 +59,10 @@ class BrainRouter:
         if understanding.get("refined_message"):
              msg_clean = understanding["refined_message"]
              logger.info(f"[BRAIN_RECONSTRUCTION] Overriding msg with: {msg_clean}")
+
+        # Inject understanding into context for all sub-processors
+        if context is None: context = {}
+        context["understanding"] = understanding
 
         intent_group = understanding["intent_group"]
         specific_intent = understanding.get("specific_intent")
@@ -123,7 +128,7 @@ class BrainRouter:
                  if res: return await self._finalize_interaction(msg_clean, res, specific_intent or intent_group)
 
             # B. CONTEXTUAL CONTINUITY (Seguimientos cortos como "y ahora?" o "por qué?")
-            if self._is_short_followup(msg_clean) and delib_context.recent_topic:
+            if self._is_short_followup(msg_clean, source_surface=source_surface) and delib_context.recent_topic:
                  res = await self._handle_short_prompt(msg_clean, delib_context, lang, system_state)
                  return await self._finalize_interaction(msg_clean, res, "follow_up")
 
@@ -181,6 +186,11 @@ class BrainRouter:
         """Centralized post-processing and semantic memory logging."""
         if res and res.message:
             semantic_memory.add_interaction(msg, res.message, intent)
+        
+        # Attach HUD snapshot for always-on status (CAPA 1 HUD)
+        from .observability.governance_dashboard import governance_dashboard
+        res.hud = governance_dashboard.get_hud_snapshot()
+        
         return res
 
     async def _handle_direct_command(self, intent: str, msg: str, context: Optional[Dict[str, Any]]) -> Optional[AICommandResponse]:
@@ -285,7 +295,8 @@ class BrainRouter:
             goal=plan.interpreted_goal,
             plan_id=plan.title,
             pending_steps=[str(s.id) for s in plan.steps],
-            plan=plan
+            plan=plan,
+            source_draft_id=interpreted.source_draft_id
         )
         # Populate operational parameters (Phase 18 & 19)
         mission.parameters = {
@@ -342,17 +353,108 @@ class BrainRouter:
 
         # 0.0 CREATOR-ONLY PIN OVERRIDE (Phase 21: Authority Injection) - SHIELD PRIORITY
         pin_pattern = r"(?:autoriz|override|confirm|valid|pin).+?(\d{4})"
+        # Version 83: Governed Action Handler (Quick Actions Routing)
+        gov_action_pattern = r"governed_action\s+(\w+)\s+mission_id\s+([\w\-]+)\s+PIN\s+(\d{4})"
+        
+        # 1. Handle Governed Quick Action (Directed to specific mission)
+        gov_match = re.search(gov_action_pattern, msg_lower)
+        if gov_match:
+             target_action = gov_match.group(1)
+             target_m_id = gov_match.group(2)
+             provided_pin = gov_match.group(3)
+             
+             if provided_pin != "1234":
+                  return AICommandResponse(intent="mission_control", status="failure", message="PIN de Autoridad incorrecto.")
+             
+             # Targeted routing
+             m = mission_manager.get_mission_by_id(target_m_id)
+             if not m:
+                  return AICommandResponse(intent="mission_control", status="failure", message=f"Misión {target_m_id[:8]} no encontrada.")
+             
+             from backend.core.ai_host.memory.mission_telemetry import mission_telemetry
+             
+             if target_action == "pause_mission":
+                  m.status = MissionStatus.PAUSED
+                  m.blocked_reasons.append("Pausa manual mediante Quick Action (Autorizada).")
+             elif target_action == "resume_mission":
+                  m.status = MissionStatus.OPEN
+                  m.blocked_reasons = [] # Clear blocks for manual resume
+             elif target_action == "abort_mission":
+                  mission_manager.rollback_branch(target_m_id, reason="Aborto manual mediante Quick Action (Autorizada).")
+                  return AICommandResponse(intent="mission_control", status="success", message=f"Rama de misión {target_m_id[:8]} abortada exitosamente.")
+             elif target_action == "request_override":
+                  # Standard override session logic
+                  expires_at = datetime.now() + timedelta(minutes=10)
+                  m.authority_session = {
+                      "mission_id": target_m_id, "authority_granted": True,
+                      "authority_granted_at": datetime.now().isoformat(),
+                      "authority_expires_at": expires_at.isoformat(),
+                      "authority_scope": m.related_targets, "authority_invalidated_reason": None
+                  }
+             
+             mission_manager.save_mission(m)
+             mission_telemetry.record_event(
+                 target_m_id, "quick_action_executed", 
+                 f"Acción gobernada '{target_action}' ejecutada por el Creador.", 
+                 severity="WARNING", source_actor="Creator"
+             )
+             return AICommandResponse(intent="mission_control", status="success", message=f"Acción '{target_action}' ejecutada para misión {target_m_id[:8]}.")
+
+        # 2. General Switch/Focus Handling (Safe)
+        if msg_lower.startswith("mission: switch_focus"):
+             m_id_match = re.search(r"switch_focus\s+([\w\-]+)", msg_lower)
+             if m_id_match:
+                  m_id = m_id_match.group(1)
+                  if mission_manager.switch_focus(m_id):
+                       return AICommandResponse(intent="mission_control", status="success", message=f"Enfoque cambiado a misión {m_id[:8]}.")
+
+        # 3. Standard PIN Handling (Legacy/Current Mission Context)
         pin_match = re.search(pin_pattern, msg_lower)
         if pin_match:
              pin = pin_match.group(1)
+             
+             # 0.0.1 CONSTITUTIONAL HARD LIMIT (Phase 81)
+             # Even with PIN, some surfaces are NEVER_AUTO for security reasons.
+             hard_limits = ["auth", "security", "core/auth"]
+             targets = active.related_targets or []
+             if any(hl in t.lower() for hl in hard_limits for t in targets):
+                  return AICommandResponse(
+                      intent="mission_control",
+                      status="failure",
+                      message="LÍMITE CONSTITUCIONAL: La superficie afectada (AUTH/SECURITY) está bajo 'NEVER_AUTO'. El PIN no es suficiente para esta operación de núcleo." if "es" in msg_lower else "CONSTITUTIONAL LIMIT: Affected surface (AUTH/SECURITY) is under 'NEVER_AUTO'. PIN is insufficient for this core operation.",
+                      payload={"hard_override": False, "reason": "HARD_LIMIT_REACHED"}
+                  )
+
              if pin == "1234": # Security PIN (Phase 21)
-                  active.parameters["hard_override_granted"] = True
+                  # Authority Session Model (Phase 82)
+                  expires_at = datetime.now() + timedelta(minutes=10)
+                  active.authority_session = {
+                      "mission_id": active.mission_id,
+                      "authority_granted": True,
+                      "authority_granted_at": datetime.now().isoformat(),
+                      "authority_expires_at": expires_at.isoformat(),
+                      "authority_scope": active.related_targets,
+                      "authority_invalidated_reason": None
+                  }
+                  active.parameters["hard_override_granted"] = True # Legacy compatibility
+                  
+                  # Authority Traceability (Phase 81)
+                  try:
+                       from backend.core.ai_host.memory.mission_telemetry import mission_telemetry
+                       mission_telemetry.record_event(
+                           active.mission_id,
+                           "manual_authority_injected",
+                           f"Autorización manual otorgada (+10m). Expira: {expires_at.strftime('%H:%M:%S')}",
+                           severity="WARNING",
+                           source_actor="Creator"
+                       )
+                  except: pass
                   mission_manager.save_mission(active)
                   return AICommandResponse(
                       intent="mission_control",
                       status="success",
-                      message="Autoridad reforzada confirmada. PIN validado. Barreras extremas levantadas temporalmente." if "es" in msg_lower else "Reinforced authority confirmed. PIN validated. Extreme barriers lifted.",
-                      payload={"hard_override": True}
+                      message=f"Autoridad reforzada confirmada (PIN). Sesión técnica válida hasta {expires_at.strftime('%H:%M:%S')}." if "es" in msg_lower else f"Reinforced authority confirmed. Technical session valid until {expires_at.strftime('%H:%M:%S')}.",
+                      payload={"hard_override": True, "expires_at": expires_at.isoformat()}
                   )
              else:
                   return AICommandResponse(
@@ -521,7 +623,7 @@ class BrainRouter:
             msg = msg.replace(n, "")
         return msg.strip()
 
-    def _is_short_followup(self, msg: str) -> bool:
+    def _is_short_followup(self, msg: str, source_surface: str = "chat") -> bool:
         greetings = ["hola", "hello", "hi", "hey", "buenos dias", "buenas noches", "buenos días", "buenas tardes", "todo bien", "todo ok", "buenas"]
         if any(g in msg for g in greetings):
             return False

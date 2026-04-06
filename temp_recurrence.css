@@ -1,0 +1,50 @@
+/* OMNIWEB: CONSTITUTIONAL RECURRENCE PROTECTOR */
+.pruning-card.is-gated {
+    border-left: 4px solid #ff4444;
+    opacity: 0.8 !important;
+    background: rgba(255, 68, 68, 0.05) !important;
+}
+
+.p-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    width: 100%;
+}
+
+.p-gated-badge {
+    font-size: 0.6rem;
+    background: #ff4444;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.p-structural-badge {
+    font-size: 0.6rem;
+    background: #ffb400;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.trajectory-badge.structural_review {
+    background: rgba(255, 180, 0, 0.2) !important;
+    color: #ffb400 !important;
+    border: 1px solid #ffb400 !important;
+}
+
+.trajectory-badge.recurrent_drift {
+    background: rgba(255, 68, 68, 0.1) !important;
+    color: #ff4444 !important;
+}
+
+.p-badge.drift.warn {
+    color: #ff4444 !important;
+    border-color: #ff4444 !important;
+}

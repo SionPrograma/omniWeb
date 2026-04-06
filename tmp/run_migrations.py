@@ -1,18 +1,10 @@
-
 import sys
 import os
-
-# Add the project root to sys.path
-sys.path.append(r"c:\Users\Propietario\Desktop\plan actual\07-proyectosGrandes\01-omniweb")
-
-from backend.core.database import db_manager
+sys.path.append(os.getcwd())
 from backend.core.permissions import set_chip_context
+from backend.core.database import db_manager
 
-def main():
+with set_chip_context("core"):
     print("Running migrations...")
-    with set_chip_context("core"):
-        db_manager.run_migrations()
+    db_manager.run_migrations()
     print("Migrations complete.")
-
-if __name__ == "__main__":
-    main()

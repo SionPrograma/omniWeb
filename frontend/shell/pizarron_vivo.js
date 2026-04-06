@@ -175,10 +175,22 @@ class PizarronVivoUI {
                 return '#888';
             };
 
+            const rebaseRequired = m.rebase_required || false;
+            const rebaseCount = (m.rebase_recommendations || []).length;
+
             return `
-                <div class="mission-portfolio-card ${isFocus ? 'focus' : ''}" 
+                <div class="mission-portfolio-card ${isFocus ? 'focus' : ''} ${rebaseRequired ? 'rebase-required-pulse' : ''}" 
                      onclick="window.omniShell.addInput('switch mission ${mId}')"
-                     style="background: rgba(255,255,255,0.03); border: 1px solid ${isFocus ? 'var(--pizarron-accent)' : 'rgba(255,255,255,0.05)'}; padding: 12px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; border-left: 4px solid ${isFocus ? 'var(--pizarron-accent)' : getStatusColor(mStatus)};">
+                     style="background: rgba(255,255,255,0.03); border: 1px solid ${isFocus ? 'var(--pizarron-accent)' : (rebaseRequired ? '#ffaa0088' : 'rgba(255,255,255,0.05)')}; padding: 12px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; border-left: 4px solid ${isFocus ? 'var(--pizarron-accent)' : (rebaseRequired ? '#ffaa00' : getStatusColor(mStatus))};">
+                    
+                    <div id="fusion-${mId}" class="fusion-context-container" style="display:none; margin-bottom: 8px;"></div>
+                    ${rebaseRequired ? `
+                        <div class="rebase-hud-badge" onclick="event.stopPropagation(); window.roadmapUI.viewAdvisoryDashboard()" 
+                             style="position:absolute; top:0; right:0; background:#ffaa00; color:#000; font-size:0.55rem; padding:2px 6px; font-weight:bold; border-bottom-left-radius:6px; cursor:pointer; z-index:10; font-family:'Outfit';">
+                             REBASE REQUIRED (${rebaseCount})
+                        </div>
+                    ` : ''}
+
                     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <span style="font-size: 0.55rem; color: #888; font-family: monospace;">#${mId.substring(0, 8)}</span>
                         <span style="font-size: 0.6rem; color: ${getStatusColor(mStatus)}; font-weight: bold; text-transform: uppercase;">${mStatus} ${isFocus ? '[FOCUS]' : ''}</span>
@@ -289,10 +301,649 @@ class PizarronVivoUI {
                 <div style="margin-left: auto; font-size: 0.6rem; opacity: 0.4; align-self: center;">Sincronización: Nominal</div>
             </div>
         `;
+
+        // Trigger Governance Fusion (Unified risk view)
+        setTimeout(() => {
+            const allMissions = [active, ...parallel, ...completed].filter(m => m !== null);
+            allMissions.forEach(m => {
+                const mid = m.id || m.mission_id;
+                if (window.omniRenderFusion) window.omniRenderFusion(`fusion-${mid}`, mid, 'MISSION');
+            });
+        }, 100);
+    }
+
+    rebaseMission(handoffId) {
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(`REBASE MISSION HANDOFF ${handoffId}`);
+        }
+    }
+
+    renderRebaseAlert(rebase) {
+        if (!rebase || rebase.status === 'STILL_VALID') return '';
+
+        let color = '#ffaa00';
+        let label = 'SISTEMA DESFASADO';
+        let showContinue = true;
+        let icon = '⚡';
+
+        if (rebase.status === 'CONFLICTED') {
+            color = '#ff4444';
+            label = 'CONFLICTO DETECTADO';
+            showContinue = false;
+            icon = '🛑';
+        }
+        if (rebase.status === 'BLOCKED_BY_STATE') {
+            color = '#ff4444';
+            label = 'Gobernanza Crítica';
+            showContinue = false;
+            icon = '🔒';
+        }
+        if (rebase.status === 'OBSOLETE') {
+            color = '#32ff96';
+            label = 'Misión ya ejecutada';
+            showContinue = false;
+            icon = '✅';
+        }
+
+        return `
+            <div class="rebase-alert animate-slide-in" 
+                 style="margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.4); border: 1px solid ${color}; border-radius: 10px; border-left: 5px solid ${color}">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: ${color}; letter-spacing: 1px;">
+                        ${icon} ${label.toUpperCase()}
+                    </div>
+                    <div style="font-size:0.5rem; color:#666;">Confianza: ${(rebase.rebase_confidence * 100).toFixed(0)}%</div>
+                </div>
+                <div style="color: #bbb; font-size: 0.65rem; margin-top:10px; line-height:1.4;">
+                    ${rebase.status === 'OBSOLETE' ?
+                'OmniWeb detectó que el objetivo de esta misión fue resuelto por otra operación reciente.' :
+                'El estado del sistema ha derivado desde la creación de esta propuesta.'}
+                    
+                    <div style="margin-top:8px; background:rgba(255,255,255,0.03); padding:8px; border-radius:4px;">
+                        ${(rebase.detected_changes || []).map(c => `<div style="margin-bottom:3px;">• ${c.detail}</div>`).join('')}
+                        ${(rebase.conflicts || []).map(c => `<div style="color:#ff4444; margin-bottom:3px;">• ${c}</div>`).join('')}
+                    </div>
+                </div>
+                <div style="margin-top:12px; display:flex; gap:8px;">
+                    ${rebase.status !== 'OBSOLETE' ? `
+                        <button class="handoff-mini-btn action-primary" onclick="window.pizarronUI.rebaseMission('${rebase.handoff_id}')">ACTUALIZAR (REBASE)</button>
+                    ` : `
+                        <button class="handoff-mini-btn" onclick="window.pizarronUI.archiveHandoff('${rebase.handoff_id}')">ARCHIVAR PROPUESTA</button>
+                    `}
+                    ${showContinue ? `
+                        <button class="handoff-mini-btn" onclick="document.querySelector('.btn-confirm').click()" style="opacity:0.5">FORZAR LANZAMIENTO</button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    renderIntakePanel(container, mission, gate = null, error = null, rebase = null) {
+        if (!container || !mission) return;
+        this.currentDraftId = mission.handoff_id;
+
+        const risk = (mission.risk_level || 'low').toLowerCase();
+        let riskClass = 'risk-low';
+        if (risk === 'medium') riskClass = 'risk-medium';
+        if (risk === 'high' || risk === 'critical') riskClass = 'risk-high';
+
+        // CAPA 2 (Phase 87): REBASE LAYER
+        const rebaseUI = this.renderRebaseAlert(rebase);
+
+        // Insert Gate UI if required
+        let gateUI = '';
+        if (gate && gate.required) {
+            gateUI = `
+                <div class="intake-gate-container animate-slide-in" 
+                     style="margin-bottom: 20px; padding: 15px; background: rgba(255, 68, 68, 0.05); border: 1px dashed rgba(255, 68, 68, 0.3); border-radius: 8px;">
+                    <div style="color: #ff4444; font-size: 0.7rem; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        ${gate.reason || 'Confirmación requerida'}
+                    </div>
+                    ${gate.type === 'PIN' ? `
+                        <div class="gate-pin-field">
+                            <label style="display:block; font-size: 0.6rem; color: #ff4444; margin-bottom: 5px;">MANDO DE AUTORIDAD (PIN)</label>
+                            <input type="password" id="intake-pin" 
+                                   class="intake-input ${error === 'PIN_INVALID' ? 'input-error' : ''}" 
+                                   maxlength="4" placeholder="••••"
+                                   style="text-align: center; letter-spacing: 5px; font-size: 1.2rem; border-color: ${error ? '#ff4444' : 'rgba(255, 68, 68, 0.2)'};">
+                        </div>
+                    ` : ''}
+                    ${error ? `<div style="color: #ff4444; font-size: 0.6rem; margin-top: 5px;">${error === 'PIN_INVALID' ? 'PIN INCORRECTO' : (error === 'PIN_REQUIRED' ? 'PIN REQUERIDO' : error)}</div>` : ''}
+                </div>
+            `;
+        }
+
+        const confirmLabel = (gate && gate.required && gate.type === 'PIN') ? 'VERIFY & EXECUTE' : 'CONFIRM & EXECUTE';
+        const confirmStyle = (gate && gate.level === 'CRITICAL') ? 'background: #ff4444; color: #fff;' : '';
+
+        container.innerHTML = `
+            <div class="intake-card animate-slide-in">
+                <div class="intake-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <div class="intake-branding">COMMAND CONSOLE v1.0</div>
+                        <div class="intake-title">PROPOSED MISSION CONTRACT</div>
+                    </div>
+                    <button class="handoff-mini-btn" onclick="window.pizarronUI.loadBacklog()" style="opacity:0.6">← COLA</button>
+                </div>
+
+                ${rebaseUI}
+                ${gateUI}
+
+                ${mission.wisdom_source ? `
+                    <div class="wisdom-draft-source-badge" 
+                         onclick="window.wisdomAtlas.viewNodeDetail('${mission.wisdom_source.node_id}')"
+                         style="margin-bottom: 15px; background: rgba(50, 255, 150, 0.1); border: 1px solid rgba(50, 255, 150, 0.3); padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.2rem;">🏺</span>
+                        <div style="flex:1;">
+                            <div style="font-size: 0.55rem; color: var(--pizarron-accent); font-weight: bold; text-transform: uppercase;">WISDOM EVIDENCE SOURCE</div>
+                            <div style="font-size: 0.75rem; color: #fff; font-weight: 600;">${mission.wisdom_source.title}</div>
+                            <div style="font-size: 0.65rem; color: #ccc; opacity: 0.8;">Click para ver precedente en el Atlas.</div>
+                        </div>
+                        <div style="font-size: 0.5rem; background: var(--pizarron-accent); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold;">VIEW ORIGIN</div>
+                    </div>
+                ` : ''}
+
+                <div class="intake-field">
+                    <label>OBJECTIVE</label>
+                    <input type="text" id="intake-obj" value="${mission.objective || ''}" class="intake-input">
+                </div>
+
+                <div class="intake-field">
+                    <label>SURFACE AFFECTED</label>
+                    <div class="intake-chips" id="intake-surface">
+                        ${(mission.surface_affected || []).map(s => `<span class="intake-chip">${s}</span>`).join('')}
+                    </div>
+                </div>
+
+                <div class="intake-field">
+                    <label>CONSTRAINTS / RULES</label>
+                    <textarea id="intake-constraints" class="intake-input" rows="4" style="resize: vertical;">${(mission.constraints || []).join('\n')}</textarea>
+                </div>
+
+                <div class="intake-flex" style="display:flex; gap:15px; margin-bottom:15px;">
+                    <div class="intake-field" style="flex:1;">
+                        <label>RISK LEVEL</label>
+                        <div class="risk-preview ${riskClass}">${(mission.risk_level || 'LOW').toUpperCase()}</div>
+                    </div>
+                    <div class="intake-field" style="flex:1;">
+                        <label>EXECUTION STYLE</label>
+                        <select id="intake-style" class="intake-input">
+                            <option value="autonomous" ${mission.execution_style === 'autonomous' ? 'selected' : ''}>Autonomous</option>
+                            <option value="with_confirmation" ${mission.execution_style === 'with_confirmation' ? 'selected' : ''}>Step-by-Step</option>
+                            <option value="simulation" ${mission.execution_style === 'simulation' ? 'selected' : ''}>Simulation Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                ${gateUI}
+
+                <div id="intake-enrichment-hud" class="copilot-enrichment-hud" style="display:none;"></div>
+
+                <div class="intake-rules">
+                    <div class="rule-item">✓ Governed by Omni-Shield</div>
+                    <div class="rule-item">✓ Snapshot created before execution</div>
+                    <div class="rule-item">✓ Rollback capability enabled</div>
+                </div>
+
+                <div class="intake-actions">
+                    <button class="intake-btn btn-abort" onclick="window.pizarronUI.abortIntake()">ABORT</button>
+                    <button class="intake-btn btn-confirm" style="${confirmStyle}" onclick="window.pizarronUI.startMissionWithCheck('${mission.handoff_id}')">${confirmLabel}</button>
+                </div>
+            </div>
+        `;
+
+        // Trigger enrichment scan
+        this.fetchMissionEnrichment(mission);
+    }
+
+    async fetchMissionEnrichment(mission) {
+        const hud = document.getElementById('intake-enrichment-hud');
+        if (!hud) return;
+
+        try {
+            const res = await fetch('/api/v1/governance/copilot/enrich', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}`
+                },
+                body: JSON.stringify({
+                    objective: mission.objective,
+                    surface: mission.surface_affected || []
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success' && data.count > 0) {
+                this.renderEnrichmentSignals(hud, data.signals);
+            }
+        } catch (err) {
+            console.warn("Copilot Enrichment failed", err);
+        }
+    }
+
+    renderEnrichmentSignals(container, signals) {
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="enrichment-header">
+                <span class="enrichment-title">🛡️ REAL-TIME GOVERNANCE COPILOT</span>
+                <span style="font-size: 0.5rem; color: #00e5ff; opacity: 0.5;">${signals.length} SEÑALES</span>
+            </div>
+            <div class="enrichment-list">
+                ${signals.map((s, idx) => `
+                    <div class="enrichment-signal sev-${s.severity}">
+                        <div class="signal-type">${s.signal_type.replace(/_/g, ' ')} (${(s.confidence * 100).toFixed(0)}% conf)</div>
+                        <div class="signal-rationale">${s.rationale}</div>
+                        ${s.suggested_adjustment ? `
+                            <div class="signal-suggestion-row">
+                                <div class="signal-suggestion">${s.suggested_adjustment}</div>
+                                ${s.adjustment_payload ? `
+                                    <button class="enrichment-apply-btn" onclick='window.pizarronUI.applyCopilotAdjustment(${JSON.stringify(s.adjustment_payload)})'>APLICAR</button>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    applyCopilotAdjustment(payload) {
+        console.log("[COPILOT] Aplicando ajuste:", payload);
+        const objInput = document.getElementById('intake-obj');
+        const constraintsArea = document.getElementById('intake-constraints');
+        const styleSelect = document.getElementById('intake-style');
+
+        if (payload.type === 'ADD_CONSTRAINT') {
+            const current = constraintsArea.value.trim();
+            constraintsArea.value = current ? (current + '\n' + payload.value) : payload.value;
+            constraintsArea.classList.add('adjustment-pulse');
+            setTimeout(() => constraintsArea.classList.remove('adjustment-pulse'), 1000);
+        } else if (payload.type === 'SET_EXECUTION_STYLE') {
+            styleSelect.value = payload.value;
+            styleSelect.classList.add('adjustment-pulse');
+            setTimeout(() => styleSelect.classList.remove('adjustment-pulse'), 1000);
+        }
+
+        // Optional: Re-fetch enrichment to clear signals or update state
+        // this.fetchMissionEnrichment(...) 
+    }
+
+    startMissionWithCheck(handoffId) {
+        this.runPreMissionCheck(handoffId, "PROPOSAL");
+    }
+
+    async runPreMissionCheck(targetId, targetType = "PROPOSAL") {
+        console.log(`[GOVERNANZA] Iniciando pre-check para ${targetId}...`);
+        try {
+            const response = await fetch(`/api/v1/governance/pre-mission-check/${targetId}?type=${targetType}`);
+            const check = await response.json();
+
+            // If it's safe to start and no critical signals, we can proceed or still show the modal for review.
+            // For now, following protocol: show evidence-based decision support.
+            this.showGovernancePreCheckModal(check);
+        } catch (err) {
+            console.error("Governance check failed", err);
+            // Fallback for UI continuity
+            this.executeConfirmedIntake();
+        }
+    }
+
+    showGovernancePreCheckModal(check) {
+        const modalId = 'governance-precheck-modal';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+                display: flex; align-items: center; justify-content: center;
+                z-index: 15000; font-family: 'Outfit', sans-serif;
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const getStatusIcon = (status) => {
+            const icons = {
+                'SAFE_TO_START': '✅', 'START_WITH_WARNING': '⚠️',
+                'REVIEW_REQUIRED': '🔍', 'REBASE_RECOMMENDED': '🔄',
+                'FREEZE_UNTIL_RECOVERY': '❄️', 'ESCALATE_TO_CREATOR_CORE': '⚖️'
+            };
+            return icons[status] || '❓';
+        };
+
+        const statusClass = `status-${check.status.toLowerCase().replace(/_/g, '-')}`;
+
+        modal.innerHTML = `
+            <div class="gov-precheck-content animate-slide-in ${statusClass}" style="
+                background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 12px; width: 90%; max-width: 550px; padding: 25px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5); border-top: 4px solid var(--pizarron-accent);
+            ">
+                <style>
+                    .gov-precheck-content.status-freeze-until-recovery { border-top-color: #ff4444; }
+                    .gov-precheck-content.status-review-required { border-top-color: #ffaa00; }
+                    .gov-precheck-content.status-safe-to-start { border-top-color: #32ff94; }
+                    .gov-signal-card { 
+                        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+                        padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.75rem;
+                    }
+                    .sig-critical { border-left: 3px solid #ff4444; background: rgba(255,68,68,0.05); }
+                    .sig-warning { border-left: 3px solid #ffaa00; background: rgba(255,170,0,0.05); }
+                    .sig-info { border-left: 3px solid #00ccff; }
+                    .gov-metric-box { text-align: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; }
+                    .gov-metric-box label { display: block; font-size: 0.55rem; color: #888; margin-bottom: 4px; }
+                    .gov-metric-box .val { font-size: 1.1rem; font-weight: bold; }
+                    .val.bad { color: #ff4444; text-shadow: 0 0 5px #ff444444; }
+                    .val.warn { color: #ffaa00; }
+                    .val.good { color: #32ff94; }
+                </style>
+
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
+                    <div>
+                        <div style="font-size: 0.6rem; color: var(--pizarron-accent); letter-spacing: 2px; font-weight: bold;">PRE-MISSION GOVERNANCE AUDIT</div>
+                        <h2 style="margin: 5px 0 0 0; font-size: 1.2rem; color: #fff;">${getStatusIcon(check.status)} ${check.status.replace(/_/g, ' ')}</h2>
+                    </div>
+                    ${check.confidence < 1.0 ? `<div style="font-size: 0.55rem; color: #888;">CONFIANZA: ${(check.confidence * 100).toFixed(0)}%</div>` : ''}
+                </div>
+
+                <div style="background: rgba(255,212,55,0.05); border: 1px solid rgba(255,212,55,0.1); padding: 12px; border-radius: 8px; font-size: 0.8rem; color: #ddd; line-height: 1.4; margin-bottom: 20px;">
+                    ${check.rationale}
+                </div>
+
+                <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+                    ${check.signals.map(s => `
+                        <div class="gov-signal-card sig-${s.severity.toLowerCase()}">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span style="font-weight:bold; color:#fff;">${s.type}</span>
+                                <span style="font-size: 0.6rem; opacity: 0.8;">${s.severity}</span>
+                            </div>
+                            <div style="opacity: 0.8;">${s.message}</div>
+                        </div>
+                    `).join('')}
+                    ${check.signals.length === 0 ? '<div style="text-align:center; opacity:0.3; font-size:0.7rem; padding: 20px;">SIN ALERTAS ADVERSAS DETECTADAS</div>' : ''}
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+                    <div class="gov-metric-box">
+                        <label>VENCIDA</label>
+                        <span class="val ${check.active_overdue_debt > 0 ? 'bad' : 'good'}">${check.active_overdue_debt}</span>
+                    </div>
+                    <div class="gov-metric-box">
+                        <label>DEGRADADA</label>
+                        <span class="val ${check.degraded_debt > 0 ? 'warn' : 'good'}">${check.degraded_debt}</span>
+                    </div>
+                    <div class="gov-metric-box">
+                        <label>OVERLAP</label>
+                        <span class="val ${check.critical_advisory_overlap > 0 ? 'bad' : 'good'}">${check.critical_advisory_overlap}</span>
+                    </div>
+                    <div class="gov-metric-box">
+                        <label>REBASE</label>
+                        <span class="val ${check.rebase_pending ? 'warn' : 'good'}">${check.rebase_pending ? 'PEND' : 'OK'}</span>
+                    </div>
+                </div>
+
+                <div style="padding: 10px; border-left: 3px solid var(--pizarron-accent); background: rgba(255,255,255,0.02); font-size: 0.75rem; margin-bottom: 25px;">
+                    <strong style="color: var(--pizarron-accent);">SUGERENCIA:</strong> ${check.suggested_action}
+                </div>
+
+                <div style="display:flex; gap: 12px; justify-content: flex-end;">
+                    <button class="pizarron-btn-mini" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; font-size: 0.7rem;" 
+                            onclick="document.getElementById('${modalId}').style.display='none'">ABORTAR MISIÓN</button>
+                    ${check.status === 'REBASE_RECOMMENDED' ? `
+                        <button class="pizarron-btn-mini" style="background: #ffaa00; color: #000; padding: 10px 20px; font-size: 0.7rem;"
+                                onclick="window.roadmapUI.viewAdvisoryDashboard(); document.getElementById('${modalId}').style.display='none'">VER REBASE</button>
+                    ` : ''}
+                    ${check.status === 'FREEZE_UNTIL_RECOVERY' ? `
+                        <button class="pizarron-btn-mini" style="background: var(--pizarron-critical); color: #fff; padding: 10px 20px; font-size: 0.7rem;"
+                                onclick="window.pizarronUI.runPreMissionCheck('${check.target_id}', '${check.target_type}')">RE-AUDITAR</button>
+                    ` : `
+                        <button class="pizarron-btn-mini" style="background: var(--pizarron-accent); color: #000; padding: 10px 20px; font-size: 0.7rem;"
+                                onclick="window.pizarronUI.confirmPreMissionDecision('${check.check_id}', 'CONTINUE')">PROCEDER CON RIESGO</button>
+                    `}
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+    }
+
+    async confirmPreMissionDecision(checkId, decision) {
+        try {
+            await fetch(`/api/v1/governance/pre-mission-check/${checkId}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ decision })
+            });
+
+            const modal = document.getElementById('governance-precheck-modal');
+            if (modal) modal.style.display = 'none';
+
+            // Proceed with execution
+            this.executeConfirmedIntake();
+        } catch (err) {
+            console.error("Failed to register decision", err);
+            this.executeConfirmedIntake();
+        }
+    }
+
+    abortIntake() {
+        const mount = document.getElementById('ws-intake-mount');
+        if (mount) mount.innerHTML = '<div style="opacity:0.3; text-align:center; padding:40px;">Consola de mando en espera.</div>';
+
+        // Hide intake panel and show copilot
+        const wsPanelIntake = document.getElementById('ws-panel-intake');
+        const wsPanelCopilot = document.getElementById('ws-panel-copilot');
+        const toggleIntake = document.querySelector('.ws-toggle[data-panel="intake"]');
+        const toggleCopilot = document.querySelector('.ws-toggle[data-panel="copilot"]');
+
+        if (wsPanelIntake) wsPanelIntake.classList.remove('active');
+        if (toggleIntake) toggleIntake.classList.remove('active');
+
+        if (wsPanelCopilot) wsPanelCopilot.classList.add('active');
+        if (toggleCopilot) toggleCopilot.classList.add('active');
+
+        if (window.creatorEnv) window.creatorEnv.updateGridLayout();
+    }
+
+    async executeConfirmedIntake() {
+        const obj = document.getElementById('intake-obj').value;
+        const constraints = document.getElementById('intake-constraints').value;
+        const style = document.getElementById('intake-style').value;
+        const pinInput = document.getElementById('intake-pin');
+        const pin = pinInput ? pinInput.value : '';
+
+        let megaprompt = `MISSION: ${obj}\n`;
+        megaprompt += `OBJECTIVE: ${obj}\n`;
+        megaprompt += `CONSTRAINTS:\n${constraints}\n`;
+        megaprompt += `STYLE: ${style}\n`;
+        if (pin) megaprompt += `--pin=${pin}\n`;
+        if (window.pizarronUI.currentDraftId) megaprompt += `--source_draft=${window.pizarronUI.currentDraftId}\n`;
+        megaprompt += `--confirmed=true`;
+
+        // Visual feedback
+        const btn = document.querySelector('.btn-confirm');
+        if (btn) {
+            btn.innerText = "LAUNCHING...";
+            btn.disabled = true;
+        }
+
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(megaprompt);
+        }
+
+        // Switch to mission panel
+        setTimeout(() => {
+            if (window.creatorEnv) {
+                const missionToggle = document.querySelector('.ws-toggle[data-panel="mission"]');
+                const intakeToggle = document.querySelector('.ws-toggle[data-panel="intake"]');
+
+                if (intakeToggle) intakeToggle.classList.remove('active');
+                if (document.getElementById('ws-panel-intake')) document.getElementById('ws-panel-intake').classList.remove('active');
+
+                if (missionToggle && !missionToggle.classList.contains('active')) {
+                    missionToggle.click();
+                } else {
+                    window.creatorEnv.updateGridLayout();
+                }
+            }
+        }, 800);
+    }
+
+
+    renderHandoffBacklog(container, backlog) {
+        if (!container) return;
+
+        let html = `
+            <div class="intake-card animate-slide-in">
+                <div class="intake-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div class="intake-branding">COMMAND CONSOLE v1.2</div>
+                        <div class="intake-title">MISSION HANDOFF QUEUE</div>
+                    </div>
+                    <div>
+                        <button class="handoff-mini-btn action-primary" onclick="window.omniShell.addInput('AUDIT BACKLOG FORECLOSURE')">AUDITAR CIERRES</button>
+                    </div>
+                </div>
+
+                <div class="handoff-backlog-container">
+                    ${backlog.length === 0 ? `<div class="backlog-empty-state">No hay misiones pendientes en la cola de mando.</div>` : ''}
+                    ${backlog.map(h => {
+            const risk = (h.risk_level || 'low').toLowerCase();
+            const stateClass = `state-${h.readiness_state.toLowerCase()}`;
+            const riskStyle = risk === 'high' || risk === 'critical' ? 'color:#ff4444' : (risk === 'medium' ? 'color:#ffaa00' : 'color:#32ff96');
+
+            const foreclosure = h.foreclosure || { status: 'ACTIVE' };
+            const isCandidate = foreclosure.status && foreclosure.status.startsWith('CANDIDATE');
+            const candidateLabel = foreclosure.status === 'CANDIDATE_FORECLOSE' ? 'OBSOLETA' : 'REDUNDANTE';
+            const candidateColor = foreclosure.status === 'CANDIDATE_FORECLOSE' ? '#ff4444' : '#ffaa00';
+
+            const governanceRebase = h.governance_rebase || [];
+            const rebaseActive = governanceRebase.length > 0;
+            const timeline = (rebaseActive && governanceRebase[0].pressure_timeline) ? governanceRebase[0].pressure_timeline : null;
+            const trajectoryLabel = timeline ? timeline.trajectory.replace(/_/g, ' ') : "Aviso puntual";
+
+            return `
+                <div class="handoff-item ${stateClass} ${isCandidate ? 'foreclosure-candidate' : ''} ${rebaseActive ? 'rebase-pressure-item' : ''}" 
+                     onclick="window.pizarronUI.loadHandoff('${h.handoff_id}')"
+                     style="${isCandidate ? `border-left: 4px solid ${candidateColor}; background: rgba(255,255,255,0.02);` : (rebaseActive ? 'border-left: 4px solid #ffaa00; background: rgba(255,170,0,0.02);' : '')}">
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="handoff-badge">${h.readiness_state}</div>
+                        <div style="display:flex; gap:5px;">
+                            ${rebaseActive ? `
+                                <div class="rebase-pressure-badge" title="Trayectoria: ${trajectoryLabel}"
+                                     style="font-size: 0.55rem; color: ${governanceRebase[0].has_active_override ? '#32ff96' : '#000'}; background: ${governanceRebase[0].has_active_override ? 'rgba(50,255,150,0.1)' : '#ffaa00'}; border: ${governanceRebase[0].has_active_override ? '1px solid #32ff96' : 'none'}; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: 'Outfit';">
+                                     ${governanceRebase[0].has_active_override ? 'DEUDA ACEPTADA' : (timeline && timeline.trajectory === 'TEMPORARY_ALERT' ? 'AVISO ESTRUCTURAL' : 'GOLPE ESTRUCTURAL')}
+                                </div>
+                            ` : ''}
+                            ${isCandidate ? `
+                                <div style="font-size: 0.55rem; color: ${candidateColor}; font-weight: bold; padding: 2px 6px; border: 1px solid ${candidateColor}44; border-radius: 4px; background: ${candidateColor}11;">
+                                    SUGERENCIA: ${candidateLabel}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="handoff-title">${h.briefing_title}</div>
+                    
+                    ${rebaseActive ? `
+                        <div style="font-size: 0.6rem; color: #ffaa00; margin-bottom: 8px; font-style: italic; opacity: 0.9;">
+                            ⚠ ${governanceRebase[0].suggested_action}: Cimientos inestables detectados.
+                        </div>
+                    ` : ''}
+
+                    ${isCandidate ? `
+                        <div style="font-size: 0.6rem; color: ${candidateColor}; margin-bottom: 8px; font-style: italic; opacity: 0.8;">
+                            → ${foreclosure.reason}
+                        </div>
+                    ` : ''}
+
+                    <div class="handoff-meta">
+                        <span class="handoff-risk-pill" style="border:1px solid ${riskStyle}; color:${riskStyle}">${risk.toUpperCase()}</span>
+                        <span>${h.surface_affected.join(', ')}</span>
+                    </div>
+
+                    <div class="handoff-actions-row" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 10px;">
+                        <button class="handoff-mini-btn action-primary">INSPECCIONAR</button>
+                        
+                        ${rebaseActive ? `
+                            <button class="handoff-mini-btn" style="border-color:#ffaa00; color:#ffaa00"
+                                    onclick="event.stopPropagation(); window.roadmapUI.viewAdvisoryDashboard()">
+                                GESTIONAR REBASE
+                            </button>
+                        ` : ''}
+
+                        ${isCandidate ? `
+                            <button class="handoff-mini-btn" style="border-color:${candidateColor}; color:${candidateColor}"
+                                    onclick="event.stopPropagation(); window.pizarronUI.applyForeclosure('${h.handoff_id}', '${foreclosure.status === 'CANDIDATE_FORECLOSE' ? 'FORECLOSE' : 'ARCHIVE'}')">
+                                ${foreclosure.status === 'CANDIDATE_FORECLOSE' ? 'APLICAR CIERRE' : 'ARCHIVAR'}
+                            </button>
+                        ` : `
+                            <button class="handoff-mini-btn" onclick="event.stopPropagation(); window.pizarronUI.archiveHandoff('${h.handoff_id}')">ARCHIVAR</button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }).join('')}
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
+
+    loadHandoff(handoffId) {
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(`INSPECT MISSION HANDOFF ${handoffId}`);
+        }
+    }
+
+    applyForeclosure(handoffId, type) {
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(`APPLY STRATEGIC FORECLOSURE ${handoffId} TYPE=${type}`);
+        }
+    }
+
+    archiveHandoff(handoffId) {
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(`ARCHIVE MISSION HANDOFF ${handoffId}`);
+        }
+    }
+
+    reactivateHandoff(handoffId) {
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(`REACTIVATE MISSION HANDOFF ${handoffId}`);
+        }
+    }
+
+    loadBacklog() {
+        if (window.omniShell && window.omniShell.addInput) {
+            window.omniShell.addInput(`SHOW MISSION HANDOFF QUEUE`);
+        }
     }
 
     renderInto(container, data) {
         if (!container || !data) return;
+
+        // --- MULTI-MISSION SCHEDULER (Phase 88) ---
+        if (data.is_scheduler && data.schedules && data.schedules.length > 0) {
+            window.schedulerUI.renderSchedule(container, data.schedules[0], data.handoff_backlog || []);
+            return;
+        }
+
+        // --- MULTI-HANDOFF BACKLOG ---
+        if (data.handoff_backlog && data.handoff_backlog.length > 0 && !data.is_intake) {
+            this.renderHandoffBacklog(container, data.handoff_backlog);
+            return;
+        }
+
+        // --- INTAKE PANEL OVERRIDE ---
+        if (data.is_intake && data.proposed_mission) {
+            this.renderIntakePanel(container, data.proposed_mission, data.confirmation_gate, data.gate_error, data.rebase_report);
+            return;
+        }
+
         const mission = data.mission || data.active_mission || null;
 
         const currentHash = JSON.stringify(mission) + this.selectedNodeId + (data.proposals ? data.proposals.length : 0);
@@ -303,6 +954,9 @@ class PizarronVivoUI {
             const handoff = data.last_handoff || null;
             if (handoff) {
                 container.innerHTML = this.renderHandoffCard(handoff);
+                if (window.omniRenderFusion) {
+                    window.omniRenderFusion(`fusion-${handoff.handoff_id}`, handoff.handoff_id, 'HANDOFF');
+                }
                 return;
             }
             container.innerHTML = `
@@ -2051,6 +2705,7 @@ class PizarronVivoUI {
 
         return `
             <div class="pizarron-card handoff-card animate-slide-in" style="border-left: 4px solid #00ff88; background: rgba(0,255,136,0.03);">
+                <div id="fusion-${handoff.handoff_id}" class="fusion-context-container" style="display:none; margin-bottom: 12px;"></div>
                 <div style="display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                     <div>
                         <h4 style="margin:0; color: #00ff88; font-family: 'Outfit';">MISIÓN CERRADA: HANDOFF</h4>
@@ -2158,6 +2813,18 @@ class PizarronVivoUI {
             }
         } catch (err) {
             console.error("Search failed", err);
+        }
+    }
+
+    focusHandoff(handoffId) {
+        const card = document.querySelector(`.handoff-item[data-id="${handoffId}"]`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.classList.add('selected');
+            card.style.boxShadow = '0 0 20px rgba(212, 175, 55, 0.5)';
+            setTimeout(() => {
+                card.style.boxShadow = '';
+            }, 2000);
         }
     }
 }

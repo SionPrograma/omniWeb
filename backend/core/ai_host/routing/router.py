@@ -35,10 +35,18 @@ async def process_message(request: ProcessRequest, current_user: OmniUser = Depe
     }
     cmd_res = await ai_router.route(request.message, modality=request.modality, context=context)
     
+    # PHASE 103 (Chat Enrichment): Consult Governance Layer
+    from ..observability.governance_chat_engine import chat_governance_engine
+    gov_signals = await chat_governance_engine.analyze_interaction(request.message, context)
+    
     # Adapt response using InterfaceAdapter if needed
     from ..interface_adapter import adapter
     formatted = adapter.format_response(cmd_res.message, cmd_res.payload)
     formatted["intent"] = cmd_res.intent # Add intent to response for frontend logic
+    formatted["gov_enrichment"] = {
+        "signals": [s.model_dump() for s in gov_signals],
+        "count": len(gov_signals)
+    }
     
     return formatted
 

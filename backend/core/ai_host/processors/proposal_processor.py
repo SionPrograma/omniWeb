@@ -264,7 +264,8 @@ CRITERIO_DE_SEGURIDAD: CAMBIO_SEGURO{scope_warning}"""
 
         # 7. ORCHESTRATE MISSION PHASES
         source = context.get("source", "text") if context else "text"
-        mission_plan = mission_orchestrator.plan_mission(msg, intent="copilot_proposal", source=source)
+        understanding = context.get("understanding") if context else None
+        mission_plan = mission_orchestrator.plan_mission(msg, intent="copilot_proposal", interpretation=understanding, source=source)
         orch_report = mission_orchestrator.format_orchestration_report()
 
         # 8. FORMAT FINAL MESSAGE

@@ -370,6 +370,10 @@
                     </svg>
                 </button>
             </div>`;
+
+            if (payload && payload.tactical_overlay) {
+                innerHTML += renderTacticalOverlay(payload.tactical_overlay);
+            }
         }
 
         innerHTML += `<div class="msg-bubble">${content}</div>`;
@@ -454,6 +458,210 @@
         return html;
     }
 
+    function renderTacticalOverlay(overlay) {
+        if (!overlay) return "";
+        const riskClass = (overlay.risk_state || "low").toLowerCase();
+
+        let surfaceHtml = "";
+        if (overlay.affected_surface) {
+            surfaceHtml = `<div class="tactical-surface">` +
+                overlay.affected_surface.map(s => `<span class="surface-badge">${s}</span>`).join("") +
+                `</div>`;
+        }
+
+        let pathHtml = "";
+        if (overlay.execution_path) {
+            pathHtml = `<div class="tactical-stepper">` +
+                overlay.execution_path.map(step => {
+                    const statusClass = step.status === "COMPLETADO" ? "completed" :
+                        step.status === "PROCESANDO" ? "processing" :
+                            step.status === "BLOQUEADO" ? "blocked" : "";
+                    return `<div class="tactical-step ${statusClass}">
+                        <strong>${step.name}</strong><br/>
+                        <span style="font-size: 0.7rem; opacity: 0.7">${step.detail}</span>
+                    </div>`;
+                }).join("") +
+                `</div>`;
+        }
+
+        let overrideHtml = "";
+        if (overlay.lock_info) {
+            overrideHtml = `
+            <div class="tactical-override">
+                <div class="tactical-lock-reason">
+                    <strong>SEGURIDAD:</strong> ${overlay.lock_info.reason}
+                </div>
+                <div class="tactical-actions">
+                    ${(overlay.actions || []).map(a => `
+                        <button class="tactical-btn ${a.style || ''}" 
+                                onclick="window.omniManualAction('${overlay.mission_id}', '${a.action}', '${a.label}')">
+                            ${a.label}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="tactical-authority-gate">
+                    GATE: ${overlay.lock_info.authority_gate || 'MANUAL_REQUIRED'}
+                </div>
+            </div>`;
+        }
+
+        // CAPA 4: Session Status (Phase 82)
+        let authorityHtml = "";
+        if (overlay.authority_info && overlay.authority_info.active) {
+            authorityHtml = `<div class="authority-status active">AUTORIDAD ACTIVA (EXPIRA: ${overlay.authority_info.expires_at.split('T')[1].substring(0, 5)})</div>`;
+        } else if (overlay.authority_info && overlay.authority_info.reason === 'EXPIRED') {
+            authorityHtml = `<div class="authority-status" style="color:#ff3232;">SESIÓN EXPIRADA</div>`;
+        }
+
+        // CAPA 3: Audit Trail (Phase 82)
+        let auditHtml = "";
+        if (overlay.audit_trail && overlay.audit_trail.length > 0) {
+            auditHtml = `
+                <div class="tactical-audit">
+                    <div class="audit-title">AUDIT TRAIL / GOBERNANZA</div>
+                    ${overlay.audit_trail.map(e => `
+                        <div class="audit-entry">
+                            <span class="audit-ts">${e.ts}</span>
+                            <span class="audit-type">${e.type}</span>
+                            <span class="audit-msg">${e.msg}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        return `
+        <div class="tactical-card">
+            <div class="tactical-header">
+                <div class="tactical-intent">
+                    <span class="tactical-branding">${overlay.branding || 'OmniWeb Core'}</span>
+                    <span class="tactical-goal">${overlay.understood_intent || 'Misión Técnica'}</span>
+                </div>
+                <span class="risk-badge ${riskClass}">${overlay.risk_state || 'BAJO'}</span>
+            </div>
+            ${authorityHtml}
+            ${surfaceHtml}
+            ${pathHtml}
+            ${overrideHtml}
+            <div class="tactical-next-action">
+                ${overlay.next_action || 'Esperando interacción...'}
+            </div>
+            ${auditHtml}
+            ${overlay.global_governance ? renderGovernanceDashboard(overlay.global_governance) : ''}
+        </div>`;
+    }
+
+    function renderGovernanceDashboard(snapshot) {
+        if (!snapshot || snapshot.length === 0) return "";
+
+        const rows = snapshot.map(m => {
+            const urgencyClass = `urgency-${m.urgency}`;
+            const stateLabel = m.governance_state.replace(/_/g, ' ');
+            const authStatus = m.authority.active ?
+                `<span class="auth-tag active">SESIÓN ACTIVA</span>` :
+                (m.governance_state === "SESSION_EXPIRED" ? `<span class="auth-tag expired">EXPIRADA</span>` : "");
+
+            const missionName = m.name.length > 30 ? m.name.substring(0, 27) + '...' : m.name;
+
+            const quickActionsHtml = (m.quick_actions || []).map(a => `
+                <button class="quick-action-btn level-${a.level || 'safe'}" 
+                        onclick="event.stopPropagation(); window.omniRunQuickAction('${m.mission_id}', '${a.id}', '${a.label}', ${!!a.requires_pin}, ${!!a.requires_confirmation})">
+                    <span class="action-icon">${a.icon || '⚡'}</span> ${a.label}
+                </button>
+            `).join('');
+
+            return `
+                <div class="gov-row ${urgencyClass}" onclick="window.omniSwitchMission ? window.omniSwitchMission('${m.mission_id}') : console.log('Mission switch:', '${m.mission_id}')">
+                    <div class="gov-mission-info">
+                        <div class="gov-mission-name">${missionName}</div>
+                        <div class="gov-mission-id">${m.mission_id.substring(0, 8)}...</div>
+                    </div>
+                    <div class="gov-state-block">
+                        <div class="gov-state-badge">${stateLabel}</div>
+                        ${authStatus}
+                    </div>
+                    <div class="gov-event-info">
+                        ${m.latest_event ? `
+                            <span class="event-ts">${m.latest_event.ts}</span>
+                            <span class="event-msg">${m.latest_event.msg}</span>
+                        ` : '<span class="event-none">Sin eventos tácticos</span>'}
+                    </div>
+                    <div class="gov-actions-container">
+                        ${quickActionsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="gov-dashboard">
+                <div class="gov-dashboard-header">
+                    OPERACIÓN GLOBAL / GOBERNANZA
+                </div>
+                <div class="gov-table">
+                    ${rows}
+                </div>
+            </div>
+        `;
+    }
+
+    // --- MISSION MANUAL OVERRIDE HANDLERS ---
+    // --- MISSION CONTROL QUICK ACTIONS (Unidad 83) ---
+    window.omniRunQuickAction = function (missionId, actionId, label, requiresPin, requiresConfirmation) {
+        console.log(`[MISSION_CONTROL] Action triggered: ${actionId} for mission ${missionId}`);
+
+        if (requiresConfirmation && !confirm(`¿Está seguro de ejecutar "${label}"?`)) {
+            return;
+        }
+
+        if (requiresPin) {
+            const pin = prompt(`"${label}" requiere autorización del Creador.\nIngrese su PIN:`);
+            if (!pin) return;
+
+            // Dispatch governed action command
+            const cmd = `mission: governed_action ${actionId} mission_id ${missionId} PIN ${pin}`;
+            shellInput.value = cmd;
+            processCommand();
+            return;
+        }
+
+        // Direct commands based on actionId
+        let command = "";
+        switch (actionId) {
+            case 'switch_focus':
+                if (window.omniSwitchMission) window.omniSwitchMission(missionId);
+                return;
+            case 'pause_mission':
+                command = `mission: pause ${missionId}`;
+                break;
+            case 'resume_mission':
+                command = `mission: resume ${missionId}`;
+                break;
+            case 'abort_mission':
+                command = `mission: abort ${missionId}`;
+                break;
+            case 'request_forecast':
+                command = `mission: forecast ${missionId}`;
+                break;
+            case 'view_risk':
+                command = `mission: audit risk ${missionId}`;
+                break;
+            default:
+                command = `mission: action ${actionId} target ${missionId}`;
+        }
+
+        if (command) {
+            shellInput.value = command;
+            processCommand();
+        }
+    };
+
+    window.omniManualAction = function (missionId, action, label) {
+        // Fallback for legacy tactical cards
+        const needsPin = (action === 'request_override');
+        window.omniRunQuickAction(missionId, action, label, needsPin, (action === 'abort_mission'));
+    };
+
     function escapeHtml(unsafe) {
         return unsafe
             .replace(/&/g, "&amp;")
@@ -527,6 +735,93 @@
         }, 3500);
     }
     window.showToast = showToast;
+
+    // --- Phase 4: Cognitive Overlay HUD (Always-On Status) ---
+    function updateHUD(hud) {
+        const hudContainer = document.getElementById('omni-hud');
+        if (!hudContainer) return;
+
+        if (!hud || !hud.mission_id) {
+            hudContainer.style.display = 'none';
+            return;
+        }
+
+        hudContainer.style.display = 'flex';
+        const driftState = (hud.drift && hud.drift.state) ? hud.drift.state.toLowerCase() : 'nominal';
+        const govState = (hud.governance && hud.governance.state) ? hud.governance.state.replace(/_/g, ' ') : 'NOMINAL';
+        const urgency = hud.governance ? hud.governance.urgency : 1;
+
+        hudContainer.classList.toggle('alert-mode', urgency >= 4 || driftState === 'critical');
+
+        let alertsHtml = "";
+        if (hud.critical_alerts_count > 0) {
+            alertsHtml = `
+                <div class="hud-alert-summary" onclick="window.omniShell && window.omniShell.switchView ? window.omniShell.switchView('mission') : ''" style="cursor:pointer;">
+                    <div class="hud-alert-dot"></div>
+                    <span>${hud.critical_alerts_count} ALERTAS</span>
+                </div>
+            `;
+        }
+
+        let authHtml = "";
+        if (hud.governance && hud.governance.authority_active) {
+            authHtml = `<span class="hud-badge nominal" style="font-size: 0.55rem; padding: 1px 4px; border: none; border-radius: 2px;">AUTH ACTIVA</span>`;
+        }
+
+        // 5. Accepted Debt Summary (Phase 107 Integration)
+        let debtHtml = "";
+        if (hud.debt && hud.debt.total > 0) {
+            const d = hud.debt;
+            const severityClass = d.severity.toLowerCase();
+            let label = "DEUDA";
+            let val = d.total;
+
+            if (d.severity === 'CRITICAL') {
+                label = "VENCIDA";
+                val = d.urgent_count;
+            } else if (d.severity === 'WARNING') {
+                label = "REVISIÓN";
+                val = d.review_due;
+            }
+
+            debtHtml = `
+                <div class="hud-section ${d.is_running_under_debt ? 'running-debt' : ''}" 
+                     onclick="if(window.roadmapUI) window.roadmapUI.checkDebtCockpit();" 
+                     style="cursor:pointer; padding: 0 8px; border-radius: 4px; transition: background 0.2s;"
+                     onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+                     onmouseout="this.style.background='transparent'">
+                    <span class="hud-badge ${severityClass}" style="min-width: 60px; text-align: center;">
+                        ${label}: ${val}
+                    </span>
+                    ${d.is_running_under_debt ? '<span class="hud-debt-marker animated">⚠️ BAJO DEUDA</span>' : ''}
+                </div>
+            `;
+        }
+
+        hudContainer.innerHTML = `
+            <div class="hud-section" onclick="window.omniSwitchMission('${hud.mission_id}')" style="cursor:pointer;">
+                <span class="hud-label">MISIÓN:</span>
+                <span class="hud-value">${hud.mission_name}</span>
+            </div>
+            <div class="hud-section">
+                <span class="hud-badge ${driftState === 'nominal' ? 'nominal' : (driftState === 'warning' ? 'warning' : 'critical')}" style="min-width: 65px; text-align: center;">
+                    ${driftState === 'nominal' ? 'ALINEADO' : (driftState === 'warning' ? 'DERIVA' : 'CRÍTICO')}
+                </span>
+                ${hud.drift && hud.drift.is_healing ? '<span class="hud-badge nominal" style="animation: orbPulse 1.5s infinite; border-style: dotted;">HEALING</span>' : ''}
+            </div>
+            <div class="hud-section">
+                <span class="hud-label">GOBERNANZA:</span>
+                <span class="hud-value" style="font-size: 0.62rem; letter-spacing: 0;">${govState}</span>
+                ${authHtml}
+            </div>
+            ${debtHtml}
+            <div class="hud-interaction">
+                ${alertsHtml}
+                <button class="hud-button" onclick="window.omniSwitchMission('${hud.mission_id}')">EXPANDIR</button>
+            </div>
+        `;
+    }
+    window.omniUpdateHUD = updateHUD;
 
     if (shellForm) {
         shellForm.addEventListener('submit', (e) => {
@@ -666,6 +961,9 @@
             const data = await response.json();
             if (orb) orb.classList.remove('processing');
             typingDiv.remove();
+
+            // CAPA 1-4: Cognitive Overlay HUD update (Unidad 84)
+            if (window.omniUpdateHUD) window.omniUpdateHUD(data.hud);
 
             if (data.message) {
                 console.log("[EXECUTION_SUCCESS] Response received.");
@@ -1096,9 +1394,418 @@
     updateCapabilities(); // Initial check
     setInterval(updateCapabilities, 8000); // Polling status
 
-    // window.omniShell is already defined above with full methods.
-    // addInput is globally available via the first definition.
+    window.omniSwitchMission = function (missionId) {
+        console.log("Navigating to Mission Context:", missionId);
+        if (window.omniShell && typeof window.omniShell.switchView === 'function') {
+            // Update backend focus context
+            shellInput.value = `mission: switch_focus ${missionId}`;
+            processCommand();
 
+            // First switch to workspace view where the cockpit resides
+            window.omniShell.switchView('workspace');
+
+            // Highlight the target mission visually if possible
+            const missionCards = document.querySelectorAll('.mission-card, .tactical-card');
+            missionCards.forEach(card => {
+                if (card.dataset && card.dataset.missionId === missionId) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.ring = '2px solid var(--accent)';
+                }
+            });
+        }
+    };
+
+    /* GOVERNANCE FUSION BRIDGE (Unidad 108) */
+    async function renderGovernanceFusion(containerId, targetId, targetType = 'MISSION') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        try {
+            const res = await fetch(`/api/v1/governance/fusion/${targetId}?target_type=${targetType}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            if (!res.ok) return;
+
+            const snapshot = await res.json();
+            if (snapshot.fused_status === 'NOMINAL') {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'flex';
+            let traceHtml = '';
+            if (snapshot.last_action_trace) {
+                const trace = snapshot.last_action_trace;
+                traceHtml = `
+                    <div class="fusion-trace-box outcome-${trace.outcome_status.toLowerCase().replace(/_/g, '-')}">
+                        <div class="trace-header">
+                            <span class="trace-action-pill">${trace.creator_action.replace(/_/g, ' ')}</span>
+                            <span class="trace-outcome-status">${trace.outcome_status.replace(/_/g, ' ')}</span>
+                        </div>
+                        <div class="trace-rationale">${trace.rationale_summary || ''}</div>
+                        <div class="trace-footer">
+                            <span>Efecto: ${trace.severity_delta < 0 ? 'ALIVIO' : (trace.severity_delta > 0 ? 'ESCALADA' : 'ESTABLE')}</span>
+                            <span class="trace-eval-at">Auditado: ${new Date(trace.last_evaluated_at).toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="gov-fusion-card band-${snapshot.severity_band.toLowerCase()}">
+                    <div class="fusion-header">
+                        <span class="fusion-title">CONTEXTO DE RIESGO UNIFICADO</span>
+                        <span class="fusion-badge badge-${snapshot.fused_status.toLowerCase().replace(/_/g, '-')}">${snapshot.fused_status.replace(/_/g, ' ')}</span>
+                    </div>
+                    <div class="fusion-body">
+                        <div class="fusion-rationale">${snapshot.rationale}</div>
+                        <div class="fusion-composition">
+                            <div class="fusion-comp-item"><span>DEUDA:</span> ${snapshot.debt_state}</div>
+                            <div class="fusion-comp-item"><span>PRESIÓN:</span> ${snapshot.pressure_state.replace(/_/g, ' ')}</div>
+                            <div class="fusion-comp-item"><span>BASE:</span> ${snapshot.advisory_state}</div>
+                        </div>
+                        ${traceHtml}
+                    </div>
+                    <div class="fusion-action-row">
+                        <button class="fusion-btn primary" onclick="window.omniHandleFusionAction('${snapshot.next_action}', '${targetId}', '${targetType}')">
+                            ${snapshot.next_action.replace(/_/g, ' ')}
+                        </button>
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            console.error("Fusion render failed", err);
+        }
+    }
+    window.omniRenderFusion = renderGovernanceFusion;
+
+    window.omniHandleFusionAction = function (action, targetId, targetType) {
+        console.log("Fusion Action:", action, targetId);
+        if (action === 'OPEN_REBASE_PREVIEW' || action === 'OPEN_REBASE_ADVISOR') {
+            if (window.roadmapUI) window.roadmapUI.adjustPlan(targetId);
+        } else if (action === 'OPEN_DEBT_COCKPIT' || action === 'REVIEW_DEBT') {
+            if (window.roadmapUI) {
+                window.roadmapUI.checkDebtCockpit();
+            } else {
+                window.omniShell.addInput('governance: check_debt');
+            }
+        } else if (action === 'INSPECT_TIMELINE') {
+            window.omniShell.addInput(`governance: inspect_timeline ${targetId}`);
+        } else if (action === 'FREEZE_UNTIL_RECOVERY') {
+            window.omniShell.addInput(`mission: freeze ${targetId} --reason "Compromiso estructural detectado via Fusión"`);
+        } else {
+            window.omniShell.addInput(`inspect ${targetType.toLowerCase()} ${targetId}`);
+        }
+
+        // Switch to appropriate view
+        if (action.includes('DEBT') || action.includes('PREVIEW') || action.includes('TIMELINE') || action.includes('COCKPIT')) {
+            window.omniShell.switchView('workspace');
+        }
+    };
+
+    /* FORENSIC DECISION COCKPIT (Unidad 109) */
+    async function renderForensicCockpit() {
+        const mainContent = document.getElementById('main-content');
+        if (!mainContent) return;
+
+        mainContent.innerHTML = `<div class="forensic-cockpit-container"><h1 style="color:var(--accent); font-family: Outfit; letter-spacing: 2px;">AUDITANDO HISTORIAL FORENSE...</h1></div>`;
+
+        try {
+            const res = await fetch(`/api/v1/governance/forensic/cockpit`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            const data = await res.json();
+            const payload = data.payload;
+            const summary = payload.summary;
+
+            let traceRows = payload.traces.map(t => {
+                const outcomeClass = t.outcome_status.toLowerCase().replace(/_/g, '-');
+                const appliedStr = new Date(t.applied_at).toLocaleString();
+                return `
+                    <tr class="forensic-trace-row" onclick="window.omniShell.addInput('inspect mission ${t.target_id}'); window.omniShell.switchView('workspace');">
+                        <td class="trace-cell-id">#${t.trace_id}</td>
+                        <td class="trace-cell-domain">${t.target_domain}</td>
+                        <td class="trace-cell-action">${t.creator_action.replace(/_/g, ' ')}</td>
+                        <td><span class="outcome-badge outcome-${outcomeClass}">${t.outcome_status.replace(/_/g, ' ')}</span></td>
+                        <td class="trace-cell-rationale">${t.rationale_summary || ''}</td>
+                        <td class="trace-cell-date">${appliedStr}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            let hotspotsHtml = Object.entries(summary.hotspots).map(([dom, count]) => `
+                <div class="hotspot-pill">
+                    <span>${dom}</span>
+                    <span class="hotspot-count">${count}</span>
+                </div>
+            `).join('') || '<div class="hotspot-pill">Sin fricción detectada</div>';
+
+            let insightsHtml = payload.insights.map(ins => `<div class="insight-item">${ins}</div>`).join('');
+
+            mainContent.innerHTML = `
+                <div class="forensic-cockpit-container">
+                    <div class="forensic-header">
+                        <div>
+                            <h1>CABINA FORENSE DE DECISIONES</h1>
+                            <div class="forensic-description">Auditoría global de efectividad estructural: Convirtiendo decisiones del Creador en aprendizaje sistémico.</div>
+                        </div>
+                    </div>
+
+                    <div class="forensic-summary-row">
+                        <div class="forensic-card">
+                            <div class="card-label">Decisiones Totales</div>
+                            <div class="card-value">${summary.total_decisions}</div>
+                            <div class="card-sub">Capturadas en este roadmap</div>
+                        </div>
+                        <div class="forensic-card">
+                            <div class="card-label">Efectividad</div>
+                            <div class="card-value text-effective">${summary.outcomes.EFFECTIVE}</div>
+                            <div class="card-sub">Alivio estructural confirmado</div>
+                        </div>
+                        <div class="forensic-card">
+                            <div class="card-label">Degradación Post-Acción</div>
+                            <div class="card-value text-degraded">${summary.outcomes.DEGRADED}</div>
+                            <div class="card-sub">Intervenciones ineficaces</div>
+                        </div>
+                        <div class="forensic-card">
+                            <div class="card-label">Evaluaciones Pendientes</div>
+                            <div class="card-value text-pending">${summary.outcomes.PENDING}</div>
+                            <div class="card-sub">Esperando señal operativa</div>
+                        </div>
+                    </div>
+
+                    ${insightsHtml ? `
+                    <div class="forensic-insights-box">
+                        <div class="card-label" style="color:var(--accent)">Análisis de Patrones</div>
+                        <div class="insights-list">${insightsHtml}</div>
+                    </div>` : ''}
+
+                    <div>
+                        <div class="card-label">Hotspots de Fricción Forense (Degradación por Dominio)</div>
+                        <div class="forensic-hotspots">${hotspotsHtml}</div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <div class="forensic-list-header">HISTORIAL FORENSE DETALLADO</div>
+                        <div style="overflow-x: auto;">
+                            <table class="forensic-trace-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Dominio</th>
+                                        <th>Acción</th>
+                                        <th>Resultado</th>
+                                        <th>Resumen Forense</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${traceRows || '<tr><td colspan="6" style="text-align:center; padding: 2rem;">No hay trazas forenses registradas aún.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            console.error(err);
+            mainContent.innerHTML = `<div class="forensic-cockpit-container"><h1>ERROR AL CARGAR DASHBOARD FORENSE</h1></div>`;
+        }
+    }
+    window.omniRenderForensicCockpit = renderForensicCockpit;
+
+    /* FRICTION HEATMAP (Unidad 111) */
+    async function renderFrictionHeatmap() {
+        const mainContent = document.getElementById('main-content');
+        if (!mainContent) return;
+
+        mainContent.innerHTML = `<div class="heatmap-container"><h1 style="color:var(--accent); font-family: Outfit; letter-spacing: 2px;">CALCULANDO FRICCIÓN ESTRUCTURAL...</h1></div>`;
+
+        try {
+            const res = await fetch(`/api/v1/governance/forensic/heatmap`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            const data = await res.json();
+            const nodes = data.payload;
+
+            let nodesHtml = await Promise.all(nodes.map(async (n) => {
+                const bandClass = `band-${n.severity_band.toLowerCase()}`;
+                const signals = n.signals;
+
+                // Fetch associated relief proposals
+                let reliefHtml = '';
+                let statusBadgeHtml = '';
+                try {
+                    const rRes = await fetch(`/api/v1/governance/forensic/relief/proposals?domain=${n.domain}`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+                    });
+                    const rData = await rRes.json();
+                    if (rData.payload && rData.payload.length > 0) {
+                        const p = rData.payload[0];
+                        if (p.status === 'PENDING') {
+                            reliefHtml = `
+                            <div class="relief-available-badge" onclick="event.stopPropagation(); window.omniRenderReliefPreview('${p.proposal_id}')">
+                                🛡️ ALIVIO DISPONIBLE
+                            </div>
+                            `;
+                        } else if (p.status === 'ACCEPTED') {
+                            const outcomeEmoji = {
+                                'EFFECTIVE_RELIEF': '✅',
+                                'PARTIAL_RELIEF': '📈',
+                                'STRUCTURAL_RESISTANCE': '🔥',
+                                'ESCALATING_DESPITE_RELIEF': '⚠️',
+                                'UNDER_OBSERVATION': '🕒'
+                            }[p.relief_outcome] || '🛡️';
+
+                            statusBadgeHtml = `
+                            <div class="stabilization-status-badge ${p.relief_outcome ? p.relief_outcome.toLowerCase() : ''}" onclick="event.stopPropagation(); window.omniRenderReliefPreview('${p.proposal_id}')">
+                                ${outcomeEmoji} ${p.relief_outcome ? p.relief_outcome.replace(/_/g, ' ') : 'STABILIZING'}
+                            </div>
+                           `;
+                        }
+                    }
+                } catch (e) { }
+
+                return `
+                <div class="heatmap-node ${bandClass} ${statusBadgeHtml ? 'under-relief' : ''}" onclick="window.omniShell.addInput('governance: check_debt ${n.domain}'); window.omniShell.switchView('workspace');">
+                    <div class="node-severity-indicator"></div>
+                    ${reliefHtml}
+                    ${statusBadgeHtml}
+                    <div class="node-header">
+                        <span class="node-domain">${n.domain}</span>
+                        <span class="node-score">${n.friction_score.toFixed(0)}</span>
+                    </div>
+                    <div class="node-rationale">${n.rationale}</div>
+                    <div class="node-signals">
+                        ${signals.debt_count > 0 ? `<span class="signal-pill">Deuda: ${signals.debt_count}</span>` : ''}
+                        ${signals.advisory_count > 0 ? `<span class="signal-pill">Avisos: ${signals.advisory_count}</span>` : ''}
+                        ${signals.degraded_traces > 0 ? ` <span class="signal-pill">Fallos: ${signals.degraded_traces}</span>` : ''}
+                        ${signals.avg_delta !== 0 ? `<span class="signal-pill">Impacto: ${signals.avg_delta > 0 ? '+' : ''}${signals.avg_delta}</span>` : ''}
+                    </div>
+                    <div class="node-actions">
+                        <span class="action-label">${n.recommended_action.replace(/_/g, ' ')}</span>
+                        <span class="node-footer-meta">${new Date(n.last_updated).toLocaleTimeString()}</span>
+                    </div>
+                </div>
+                `;
+            }));
+
+            mainContent.innerHTML = `
+                <div class="heatmap-container">
+                    <div class="heatmap-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2>MAPA DE FRICCIÓN ESTRUCTURAL</h2>
+                            <div class="forensic-description">Priorización espacial de riesgo: Consolidando deuda, presión y efectividad forense.</div>
+                        </div>
+                        <button class="btn-apply" style="width: auto; margin: 0; padding: 10px 20px; background: var(--accent); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" 
+                            onclick="creatorEnv.generateFrictionRelief()">SCAN & GENERATE RELIEF</button>
+                    </div>
+                    <div class="heatmap-grid">
+                        ${nodesHtml.join('') || '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; opacity: 0.5;">No hay señales de fricción registradas. El sistema está nominal.</div>'}
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            console.error(err);
+            mainContent.innerHTML = `<div class="heatmap-container"><h1>ERROR AL CARGAR MAPA DE CALOR</h1></div>`;
+        }
+    }
+    window.omniRenderFrictionHeatmap = renderFrictionHeatmap;
+
+    /* RELIEF MISSION PREVIEW (Unidad 112) */
+    async function renderReliefPreview(proposalId) {
+        const overlay = document.createElement('div');
+        overlay.id = "relief-preview-overlay";
+        overlay.style = "position: fixed; inset: 0; background: rgba(5,5,8,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); animation: fadeIn 0.2s ease-out;";
+
+        overlay.innerHTML = `<div class="cockpit-card" style="width: 600px; max-width: 90%; border: 1px solid var(--accent); padding: 2rem; position: relative;">
+            <h2 style="color:var(--accent); font-family: Outfit; margin-bottom: 1rem;">PREVIEW: MISIÃ“N DE ALIVIO ESTRUCTURAL</h2>
+            <div id="relief-proposal-content" class="loading-indicator">Cargando diseÃ±o de intervenciÃ³n...</div>
+        </div>`;
+
+        document.body.appendChild(overlay);
+
+        try {
+            const res = await fetch(`/api/v1/governance/forensic/relief/proposals`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            const data = await res.json();
+            const p = data.payload.find(x => x.proposal_id === proposalId);
+
+            if (!p) throw new Error("Proposal not found");
+
+            document.getElementById('relief-proposal-content').innerHTML = `
+                <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 0.5rem;">TIPO DE INTERVENCIÃ“N</div>
+                    <div style="font-family: Outfit; font-weight: bold; color: var(--accent); letter-spacing: 1px;">${p.relief_type.replace(/_/g, ' ')}</div>
+                    <div style="margin-top: 1rem; font-size: 0.9rem; line-height: 1.5;">${p.rationale}</div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 0.5rem;">OBJETIVO PROPUESTO</div>
+                    <div style="font-family: Inter; font-size: 1.1rem; font-weight: 500;">${p.proposed_objective}</div>
+                </div>
+
+                <div style="display: flex; gap: 20px; border-top: 1px solid var(--border-subtle); padding-top: 1.5rem;">
+                    <div style="flex: 1;">
+                        <span style="display: block; font-size: 0.75rem; opacity: 0.6;">CONFIANZA RED</span>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #10B981;">${(p.confidence * 100).toFixed(0)}%</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <span style="display: block; font-size: 0.75rem; opacity: 0.6;">ALIVIO PROYECTADO</span>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #06B6D4;">-${p.expected_heat_reduction.toFixed(0)} pts</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; display: flex; gap: 10px;">
+                    <button class="btn-apply" onclick="window.omniHandleReliefDecision('${p.proposal_id}', 'ACCEPT')" style="background: var(--accent); color: white;">ACEPTAR & LANZAR MISIÃ“N</button>
+                    <button class="btn-apply" onclick="window.omniHandleReliefDecision('${p.proposal_id}', 'POSTPONE')" style="background: rgba(255,255,255,0.05);">POSTERGAR</button>
+                    <button class="btn-apply" onclick="document.getElementById('relief-preview-overlay').remove()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1);">CERRAR</button>
+                </div>
+            `;
+        } catch (err) {
+            overlay.innerHTML = `<div class="cockpit-card">Error cargando propuesta.</div>`;
+        }
+    }
+    window.omniRenderReliefPreview = renderReliefPreview;
+
+    async function handleReliefDecision(id, decision) {
+        try {
+            await fetch(`/api/v1/governance/forensic/relief/proposals/${id}/decision?decision=${decision}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            document.getElementById('relief-preview-overlay').remove();
+            window.omniRenderFrictionHeatmap();
+            if (decision === 'ACCEPT') {
+                window.omniShell.addInput(`governance: relief_mission_launched ${id}`);
+            }
+        } catch (e) { }
+    }
+    window.omniHandleReliefDecision = handleReliefDecision;
+
+    // Helper for Creator Workspace
+    if (!window.creatorEnv) window.creatorEnv = {};
+    window.creatorEnv.generateFrictionRelief = async function () {
+        try {
+            await fetch(`/api/v1/governance/forensic/relief/generate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            window.omniRenderFrictionHeatmap();
+        } catch (e) { }
+    }
+
+    async function evaluateEffects() {
+        try {
+            await fetch(`/api/v1/governance/forensic/relief/evaluate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            window.omniRenderFrictionHeatmap();
+        } catch (e) { }
+    }
+    window.omniEvaluateEffects = evaluateEffects;
 
 });
 

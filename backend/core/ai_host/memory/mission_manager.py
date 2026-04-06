@@ -244,7 +244,7 @@ class MissionManager:
         except Exception as e:
             logger.error(f"[MISSION_MANAGER] Critical Failure during focus rehydration: {e}")
 
-    def create_mission(self, goal: str, plan_id: str = None, pending_steps: List[str] = None, plan: Optional[Any] = None) -> MissionState:
+    def create_mission(self, goal: str, plan_id: str = None, pending_steps: List[str] = None, plan: Optional[Any] = None, source_draft_id: str = None) -> MissionState:
         print(f"DEBUG: [MISSION_MANAGER] create_mission called for goal: '{goal}'")
         """
         Initializes a new mission and persists it.
@@ -267,7 +267,8 @@ class MissionManager:
             active_goal=goal,
             plan_id=plan_id,
             pending_steps=pending_steps or [],
-            context_snap=snap
+            context_snap=snap,
+            source_draft_id=source_draft_id
         )
         self.save_mission(mission)
         self.active_mission = mission
@@ -425,6 +426,14 @@ class MissionManager:
              rows = conn.execute("SELECT mission_id FROM system_missions ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
              m_ids = [row["mission_id"] for row in rows]
         
+        # Load structural rebase recommendations for the entire branch
+        rebase_ads = []
+        try:
+            from .branch_manager import branch_manager
+            rebase_ads = branch_manager.get_mission_rebase_recommendations()
+        except Exception as e:
+            logger.error(f"Failed to fetch rebase advisories for portfolio health: {e}")
+
         health_list = []
         for m_id in m_ids:
              m = self.get_mission(m_id)
@@ -432,10 +441,22 @@ class MissionManager:
                   continue
              
              snapshot = m.get_live_drift_snapshot()
+             
+             # Attach rebase info if any
+             mission_rebase = [r for r in rebase_ads if r["affected_handoff_id"] == m_id]
+             if mission_rebase:
+                 snapshot["rebase_recommendations"] = mission_rebase
+                 snapshot["rebase_required"] = any(r["recommendation_state"] in ["PENDING", "REVIEWED"] for r in mission_rebase)
+                 # Elevate urgency if rebase is critical
+                 if any(r["suggested_action"] == "FREEZE_UNTIL_RECOVERY" for r in mission_rebase):
+                     snapshot["urgency"] = "CRITICAL"
+                     snapshot["urgency_rank"] = max(snapshot["urgency_rank"], 150)
+             
              health_list.append(snapshot)
              
         # Prioritize by urgency_rank and drift_score
         return sorted(health_list, key=lambda x: (x["urgency_rank"], x["drift_score"]), reverse=True)
+
 
     def get_mission(self, mission_id: str) -> Optional[MissionState]:
         """Fetches any mission from DB by ID."""
@@ -654,10 +675,11 @@ class MissionManager:
                     mission_id, active_goal, status, plan_id, 
                     completed_steps, pending_steps, blocked_reasons, 
                     related_targets, parameters, context_snap, visual_context, multimodal_history, 
-                    parent_id, child_ids, dependency_ids, relation_type, 
+                    source_draft_id, parent_id, child_ids, dependency_ids, relation_type, 
                     retried_from, branched_from, last_focused_at, updated_at,
-                    priority_score, priority_class, readiness_state, compact_digest
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    priority_score, priority_class, readiness_state, compact_digest,
+                    friction, preconditions_ok
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 # Robust serialization
@@ -679,6 +701,7 @@ class MissionManager:
                     snap,
                     v_ctx,
                     m_hist,
+                    mission.source_draft_id,
                     mission.parent_id,
                     json.dumps(mission.child_ids),
                     json.dumps(mission.dependency_ids),
@@ -690,9 +713,23 @@ class MissionManager:
                     mission.priority_score,
                     mission.priority_class,
                     mission.readiness_state,
-                    mission.compact_digest.model_dump_json() if mission.compact_digest else None
+                    mission.compact_digest.model_dump_json() if mission.compact_digest else None,
+                    mission.friction,
+                    mission.preconditions_ok
                 ))
                 conn.commit()
+        
+        # --- PHASE 114: TACTICAL WISDOM FEEDBACK LOOP ---
+        is_terminal = mission.status in [MissionStatus.COMPLETED, MissionStatus.FAILED, MissionStatus.ARCHIVED]
+        if is_terminal:
+            try:
+                from backend.core.governance.feedback_engine import wisdom_feedback_engine
+                # The engine itself will check if feedback already exists to avoid duplication
+                wisdom_feedback_engine.process_mission_completion(mission.mission_id)
+            except Exception as e:
+                logger.warning(f"[MISSION_MANAGER] Failed to trigger wisdom feedback: {e}")
+
+        logger.info(f"[MISSION_MANAGER] Mission {mission.mission_id} saved successfully.")
 
     def record_step_progress(self, mission_id: str, step_id: str, status: str, message: str = None):
         """Records telemetry for a specific step execution."""
@@ -1133,7 +1170,6 @@ Este documento resume los mecanismos de control que protegen la arquitectura de 
 
             # 4. Trigger Dependency Re-evaluation (Hierarchy Block)
             self.reevaluate_dependents(active.mission_id)
-
             self.active_mission = None
             logger.info(f"[MISSION_MANAGER] Mission {active.mission_id} closed manually.")
 
@@ -1195,6 +1231,7 @@ Este documento resume los mecanismos de control que protegen la arquitectura de 
             context_snap=json.loads(row['context_snap'] or '{}') if 'context_snap' in row.keys() else {},
             visual_context=json.loads(row['visual_context']) if (row.keys() and 'visual_context' in row.keys() and row['visual_context']) else None,
             multimodal_history=json.loads(row['multimodal_history'] or '[]') if (row.keys() and 'multimodal_history' in row.keys() and row['multimodal_history']) else [],
+            source_draft_id=row['source_draft_id'] if 'source_draft_id' in row.keys() else None,
             parent_id=row['parent_id'] if 'parent_id' in row.keys() else None,
             child_ids=json.loads(row['child_ids'] if 'child_ids' in row.keys() and row['child_ids'] else '[]'),
             dependency_ids=json.loads(row['dependency_ids'] if 'dependency_ids' in row.keys() and row['dependency_ids'] else '[]'),
@@ -1204,10 +1241,12 @@ Este documento resume los mecanismos de control que protegen la arquitectura de 
             priority_score=row['priority_score'] if 'priority_score' in row.keys() else 0.0,
             priority_class=row['priority_class'] if 'priority_class' in row.keys() else "NORMAL",
             readiness_state=row['readiness_state'] if 'readiness_state' in row.keys() else "READY",
-            compact_digest=MissionCompactDigest.model_validate_json(row['compact_digest']) if (row.keys() and 'compact_digest' in row.keys() and row['compact_digest']) else None,
+            compact_digest=MissionCompactDigest.model_validate(json.loads(row['compact_digest'])) if row.get('compact_digest') else None,
             last_focused_at=last_f,
             created_at=created_at,
-            updated_at=updated_at
+            updated_at=updated_at,
+            friction=row.get('friction', 1.0),
+            preconditions_ok=row.get('preconditions_ok', 1)
         )
 
 mission_manager = MissionManager()

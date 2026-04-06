@@ -8,6 +8,7 @@ class AICommandResponse(BaseModel):
     message: str
     payload: Dict[str, Any] = {}
     audit: Optional[Dict[str, Any]] = None
+    hud: Optional[Dict[str, Any]] = None
 
 class CommandProcessor(ABC):
     async def can_handle(self, command: str) -> bool:

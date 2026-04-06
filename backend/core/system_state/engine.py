@@ -288,6 +288,15 @@ class SystemStateEngine:
                             "reason": f"Misión con prioridad {top_mission.priority_class} ({top_mission.readiness_state})"
                         }
                 
+                # --- PHASE: MULTI-MISSION SCHEDULER (Phase 88) ---
+                schedules = []
+                try:
+                    from backend.core.ai_host.memory.scheduler_manager import scheduler_manager
+                    active_schedules = scheduler_manager.get_all()
+                    schedules = [s.model_dump() for s in active_schedules]
+                except Exception as sched_err:
+                    logger.warning(f"[SYSTEM_STATE_ENGINE] Could not fetch schedules: {sched_err}")
+                
                 # 6f. Portfolio Summary (Phase: MISSION PORTFOLIO)
                 archived = mission_manager.get_archived_missions(limit=10)
                 archived_missions = [{"id": m.mission_id, "goal": m.active_goal, "status": m.status.value, "updated": m.updated_at.isoformat()} for m in archived]
@@ -360,6 +369,7 @@ class SystemStateEngine:
                 portfolio_pulse=portfolio_pulse,
                 proposals=proposals,
                 resource_locks=resource_locks,
+                schedules=schedules,
                 recommended_focus=recommended_focus,
                 timestamp=datetime.now().isoformat(),
                 uptime_seconds=time.time() - self._start_time

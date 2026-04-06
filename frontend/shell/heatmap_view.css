@@ -1,0 +1,399 @@
+/* 
+ * OMNIWEB — GOVERNANCE FRICTION HEATMAP STYLES
+ * Spatial visualization of system risk and structural friction.
+ */
+
+.heatmap-container {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    animation: omniSlideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.heatmap-header {
+    margin-bottom: 0.5rem;
+}
+
+.heatmap-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin: 0;
+}
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+.heatmap-node {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.heatmap-node:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    border-color: var(--accent-transparent);
+}
+
+.node-severity-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    opacity: 0.8;
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.node-domain {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.node-score {
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Severity Classes */
+.band-cool .node-severity-indicator {
+    background: #10B981;
+}
+
+.band-cool .node-score {
+    color: #10B981;
+}
+
+.band-watch .node-severity-indicator {
+    background: #F59E0B;
+}
+
+.band-watch .node-score {
+    color: #F59E0B;
+}
+
+.band-hot .node-severity-indicator {
+    background: #F97316;
+}
+
+.band-hot .node-score {
+    color: #F97316;
+}
+
+.band-hot {
+    border-color: rgba(249, 115, 22, 0.3);
+}
+
+.band-critical .node-severity-indicator {
+    background: #EF4444;
+}
+
+.band-critical .node-score {
+    color: #EF4444;
+}
+
+.band-critical {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.03);
+}
+
+.band-critical::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.1);
+    animation: omniCriticalPulse 2s infinite;
+    pointer-events: none;
+}
+
+.band-improving .node-severity-indicator {
+    background: #06B6D4;
+}
+
+.band-improving .node-score {
+    color: #06B6D4;
+}
+
+.band-improving::before {
+    content: "↑";
+    position: absolute;
+    top: 10px;
+    right: 1.25rem;
+    color: #06B6D4;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Details */
+.node-rationale {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    flex-grow: 1;
+}
+
+.node-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.signal-pill {
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.node-actions {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.action-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+}
+
+.node-footer-meta {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+@keyframes omniCriticalPulse {
+    0% {
+        box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.1);
+    }
+
+    50% {
+        box-shadow: inset 0 0 30px rgba(239, 68, 68, 0.2);
+    }
+
+    100% {
+        box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.1);
+    }
+}
+
+@keyframes omniSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Severity: RESISTANT */
+.band-resistant .node-severity-indicator {
+    background: linear-gradient(90deg, #8B5CF6, #EC4899);
+}
+
+.band-resistant .node-score {
+    color: #EC4899;
+}
+
+.band-resistant {
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+}
+
+.band-resistant::after {
+    content: "RESISTANCE DETECTED";
+    position: absolute;
+    bottom: -15px;
+    right: -15px;
+    font-size: 2.5rem;
+    font-weight: 900;
+    opacity: 0.03;
+    pointer-events: none;
+    transform: rotate(-15deg);
+}
+
+/* Stabilization Status Badges */
+.stabilization-status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    z-index: 6;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+}
+
+.stabilization-status-badge.under_observation {
+    background: rgba(50, 50, 50, 0.4);
+}
+
+/* --- ROOT CAUSE AUDIT STYLES --- */
+.root-audit-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #ff3366 0%, #ff0 100%);
+    color: black;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(255, 51, 102, 0.4);
+    z-index: 20;
+    cursor: pointer;
+    animation: auditPulse 2s infinite;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.root-audit-badge.under-audit {
+    background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
+}
+
+@keyframes auditPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 10px rgba(255, 51, 102, 0.4);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(255, 51, 102, 0.7);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 10px rgba(255, 51, 102, 0.4);
+    }
+}
+
+.heatmap-node.under-audit {
+    border: 2px solid #00f2fe;
+    box-shadow: 0 0 30px rgba(0, 242, 254, 0.2);
+}
+
+.heatmap-node.under-audit::after {
+    content: "FORENSIC AUDIT ACTIVE";
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    opacity: 0.5;
+    letter-spacing: 2px;
+    font-weight: 800;
+}
+
+.stabilization-status-badge:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.stabilization-status-badge.effective_relief {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: #10B981;
+    color: #10B981;
+}
+
+.stabilization-status-badge.resistant_hotspot {
+    background: rgba(236, 72, 153, 0.1);
+    border-color: #EC4899;
+    color: #EC4899;
+    animation: omniPulseGlow 2s infinite;
+}
+
+.stabilization-status-badge.escalating_despite_relief {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #EF4444;
+    color: #EF4444;
+}
+
+.relief-delta {
+    font-size: 0.6rem;
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+@keyframes omniPulseGlow {
+    0% {
+        filter: drop-shadow(0 0 2px rgba(236, 72, 153, 0.3));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.6));
+    }
+
+    100% {
+        filter: drop-shadow(0 0 2px rgba(236, 72, 153, 0.3));
+    }
+}
+
+@keyframes omniBounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}

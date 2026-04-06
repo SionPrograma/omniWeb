@@ -17,6 +17,7 @@
         this.currentCorrectionStepId = null; // Phase 21: Track if we're correcting a rejected job
         this._pendingWorkspacePanel = null; // Fix for navigation loop
         this._navigationGuard = false;
+        this.workspaceHasBeenOpenedBefore = false;
     }
 
     init() {
@@ -193,6 +194,7 @@
         // Render Creator Dashboard components (MissionState, etc.)
         this.renderWorkspaceMissionDashboard(state);
         this.renderMissionPortfolio(state);
+        this.renderRoadmap();
 
         // Update Editor with Swarm info
         if (window.creatorEditor) {
@@ -217,6 +219,19 @@
         const panel = document.getElementById('ws-panel-portfolio');
         if (mount && panel && panel.classList.contains('active') && window.pizarronUI && window.pizarronUI.renderPortfolio) {
             window.pizarronUI.renderPortfolio(mount, state);
+        }
+    }
+
+    renderRoadmap() {
+        const mount = document.getElementById('ws-roadmap-mount');
+        const panel = document.getElementById('ws-panel-roadmap');
+        if (mount && panel && panel.classList.contains('active') && window.roadmapUI) {
+            window.roadmapUI.refresh(); // Or pass data if we had it in systemState
+            const grid = document.getElementById('creator-grid');
+            if (grid) grid.classList.add('roadmap-focus');
+        } else {
+            const grid = document.getElementById('creator-grid');
+            if (grid) grid.classList.remove('roadmap-focus');
         }
     }
 
@@ -634,6 +649,7 @@
         // Update backend state panel when workspace is active
         this.updateWorkspaceBackendState();
         this.renderWorkspaceMissionDashboard(this.systemState);
+        this.renderRoadmap();
 
         this.updateGridLayout();
     }
@@ -681,6 +697,24 @@
             });
             const data = await res.json();
             this.lastCopilotResponse = data;
+
+            // --- MISSION INTAKE (COMMAND CONSOLE) ---
+            if (data.payload && data.payload.tactical_overlay && data.payload.tactical_overlay.is_intake) {
+                console.log("[CREATOR] Mission Intake Proposed. Opening Command Console.");
+                const mount = document.getElementById('ws-intake-mount');
+                const panel = document.getElementById('ws-panel-intake');
+                const toggleBtn = document.querySelector('.ws-toggle[data-panel="intake"]');
+
+                if (mount && window.pizarronUI) {
+                    window.pizarronUI.renderIntakePanel(mount, data.payload.tactical_overlay.proposed_mission);
+
+                    if (panel && !panel.classList.contains('active')) {
+                        panel.classList.add('active');
+                        if (toggleBtn) toggleBtn.classList.add('active');
+                        this.updateGridLayout();
+                    }
+                }
+            }
 
             // --- AUTO TRIGGER PATCH PREVIEW ---
             if (data.payload && data.payload.preview_id && window.builderUI) {
@@ -745,6 +779,29 @@
 
         msg.innerHTML = renderDiff(text);
 
+        // --- PHASE 103: GOVERNANCE CHAT ENRICHMENT ---
+        if (payload && payload.gov_enrichment && payload.gov_enrichment.count > 0) {
+            payload.gov_enrichment.signals.forEach(s => {
+                const sigEl = document.createElement('div');
+                sigEl.className = `governance-chat-signal gov-signal-${s.severity_band}`;
+                sigEl.innerHTML = `
+                    <div class="gov-signal-header">
+                        <span class="gov-signal-title">🛡️ GOBERNANZA: ${s.signal_type.replace(/_/g, ' ')}</span>
+                        <span style="font-size: 0.5rem; opacity: 0.5;">${(s.confidence * 100).toFixed(0)}% Conf.</span>
+                    </div>
+                    <div class="gov-signal-rationale">${s.rationale}</div>
+                    <div class="gov-signal-actions">
+                        <button class="gov-action-btn" onclick="window.creator.handleGovChatAction('evidence', '${s.signal_id}', '${s.target_domain}')">VER EVIDENCIA</button>
+                        ${s.suggested_adjustment ? `
+                            <button class="gov-action-btn primary" onclick="window.creator.handleGovChatAction('apply', '${s.signal_id}', ${JSON.stringify(s.adjustment_payload || "").replace(/"/g, '&quot;')})">APLICAR: ${s.suggested_adjustment}</button>
+                        ` : ''}
+                        <button class="gov-action-btn" onclick="this.parentElement.parentElement.remove()">IGNORAR</button>
+                    </div>
+                `;
+                msg.appendChild(sigEl);
+            });
+        }
+
         // --- PHASE 21: VISUAL DIFF OVERLAY RENDERER ---
         if (payload && payload.visual_diff && payload.visual_context) {
             const vCtx = payload.visual_context;
@@ -774,6 +831,32 @@
 
         log.appendChild(msg);
         log.scrollTop = log.scrollHeight;
+    }
+
+    handleGovChatAction(action, signalId, data) {
+        console.log(`[GOVERNANZA] Chat Action: ${action} on ${signalId}`, data);
+
+        if (action === 'evidence') {
+            // Navigate to Heatmap or learning surface context
+            this.openPizarron();
+            if (window.pizarronUI) {
+                // Focus on domain in heatmap if possible
+                console.log("Requesting deep evidence for", data);
+            }
+        } else if (action === 'apply') {
+            if (window.pizarronUI && data) {
+                const payload = typeof data === 'string' ? JSON.parse(data) : data;
+                window.pizarronUI.applyCopilotAdjustment(payload);
+                this.addWorkspaceLog(`Ajuste de gobernanza aplicado desde chat: ${signalId}`, 'success');
+            }
+        }
+
+        // Log the interaction for traceability
+        fetch(`/api/v1/governance/trace/interaction`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ signal_id: signalId, action: action })
+        }).catch(e => console.warn("Failed to log gov interaction", e));
     }
 
     addWorkspaceLog(text, type = 'info') {
@@ -1763,7 +1846,11 @@
                     <div class="cockpit-card" style="grid-column: span 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h3>ðŸ›ï¸ AI Governance Advisor</h3>
-                            <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 15px;" onclick="creatorEnv.runLeadershipAnalysis()">Run Analysis</button>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 15px; background: var(--accent); color: white;" onclick="window.omniRenderFrictionHeatmap()">MAPA DE FRICCIÓN</button>
+                                <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 15px; background: rgba(5,5,8,0.5); border: 1px solid var(--accent-transparent);" onclick="window.omniRenderForensicCockpit()">CABINA FORENSE</button>
+                                <button class="btn-apply" style="width: auto; margin: 0; padding: 5px 15px;" onclick="creatorEnv.runLeadershipAnalysis()">Run Analysis</button>
+                            </div>
                         </div>
                         <div class="governance-stats" style="display: flex; gap: 20px; margin-top: 15px;">
                             <div class="metric"><span class="label">TOTAL INSIGHTS</span><span class="value" id="gov-total-insights">0</span></div>

@@ -1596,524 +1596,621 @@
         </div>
     </div>
 
-    <!-- Active Global Projects Panel (Phase AJ) -->
-    <div class="projects-panel glass-panel">
-        <div class="insights-title" style="color: #6b6bff;">Active Global Projects</div>
-        <div id="projects-list">
-            <div style="font-size: 0.8rem; opacity: 0.6;">Explorando proyectos...</div>
-        </div>
-        <button id="new-project-btn"
-            style="margin-top: 10px; width: 100%; padding: 8px; background: rgba(107, 107, 255, 0.1); border: 1px solid #6b6bff; color: white; border-radius: 10px; cursor: pointer; font-size: 0.8rem;">Start
-            New Project</button>
-    </div>
+    </button>
 
-    <!-- Project Evolution Timeline Panel -->
-    <div class="timeline-panel" id="timeline-panel">
-        <div class="timeline-header">
-            <div>
-                <h2
-                    style="font-size: 1.5rem; letter-spacing: 2px; color: white; display: flex; align-items: center; gap: 10px;">
-                    PROJECT TIMELINE <span id="timeline-project-name" class="timeline-status-badge">...</span>
-                </h2>
-                <div id="timeline-summary" style="font-size: 0.8rem; opacity: 0.6; margin-top: 5px;">Visualizing project
-                    history and evolution.</div>
+    <!-- STRATEGIC ROADMAP OPTIMIZER (PHASE 117) -->
+    <div class="glass-panel" id="roadmap-optimizer-panel"
+        style="margin-top: 15px; border-color: rgba(0, 240, 255, 0.2); background: rgba(0,240,255,0.02);">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot" style="background: #00f0ff; box-shadow: 0 0 10px #00f0ff;"></div>
+                <span style="font-weight: bold; font-size: 0.8rem; letter-spacing: 1px;">ROADMAP SEQUENCE</span>
             </div>
-            <button class="close-timeline"
-                onclick="document.getElementById('timeline-panel').style.display='none'">&times;</button>
+            <button onclick="triggerOptimization()"
+                style="font-size: 0.6rem; background: rgba(0,240,255,0.1); border: 1px solid #00f0ff; color: #00f0ff; border-radius: 4px; padding: 2px 6px; cursor: pointer;">RE-CALC</button>
         </div>
-        <div class="timeline-content" id="timeline-list">
-            <!-- Timeline items injected here -->
-        </div>
-        <div id="timeline-footer"
-            style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 0.8rem; opacity: 0.6;">PROGRESS: <span id="timeline-progress-text"
-                    style="color: var(--accent-color); font-weight: bold;">0%</span></div>
-            <div class="task-progress-bar" style="width: 200px; margin-top: 0;">
-                <div class="task-progress-fill" id="timeline-progress-fill"></div>
+        <p style="font-size: 0.6rem; opacity: 0.6; margin: 5px 10px;">Priorización táctica sugerida.</p>
+
+        <!-- Roadside Alerts Section (Phase 118) -->
+        <div id="roadside-alerts"
+            style="display: none; padding: 10px; background: rgba(255, 68, 68, 0.05); border-bottom: 1px solid rgba(255,68,68,0.1); margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.8rem;">🚨</span>
+                    <span style="font-weight: bold; font-size: 0.65rem; color: #ff4444; letter-spacing: 1px;">ROADSIDE
+                        ALERT</span>
+                </div>
+                <span id="roadside-count"
+                    style="font-size: 0.55rem; background: #ff4444; padding: 1px 4px; border-radius: 4px; color: white;">0</span>
             </div>
+            <div id="roadside-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+        <div id="roadmap-container"
+            style="display: flex; flex-direction: column; gap: 8px; padding: 10px; max-height: 35vh; overflow-y: auto; scrollbar-width: none;">
+            <div style="font-size: 0.7rem; opacity: 0.4; text-align: center;">Optimizando...</div>
         </div>
     </div>
 
-    <!-- AI Host Panel -->
-    <div class="ai-panel glass-panel">
-        <div class="ai-header">
-            <div class="ai-status-dot online"></div>
-            <span style="font-weight: 600; font-size: 0.9rem;">AI HOST</span>
-            <button onclick="window.location.href='/shell/?view=mission&tab=copilot'"
-                style="margin-left: 10px; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-color); color: white; border-radius: 4px; font-size: 0.6rem; cursor: pointer; padding: 2px 6px;">
-                OPEN COPILOT
-            </button>
-            <div id="ai-multimodal-indicator"
-                style="margin-left: auto; font-size: 0.7rem; color: var(--accent-color); opacity: 0;">Escuchando...
+    <!-- POST-MISSION WISDOM SYNC PANEL (PHASE 119) -->
+    <div class="glass-panel" id="post-mission-sync-panel"
+        style="margin-top: 15px; border-color: rgba(0, 255, 136, 0.2); background: rgba(0, 255, 136, 0.02); display: none;">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot" style="background: #00ff88; box-shadow: 0 0 10px #00ff88;"></div>
+                <span style="font-weight: bold; font-size: 0.8rem; letter-spacing: 1px;">WISDOM SYNC</span>
             </div>
+            <button onclick="scanSync()"
+                style="font-size: 0.6rem; background: rgba(0,255,136,0.1); border: 1px solid #00ff88; color: #00ff88; border-radius: 4px; padding: 2px 6px; cursor: pointer;">SCAN
+                OUTCOMES</button>
         </div>
-        <div class="ai-chat-history" id="chat-history">
-            <!-- Greeting will be injected dynamically -->
-        </div>
-        <div id="ai-visual-response" style="padding: 0 1rem; margin-bottom: 10px;"></div>
-        <div class="ai-input-area">
-            <button id="voice-btn" title="Voice Input"
-                style="background: none; border: 1px solid var(--glass-border); border-radius: 50%; width: 40px; height: 40px; color: white; cursor: pointer; transition: 0.3s;"><i
-                    class="fas fa-microphone"></i>🎤</button>
-            <input type="text" id="ai-input" placeholder="Escribe un comando...">
-            <button id="send-btn">→</button>
+        <p style="font-size: 0.6rem; opacity: 0.6; margin: 5px 10px;">Sincronización de resultados con el Atlas.</p>
+        <div id="sync-proposals-container"
+            style="display: flex; flex-direction: column; gap: 8px; padding: 10px; max-height: 30vh; overflow-y: auto; scrollbar-width: none;">
         </div>
     </div>
 
+    <!-- WISDOM HARVEST PANEL (PHASE 120) -->
+    <div class="glass-panel" id="wisdom-harvest-panel"
+        style="margin-top: 15px; border-color: rgba(255, 238, 0, 0.3); background: rgba(255, 238, 0, 0.02); display: none;">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot" style="background: #ffee00; box-shadow: 0 0 10px #ffee00;"></div>
+                <span style="font-weight: bold; font-size: 0.8rem; letter-spacing: 1px;">WISDOM HARVEST</span>
+            </div>
+            <button onclick="scanHarvest()"
+                style="font-size: 0.6rem; background: rgba(255,238,0,0.1); border: 1px solid #ffee00; color: #ffee00; border-radius: 4px; padding: 2px 6px; cursor: pointer;">SCAN
+                HARVEST</button>
+        </div>
+        <p style="font-size: 0.6rem; opacity: 0.6; margin: 5px 10px;">Promoción de patrones cross-contexto.</p>
+        <div id="harvest-proposals-container"
+            style="display: flex; flex-direction: column; gap: 8px; padding: 10px; max-height: 30vh; overflow-y: auto; scrollbar-width: none;">
+        </div>
+    </div>
 
-    <script>
-        // DOM Elements
-        const chipsGrid = document.getElementById('chips-grid');
+    <!-- Tactical Wisdom Recalibration Panel (Phase 114) -->
+    <div class="glass-panel" id="wisdom-feedback-panel"
+        style="top: 42rem; right: 2rem; width: 380px; max-height: 35vh; display: none; border-color: rgba(255, 187, 0, 0.3);">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot" style="background: #ffbb00; box-shadow: 0 0 10px #ffbb00;"></div>
+                <span style="font-weight: bold; font-size: 0.9rem; letter-spacing: 1px;">WISDOM RECALIBRATION</span>
+            </div>
+            <span id="feedback-count-badge" class="drift-badge warning">0 PENDING</span>
+        </div>
+        <div id="feedback-container"
+            style="overflow-y: auto; flex: 1; scrollbar-width: none; display: flex; flex-direction: column; gap: 12px; padding: 10px;">
+            <div style="font-size: 0.8rem; opacity: 0.5; text-align: center;">Escaneando desenlaces tácticos...
+            </div>
+        </div>
+    </div>
 
-        // Logic: Load Chips from API
-        async function loadChips() {
-            try {
-                const response = await fetch('/api/v1/system/chips');
-                if (!response.ok) throw new Error('API unstable');
+    <!-- WISDOM ACTION BRIDGE (PHASE 116) -->
+    <div class="glass-panel" id="wisdom-bridge-panel"
+        style="top: 10rem; right: 2rem; width: 400px; display: none; border-color: rgba(107, 107, 255, 0.3); z-index: 1000;">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot"
+                    style="background: var(--accent-color); box-shadow: 0 0 10px var(--accent-color);"></div>
+                <span style="font-weight: bold; font-size: 0.9rem; letter-spacing: 1px;">WISDOM ACTION BRIDGE</span>
+            </div>
+            <span id="bridge-count-badge" class="drift-badge info">0 PENDING</span>
+        </div>
+        <p style="font-size: 0.7rem; opacity: 0.7; margin: 0 10px 10px 10px; line-height: 1.4;">Composiciones
+            tácticas sugeridas basadas en sabiduría.</p>
+        <div id="bridge-container"
+            style="overflow-y: auto; max-height: 45vh; padding: 10px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: none;">
+            <div style="font-size: 0.8rem; opacity: 0.4; text-align: center;">Componiendo paquetes operativos...
+            </div>
+        </div>
 
-                const chips = await response.ok ? await response.json() : [];
-                renderChips(chips);
-            } catch (error) {
-                console.warn('Using manual fallback due to API error:', error);
-                // No need to clear grid, if API fails we could show a message or just leave it empty
-                // In a real app, we might have a hardcoded fallback list here.
+        <div class="timeline-panel" id="timeline-panel">
+            <div class="timeline-header">
+                <div>
+                    <h2
+                        style="font-size: 1.5rem; letter-spacing: 2px; color: white; display: flex; align-items: center; gap: 10px;">
+                        PROJECT TIMELINE <span id="timeline-project-name" class="timeline-status-badge">...</span>
+                    </h2>
+                    <div id="timeline-summary" style="font-size: 0.8rem; opacity: 0.6; margin-top: 5px;">Visualizing
+                        project
+                        history and evolution.</div>
+                </div>
+                <button class="close-timeline"
+                    onclick="document.getElementById('timeline-panel').style.display='none'">&times;</button>
+            </div>
+            <div class="timeline-content" id="timeline-list">
+                <!-- Timeline items injected here -->
+            </div>
+            <div id="timeline-footer"
+                style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 0.8rem; opacity: 0.6;">PROGRESS: <span id="timeline-progress-text"
+                        style="color: var(--accent-color); font-weight: bold;">0%</span></div>
+                <div class="task-progress-bar" style="width: 200px; margin-top: 0;">
+                    <div class="task-progress-fill" id="timeline-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Host Panel -->
+        <div class="ai-panel glass-panel">
+            <div class="ai-header">
+                <div class="ai-status-dot online"></div>
+                <span style="font-weight: 600; font-size: 0.9rem;">AI HOST</span>
+                <button onclick="window.location.href='/shell/?view=mission&tab=copilot'"
+                    style="margin-left: 10px; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-color); color: white; border-radius: 4px; font-size: 0.6rem; cursor: pointer; padding: 2px 6px;">
+                    OPEN COPILOT
+                </button>
+                <div id="ai-multimodal-indicator"
+                    style="margin-left: auto; font-size: 0.7rem; color: var(--accent-color); opacity: 0;">
+                    Escuchando...
+                </div>
+            </div>
+            <div class="ai-chat-history" id="chat-history">
+                <!-- Greeting will be injected dynamically -->
+            </div>
+            <div id="ai-visual-response" style="padding: 0 1rem; margin-bottom: 10px;"></div>
+            <div class="ai-input-area">
+                <button id="voice-btn" title="Voice Input"
+                    style="background: none; border: 1px solid var(--glass-border); border-radius: 50%; width: 40px; height: 40px; color: white; cursor: pointer; transition: 0.3s;"><i
+                        class="fas fa-microphone"></i>🎤</button>
+                <input type="text" id="ai-input" placeholder="Escribe un comando...">
+                <button id="send-btn">→</button>
+            </div>
+        </div>
+
+
+        <script>
+            // DOM Elements
+            const chipsGrid = document.getElementById('chips-grid');
+
+            // Logic: Load Chips from API
+            async function loadChips() {
+                try {
+                    const response = await fetch('/api/v1/system/chips');
+                    if (!response.ok) throw new Error('API unstable');
+
+                    const chips = await response.ok ? await response.json() : [];
+                    renderChips(chips);
+                } catch (error) {
+                    console.warn('Using manual fallback due to API error:', error);
+                    // No need to clear grid, if API fails we could show a message or just leave it empty
+                    // In a real app, we might have a hardcoded fallback list here.
+                }
             }
-        }
 
-        function renderChips(chips) {
-            chipsGrid.innerHTML = ''; // Clear skeleton/existing
+            function renderChips(chips) {
+                chipsGrid.innerHTML = ''; // Clear skeleton/existing
 
-            // Filter only visible chips
-            const visibleChips = chips.filter(c => c.metadata?.dashboard_visible !== false);
+                // Filter only visible chips
+                const visibleChips = chips.filter(c => c.metadata?.dashboard_visible !== false);
 
-            visibleChips.forEach((chip, index) => {
-                const card = document.createElement('a');
-                card.href = chip.prefix ? `/${chip.slug}/` : '#';
-                card.className = `chip ${chip.status === 'active' || chip.status === 'frontend-only' ? 'active' : 'placeholder'}`;
+                visibleChips.forEach((chip, index) => {
+                    const card = document.createElement('a');
+                    card.href = chip.prefix ? `/${chip.slug}/` : '#';
+                    card.className = `chip ${chip.status === 'active' || chip.status === 'frontend-only' ? 'active' : 'placeholder'}`;
 
-                // Random float delays for natural feel
-                const duration = 5 + Math.random() * 3;
-                const delay = Math.random() * 2;
-                card.style.setProperty('--float-duration', `${duration}s`);
-                card.style.setProperty('--float-delay', `${delay}s`);
+                    // Random float delays for natural feel
+                    const duration = 5 + Math.random() * 3;
+                    const delay = Math.random() * 2;
+                    card.style.setProperty('--float-duration', `${duration}s`);
+                    card.style.setProperty('--float-delay', `${delay}s`);
 
-                // Use metadata name if available, otherwise slug
-                const displayName = chip.metadata?.name || chip.name || chip.slug;
-                const displayStatus = chip.metadata?.type === 'placeholder' ? 'Base Ready' : (chip.status === 'active' ? 'Active' : 'Offline');
+                    // Use metadata name if available, otherwise slug
+                    const displayName = chip.metadata?.name || chip.name || chip.slug;
+                    const displayStatus = chip.metadata?.type === 'placeholder' ? 'Base Ready' : (chip.status === 'active' ? 'Active' : 'Offline');
 
-                card.innerHTML = `
+                    card.innerHTML = `
                     <span class="chip-title">${displayName}</span>
                     <span class="chip-status">${displayStatus}</span>
                 `;
 
-                if (chip.metadata?.type === 'placeholder') {
-                    card.classList.add('coming-soon');
-                    card.removeAttribute('href');
-                }
+                    if (chip.metadata?.type === 'placeholder') {
+                        card.classList.add('coming-soon');
+                        card.removeAttribute('href');
+                    }
 
-                chipsGrid.appendChild(card);
+                    chipsGrid.appendChild(card);
+                });
+
+                highlightRecent();
+            }
+
+            function highlightRecent() {
+                const lastSession = localStorage.getItem('omniweb_last_session');
+                if (lastSession) {
+                    const lastChip = document.querySelector(`a[href="/${lastSession}/"]`);
+                    if (lastChip) {
+                        lastChip.style.borderColor = "rgba(52, 211, 153, 0.8)";
+                        lastChip.style.boxShadow = "0 0 15px rgba(52, 211, 153, 0.3)";
+                        const statusText = lastChip.querySelector('.chip-status');
+                        if (statusText) statusText.innerText = "Reciente";
+                    }
+                }
+            }
+
+            // Generate stars
+            const starsContainer = document.getElementById('stars');
+            const starCount = 100;
+
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+
+                const size = Math.random() * 2 + 1;
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                const duration = Math.random() * 3 + 2;
+
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${x}%`;
+                star.style.top = `${y}%`;
+                star.style.setProperty('--duration', `${duration}s`);
+
+                starsContainer.appendChild(star);
+            }
+
+            // Add some mouse follow effect for depth
+            document.addEventListener('mousemove', (e) => {
+                const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
+                const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
+                const container = document.querySelector('.chips-container');
+                if (container) {
+                    container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+                }
             });
 
-            highlightRecent();
-        }
+            // AI Host Logic
+            const chatHistory = document.getElementById('chat-history');
+            const aiInput = document.getElementById('ai-input');
+            const sendBtn = document.getElementById('send-btn');
 
-        function highlightRecent() {
-            const lastSession = localStorage.getItem('omniweb_last_session');
-            if (lastSession) {
-                const lastChip = document.querySelector(`a[href="/${lastSession}/"]`);
-                if (lastChip) {
-                    lastChip.style.borderColor = "rgba(52, 211, 153, 0.8)";
-                    lastChip.style.boxShadow = "0 0 15px rgba(52, 211, 153, 0.3)";
-                    const statusText = lastChip.querySelector('.chip-status');
-                    if (statusText) statusText.innerText = "Reciente";
-                }
-            }
-        }
+            // Insights & Proposals Logic
+            const insightsContent = document.getElementById('insights-content');
+            const proposalsContent = document.getElementById('proposals-content');
+            const contextContent = document.getElementById('context-content');
+            const graphContent = document.getElementById('graph-content');
+            const syncGraphBtn = document.getElementById('sync-graph-btn');
 
-        // Generate stars
-        const starsContainer = document.getElementById('stars');
-        const starCount = 100;
+            async function loadInsights() {
+                try {
+                    const response = await fetch('/api/v1/system/usage');
+                    if (!response.ok) return;
 
-        for (let i = 0; i < starCount; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
+                    const data = await response.json();
+                    const usage = data.usage;
 
-            const size = Math.random() * 2 + 1;
-            const x = Math.random() * 100;
-            const y = Math.random() * 100;
-            const duration = Math.random() * 3 + 2;
-
-            star.style.width = `${size}px`;
-            star.style.height = `${size}px`;
-            star.style.left = `${x}%`;
-            star.style.top = `${y}%`;
-            star.style.setProperty('--duration', `${duration}s`);
-
-            starsContainer.appendChild(star);
-        }
-
-        // Add some mouse follow effect for depth
-        document.addEventListener('mousemove', (e) => {
-            const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
-            const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
-            const container = document.querySelector('.chips-container');
-            if (container) {
-                container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-            }
-        });
-
-        // AI Host Logic
-        const chatHistory = document.getElementById('chat-history');
-        const aiInput = document.getElementById('ai-input');
-        const sendBtn = document.getElementById('send-btn');
-
-        // Insights & Proposals Logic
-        const insightsContent = document.getElementById('insights-content');
-        const proposalsContent = document.getElementById('proposals-content');
-        const contextContent = document.getElementById('context-content');
-        const graphContent = document.getElementById('graph-content');
-        const syncGraphBtn = document.getElementById('sync-graph-btn');
-
-        async function loadInsights() {
-            try {
-                const response = await fetch('/api/v1/system/usage');
-                if (!response.ok) return;
-
-                const data = await response.json();
-                const usage = data.usage;
-
-                let html = `
+                    let html = `
                     <div class="insight-item">
                         <span class="insight-label">Total Eventos</span>
                         <span>${usage.total_events}</span>
                     </div>
                 `;
 
-                if (usage.top_chips.length > 0) {
-                    html += `<div style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.7rem; opacity: 0.5;">TOP CHIPS</div>`;
-                    usage.top_chips.forEach(chip => {
-                        html += `
+                    if (usage.top_chips.length > 0) {
+                        html += `<div style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.7rem; opacity: 0.5;">TOP CHIPS</div>`;
+                        usage.top_chips.forEach(chip => {
+                            html += `
                             <div class="insight-item">
                                 <span class="insight-label">${chip.slug || 'system'}</span>
                                 <span>${chip.count}</span>
                             </div>
                         `;
-                    });
-                }
+                        });
+                    }
 
-                insightsContent.innerHTML = html;
-            } catch (error) {
-                console.warn('Insights failed:', error);
+                    insightsContent.innerHTML = html;
+                } catch (error) {
+                    console.warn('Insights failed:', error);
+                }
             }
-        }
 
-        async function loadProposals() {
-            try {
-                const response = await fetch('/api/v1/system/proposals');
-                if (!response.ok) return;
+            async function loadProposals() {
+                try {
+                    const response = await fetch('/api/v1/system/proposals');
+                    if (!response.ok) return;
 
-                const data = await response.json();
-                const proposals = data.proposals;
+                    const data = await response.json();
+                    const proposals = data.proposals;
 
-                if (proposals.length === 0) {
-                    proposalsContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin sugerencias por ahora. El sistema está observando tu uso.</div>';
-                    return;
-                }
+                    if (proposals.length === 0) {
+                        proposalsContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin sugerencias por ahora. El sistema está observando tu uso.</div>';
+                        return;
+                    }
 
-                let html = '';
-                proposals.forEach(p => {
-                    html += `
+                    let html = '';
+                    proposals.forEach(p => {
+                        html += `
                         <div class="proposal-card">
                             <strong>${p.proposal_type.replace('_', ' ').toUpperCase()}</strong>
                             <p style="margin: 5px 0;">${p.description}</p>
                             <span style="font-size: 0.7rem; color: var(--accent-color); cursor: pointer; text-decoration: underline;">Detalles</span>
                         </div>
                     `;
-                });
-                proposalsContent.innerHTML = html;
-            } catch (error) {
-                console.warn('Proposals failed:', error);
-            }
-        }
-
-        async function loadContext() {
-            try {
-                const response = await fetch('/api/v1/user/context');
-                if (!response.ok) return;
-
-                const data = await response.json();
-                const patterns = data.patterns;
-
-                if (patterns.length === 0) {
-                    contextContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Observando hábitos...</div>';
-                    return;
+                    });
+                    proposalsContent.innerHTML = html;
+                } catch (error) {
+                    console.warn('Proposals failed:', error);
                 }
+            }
 
-                let html = '';
-                patterns.forEach(p => {
-                    let label = p.type.toUpperCase();
-                    let info = "";
-                    if (p.type === "routine") info = `${p.data.routine_type}: ${p.data.chip}`;
-                    else if (p.type === "habit") info = `Secuencia: ${p.data.chips.join(' > ')}`;
-                    else info = `${p.data.preference_type}: ${p.data.chip || p.data.style}`;
+            async function loadContext() {
+                try {
+                    const response = await fetch('/api/v1/user/context');
+                    if (!response.ok) return;
 
-                    html += `
+                    const data = await response.json();
+                    const patterns = data.patterns;
+
+                    if (patterns.length === 0) {
+                        contextContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Observando hábitos...</div>';
+                        return;
+                    }
+
+                    let html = '';
+                    patterns.forEach(p => {
+                        let label = p.type.toUpperCase();
+                        let info = "";
+                        if (p.type === "routine") info = `${p.data.routine_type}: ${p.data.chip}`;
+                        else if (p.type === "habit") info = `Secuencia: ${p.data.chips.join(' > ')}`;
+                        else info = `${p.data.preference_type}: ${p.data.chip || p.data.style}`;
+
+                        html += `
                         <div class="insight-item">
                             <span class="insight-label">${label}</span>
                             <span>${info}</span>
                         </div>
                     `;
-                });
-                contextContent.innerHTML = html;
-            } catch (error) {
-                console.warn('Context failed:', error);
-            }
-        }
-
-        async function loadGraph() {
-            try {
-                const response = await fetch('/api/v1/system/graph');
-                if (!response.ok) return;
-
-                const data = await response.json();
-                const nodes = data.nodes;
-
-                if (nodes.length === 0) {
-                    graphContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Grafo vacío. Usa el AI Host para explorar temas.</div>';
-                    return;
+                    });
+                    contextContent.innerHTML = html;
+                } catch (error) {
+                    console.warn('Context failed:', error);
                 }
+            }
 
-                // Show top 5 nodes for simplicity
-                let html = '';
-                nodes.slice(0, 6).forEach(n => {
-                    html += `
+            async function loadGraph() {
+                try {
+                    const response = await fetch('/api/v1/system/graph');
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+                    const nodes = data.nodes;
+
+                    if (nodes.length === 0) {
+                        graphContent.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Grafo vacío. Usa el AI Host para explorar temas.</div>';
+                        return;
+                    }
+
+                    // Show top 5 nodes for simplicity
+                    let html = '';
+                    nodes.slice(0, 6).forEach(n => {
+                        html += `
                         <div class="insight-item">
                             <span class="insight-label">${n.node_type}</span>
                             <span>${n.name}</span>
                         </div>
                     `;
-                });
+                    });
 
-                if (nodes.length > 6) {
-                    html += `<div style="font-size: 0.7rem; opacity: 0.4; text-align: center; margin-top: 5px;">+${nodes.length - 6} conceptos más</div>`;
-                }
-
-                graphContent.innerHTML = html;
-            } catch (error) {
-                console.warn('Graph failed:', error);
-            }
-        }
-
-        syncGraphBtn.addEventListener('click', async () => {
-            syncGraphBtn.innerText = "Sincronizando...";
-            try {
-                const response = await fetch('/api/v1/system/graph/sync', { method: 'POST' });
-                if (response.ok) {
-                    await loadGraph();
-                    syncGraphBtn.innerText = "¡Sincronizado!";
-                    setTimeout(() => syncGraphBtn.innerText = "Sincronizar Grafo", 2000);
-                }
-            } catch (e) {
-                syncGraphBtn.innerText = "Error";
-            }
-        });
-
-        const voiceBtn = document.getElementById('voice-btn');
-        const visualArea = document.getElementById('ai-visual-response');
-        const multimodalIndicator = document.getElementById('ai-multimodal-indicator');
-
-        // Voice Simulation
-        let isListening = false;
-        voiceBtn.addEventListener('click', () => {
-            isListening = !isListening;
-            if (isListening) {
-                voiceBtn.style.background = 'rgba(0, 212, 255, 0.2)';
-                multimodalIndicator.style.opacity = '1';
-                aiInput.placeholder = "Escuchando...";
-
-                // Simulate voice command after 2 seconds
-                setTimeout(() => {
-                    if (isListening) {
-                        aiInput.value = "Abrir chip-finanzas y añadir boton pdf";
-                        stopListening();
-                        sendToAI();
+                    if (nodes.length > 6) {
+                        html += `<div style="font-size: 0.7rem; opacity: 0.4; text-align: center; margin-top: 5px;">+${nodes.length - 6} conceptos más</div>`;
                     }
-                }, 2000);
-            } else {
-                stopListening();
+
+                    graphContent.innerHTML = html;
+                } catch (error) {
+                    console.warn('Graph failed:', error);
+                }
             }
-        });
 
-        function stopListening() {
-            isListening = false;
-            voiceBtn.style.background = 'none';
-            multimodalIndicator.style.opacity = '0';
-            aiInput.placeholder = "Escribe un comando...";
-        }
+            syncGraphBtn.addEventListener('click', async () => {
+                syncGraphBtn.innerText = "Sincronizando...";
+                try {
+                    const response = await fetch('/api/v1/system/graph/sync', { method: 'POST' });
+                    if (response.ok) {
+                        await loadGraph();
+                        syncGraphBtn.innerText = "¡Sincronizado!";
+                        setTimeout(() => syncGraphBtn.innerText = "Sincronizar Grafo", 2000);
+                    }
+                } catch (e) {
+                    syncGraphBtn.innerText = "Error";
+                }
+            });
 
-        function renderVisualResponse(payload) {
-            if (!payload || !payload.type) return;
+            const voiceBtn = document.getElementById('voice-btn');
+            const visualArea = document.getElementById('ai-visual-response');
+            const multimodalIndicator = document.getElementById('ai-multimodal-indicator');
 
-            // Clear previous visual
-            visualArea.innerHTML = '';
+            // Voice Simulation
+            let isListening = false;
+            voiceBtn.addEventListener('click', () => {
+                isListening = !isListening;
+                if (isListening) {
+                    voiceBtn.style.background = 'rgba(0, 212, 255, 0.2)';
+                    multimodalIndicator.style.opacity = '1';
+                    aiInput.placeholder = "Escuchando...";
 
-            const card = document.createElement('div');
-            card.style.background = 'rgba(255,255,255,0.05)';
-            card.style.border = '1px solid var(--accent-color)';
-            card.style.borderRadius = '12px';
-            card.style.padding = '12px';
-            card.style.fontSize = '0.85rem';
-            card.style.marginTop = '10px';
-            card.style.maxHeight = '200px';
-            card.style.overflowY = 'auto';
+                    // Simulate voice command after 2 seconds
+                    setTimeout(() => {
+                        if (isListening) {
+                            aiInput.value = "Abrir chip-finanzas y añadir boton pdf";
+                            stopListening();
+                            sendToAI();
+                        }
+                    }, 2000);
+                } else {
+                    stopListening();
+                }
+            });
 
-            let content = `<strong style="color: var(--accent-color); display: block; margin-bottom: 8px;">${payload.title || 'Información de Sistema'}</strong>`;
+            function stopListening() {
+                isListening = false;
+                voiceBtn.style.background = 'none';
+                multimodalIndicator.style.opacity = '0';
+                aiInput.placeholder = "Escribe un comando...";
+            }
 
-            if (payload.type.startsWith('chart')) {
-                const values = payload.data?.values || [];
-                const labels = payload.data?.labels || [];
-                content += `<div style="display: flex; gap: 5px; align-items: flex-end; height: 60px; margin-top: 10px;">`;
-                values.forEach((v, i) => {
-                    const height = Math.min(v * 50, 60);
-                    content += `<div title="${labels[i]}: ${v}" style="flex: 1; background: var(--accent-color); height: ${height}px; border-radius: 2px;"></div>`;
-                });
-                content += `</div>`;
-            } else if (payload.type === 'knowledge_map') {
-                const steps = payload.data?.steps || [];
-                content += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
-                steps.forEach((s, i) => {
-                    content += `
+            function renderVisualResponse(payload) {
+                if (!payload || !payload.type) return;
+
+                // Clear previous visual
+                visualArea.innerHTML = '';
+
+                const card = document.createElement('div');
+                card.style.background = 'rgba(255,255,255,0.05)';
+                card.style.border = '1px solid var(--accent-color)';
+                card.style.borderRadius = '12px';
+                card.style.padding = '12px';
+                card.style.fontSize = '0.85rem';
+                card.style.marginTop = '10px';
+                card.style.maxHeight = '200px';
+                card.style.overflowY = 'auto';
+
+                let content = `<strong style="color: var(--accent-color); display: block; margin-bottom: 8px;">${payload.title || 'Información de Sistema'}</strong>`;
+
+                if (payload.type.startsWith('chart')) {
+                    const values = payload.data?.values || [];
+                    const labels = payload.data?.labels || [];
+                    content += `<div style="display: flex; gap: 5px; align-items: flex-end; height: 60px; margin-top: 10px;">`;
+                    values.forEach((v, i) => {
+                        const height = Math.min(v * 50, 60);
+                        content += `<div title="${labels[i]}: ${v}" style="flex: 1; background: var(--accent-color); height: ${height}px; border-radius: 2px;"></div>`;
+                    });
+                    content += `</div>`;
+                } else if (payload.type === 'knowledge_map') {
+                    const steps = payload.data?.steps || [];
+                    content += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+                    steps.forEach((s, i) => {
+                        content += `
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--accent-color); color: #000; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">${i + 1}</div>
                             <span>${s}</span>
                         </div>
                     `;
-                });
-                content += `</div>`;
-            } else if (payload.type === 'table') {
-                const headers = payload.data?.headers || [];
-                const rows = payload.data?.rows || [];
-                content += `<table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">`;
-                content += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.1); opacity: 0.7;">${headers.map(h => `<th style="padding: 4px;">${h}</th>`).join('')}</tr>`;
-                rows.forEach(row => {
-                    content += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">${row.map(cell => `<td style="padding: 4px;">${cell}</td>`).join('')}</tr>`;
-                });
-                content += `</table>`;
-            } else {
-                content += `<p style="opacity: 0.8;">${typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data)}</p>`;
+                    });
+                    content += `</div>`;
+                } else if (payload.type === 'table') {
+                    const headers = payload.data?.headers || [];
+                    const rows = payload.data?.rows || [];
+                    content += `<table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">`;
+                    content += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.1); opacity: 0.7;">${headers.map(h => `<th style="padding: 4px;">${h}</th>`).join('')}</tr>`;
+                    rows.forEach(row => {
+                        content += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">${row.map(cell => `<td style="padding: 4px;">${cell}</td>`).join('')}</tr>`;
+                    });
+                    content += `</table>`;
+                } else {
+                    content += `<p style="opacity: 0.8;">${typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data)}</p>`;
+                }
+
+                card.innerHTML = content;
+                visualArea.appendChild(card);
             }
 
-            card.innerHTML = content;
-            visualArea.appendChild(card);
-        }
+            function renderKnowledge(data) {
+                const container = document.getElementById('knowledge-interface-content');
+                const tags = document.getElementById('knowledge-tags');
 
-        function renderKnowledge(data) {
-            const container = document.getElementById('knowledge-interface-content');
-            const tags = document.getElementById('knowledge-tags');
+                if (!data) return;
 
-            if (!data) return;
-
-            if (data.intent === 'knowledge_explain') {
-                container.innerHTML = `
+                if (data.intent === 'knowledge_explain') {
+                    container.innerHTML = `
                     <div style="border-left: 3px solid var(--accent-color); padding-left: 10px; margin-bottom: 10px;">
                         <span style="font-size: 0.7rem; opacity: 0.6; display: block;">Semantic Node: ${data.payload.concept}</span>
                         <p style="font-size: 0.8rem; margin-top: 5px;">${data.message}</p>
                     </div>
                 `;
-                tags.innerHTML = `
+                    tags.innerHTML = `
                     <span class="knowledge-tag">confidence: ${(data.payload.score * 100).toFixed(1)}%</span>
                     <span class="knowledge-tag">type: ${data.payload.source}</span>
                 `;
-            } else if (data.intent === 'knowledge_map') {
-                container.innerHTML = `
+                } else if (data.intent === 'knowledge_map') {
+                    container.innerHTML = `
                     <div style="margin-bottom: 10px;">
                         <span style="font-size: 0.7rem; opacity: 0.6; display: block;">Learning Path</span>
                         <p style="font-size: 0.8rem; margin-top: 5px;">${data.message}</p>
                     </div>
                 `;
-                tags.innerHTML = data.payload.steps.map(s => `<span class="knowledge-tag">${s}</span>`).join('');
-            }
-        }
-
-
-        function addMessage(sender, text) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${sender}`;
-
-            if (sender === 'ai') {
-                typeMessage(msgDiv, text);
-            } else {
-                msgDiv.innerText = text;
-            }
-
-            chatHistory.appendChild(msgDiv);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
-
-        function typeMessage(element, text) {
-            let i = 0;
-            element.innerText = '';
-            const interval = setInterval(() => {
-                if (i < text.length) {
-                    element.innerText += text.charAt(i);
-                    i++;
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
-                } else {
-                    clearInterval(interval);
+                    tags.innerHTML = data.payload.steps.map(s => `<span class="knowledge-tag">${s}</span>`).join('');
                 }
-            }, 30);
-        }
+            }
 
-        async function initializeGreeting() {
-            try {
-                const userId = localStorage.getItem('omniweb_user_id') || 'new_user';
-                const browserLang = navigator.language || 'en';
 
-                const response = await fetch('/api/v1/onboarding/greeting', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        browser_lang: browserLang
-                    })
-                });
+            function addMessage(sender, text) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message ${sender}`;
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const payload = data.payload;
+                if (sender === 'ai') {
+                    typeMessage(msgDiv, text);
+                } else {
+                    msgDiv.innerText = text;
+                }
 
-                    // Display greeting with animation
-                    addMessage('ai', payload.message || payload.greeting || "Sistema Omni ONLINE.");
+                chatHistory.appendChild(msgDiv);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
 
-                    // If returning user, highlight we remember them
-                    if (payload.is_returning) {
-                        console.log("System recognizes returning user:", userId);
+            function typeMessage(element, text) {
+                let i = 0;
+                element.innerText = '';
+                const interval = setInterval(() => {
+                    if (i < text.length) {
+                        element.innerText += text.charAt(i);
+                        i++;
+                        chatHistory.scrollTop = chatHistory.scrollHeight;
+                    } else {
+                        clearInterval(interval);
                     }
-                } else {
-                    throw new Error("Greeting API unavailable");
-                }
-            } catch (error) {
-                console.warn("Using fallback greeting:", error);
-                addMessage('ai', "¡Hola! Bienvenido a OmniWeb. ¿En qué puedo ayudarte?");
+                }, 30);
             }
-        }
 
-        async function loadNodes() {
-            try {
-                const response = await fetch('/api/v1/network/nodes');
-                if (!response.ok) return;
-                const nodes = await response.json();
-                const container = document.getElementById('nodes-content');
-                if (!container) return;
+            async function initializeGreeting() {
+                try {
+                    const userId = localStorage.getItem('omniweb_user_id') || 'new_user';
+                    const browserLang = navigator.language || 'en';
 
-                if (nodes.length <= 1) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Localizando nodos en la red...</div>';
-                    return;
+                    const response = await fetch('/api/v1/onboarding/greeting', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            browser_lang: browserLang
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const payload = data.payload;
+
+                        // Display greeting with animation
+                        addMessage('ai', payload.message || payload.greeting || "Sistema Omni ONLINE.");
+
+                        // If returning user, highlight we remember them
+                        if (payload.is_returning) {
+                            console.log("System recognizes returning user:", userId);
+                        }
+                    } else {
+                        throw new Error("Greeting API unavailable");
+                    }
+                } catch (error) {
+                    console.warn("Using fallback greeting:", error);
+                    addMessage('ai', "¡Hola! Bienvenido a OmniWeb. ¿En qué puedo ayudarte?");
                 }
+            }
 
-                container.innerHTML = nodes.map(node => {
-                    const isLocal = node.node_url.includes('localhost');
-                    return `
+            async function loadNodes() {
+                try {
+                    const response = await fetch('/api/v1/network/nodes');
+                    if (!response.ok) return;
+                    const nodes = await response.json();
+                    const container = document.getElementById('nodes-content');
+                    if (!container) return;
+
+                    if (nodes.length <= 1) {
+                        container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Localizando nodos en la red...</div>';
+                        return;
+                    }
+
+                    container.innerHTML = nodes.map(node => {
+                        const isLocal = node.node_url.includes('localhost');
+                        return `
                     <div class="insight-item" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; justify-content: space-between; width: 100%;">
                             <span style="font-weight: bold; color: ${isLocal ? 'var(--accent-color)' : '#fff'};">${node.node_id.substring(0, 8)} ${isLocal ? '(Local)' : ''}</span>
@@ -2129,38 +2226,38 @@
                         ` : ''}
                     </div>
                 `}).join('');
-            } catch (e) {
-                console.warn("Network nodes failed:", e);
-            }
-        }
-
-        async function syncFromNode(nodeId) {
-            try {
-                const response = await fetch(`/api/v1/network/sync?node_id=${nodeId}`, { method: 'POST' });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.loop_id) trackLoop(data.loop_id);
-                    alert("Sincronización iniciada vía Stability Loop");
+                } catch (e) {
+                    console.warn("Network nodes failed:", e);
                 }
-            } catch (e) {
-                alert("Error al iniciar sincronización");
             }
-        }
 
-        sendBtn.addEventListener('click', sendToAI);
-        aiInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendToAI();
-        });
+            async function syncFromNode(nodeId) {
+                try {
+                    const response = await fetch(`/api/v1/network/sync?node_id=${nodeId}`, { method: 'POST' });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.loop_id) trackLoop(data.loop_id);
+                        alert("Sincronización iniciada vía Stability Loop");
+                    }
+                } catch (e) {
+                    alert("Error al iniciar sincronización");
+                }
+            }
 
-        async function loadRuntime() {
-            try {
-                const response = await fetch('/api/v1/system/runtime');
-                if (!response.ok) return;
-                const data = await response.json();
-                const runtime = data.runtime;
+            sendBtn.addEventListener('click', sendToAI);
+            aiInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendToAI();
+            });
 
-                const container = document.getElementById('runtime-content');
-                container.innerHTML = `
+            async function loadRuntime() {
+                try {
+                    const response = await fetch('/api/v1/system/runtime');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const runtime = data.runtime;
+
+                    const container = document.getElementById('runtime-content');
+                    container.innerHTML = `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="font-size: 0.8rem; opacity: 0.7;">Environment:</span>
                         <span style="font-size: 0.8rem; font-weight: bold; color: var(--accent-color);">${runtime.environment.toUpperCase()}</span>
@@ -2171,29 +2268,29 @@
                     </div>
                 `;
 
-                const serviceList = document.getElementById('service-list');
-                serviceList.innerHTML = runtime.services.map(s => `
+                    const serviceList = document.getElementById('service-list');
+                    serviceList.innerHTML = runtime.services.map(s => `
                     <div class="service-item">
                         <span>${s.name.replace('_', ' ')}</span>
                         <span class="status-pill ${s.status}">${s.status}</span>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.error("Error loading runtime:", e);
-            }
-        }
-
-        async function loadIdeas() {
-            try {
-                const response = await fetch('/api/v1/system/ideas');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('ideas-content');
-                if (!data.ideas || data.ideas.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin pensamientos capturados...</div>';
-                    return;
+                } catch (e) {
+                    console.error("Error loading runtime:", e);
                 }
-                container.innerHTML = data.ideas.slice(0, 5).map(idea => `
+            }
+
+            async function loadIdeas() {
+                try {
+                    const response = await fetch('/api/v1/system/ideas');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('ideas-content');
+                    if (!data.ideas || data.ideas.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin pensamientos capturados...</div>';
+                        return;
+                    }
+                    container.innerHTML = data.ideas.slice(0, 5).map(idea => `
                     <div class="idea-item">
                         <div style="font-style: italic;">"${idea.raw_thought}"</div>
                         <div style="display: flex; flex-wrap: wrap; margin-top: 5px;">
@@ -2201,22 +2298,22 @@
                         </div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Idea Cloud load failed:", e);
-            }
-        }
-
-        async function loadClusters() {
-            try {
-                const response = await fetch('/api/v1/system/ideas/clusters');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('clusters-content');
-                if (!data.clusters || data.clusters.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.5;">Esperando patrones emergentes...</div>';
-                    return;
+                } catch (e) {
+                    console.warn("Idea Cloud load failed:", e);
                 }
-                container.innerHTML = `
+            }
+
+            async function loadClusters() {
+                try {
+                    const response = await fetch('/api/v1/system/ideas/clusters');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('clusters-content');
+                    if (!data.clusters || data.clusters.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.5;">Esperando patrones emergentes...</div>';
+                        return;
+                    }
+                    container.innerHTML = `
                     <div style="font-size: 0.75rem; font-weight: bold; margin-bottom: 8px; color: var(--text-secondary);">CONCEPTO EMERGENTE</div>
                     ${data.clusters.slice(0, 3).map(c => `
                         <div style="background: rgba(187, 134, 252, 0.05); padding: 8px; border-radius: 8px; margin-bottom: 8px; border: 1px dashed rgba(187, 134, 252, 0.3);">
@@ -2225,22 +2322,22 @@
                         </div>
                     `).join('')}
                 `;
-            } catch (e) {
-                console.warn("Clusters load failed:", e);
-            }
-        }
-
-        async function loadEducationProfile() {
-            try {
-                const response = await fetch('/api/v1/education/profile');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('skills-list');
-                if (!data.profile || data.profile.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.5;">Inicia una sesión de aprendizaje...</div>';
-                    return;
+                } catch (e) {
+                    console.warn("Clusters load failed:", e);
                 }
-                container.innerHTML = data.profile.slice(0, 5).map(skill => `
+            }
+
+            async function loadEducationProfile() {
+                try {
+                    const response = await fetch('/api/v1/education/profile');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('skills-list');
+                    if (!data.profile || data.profile.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.5;">Inicia una sesión de aprendizaje...</div>';
+                        return;
+                    }
+                    container.innerHTML = data.profile.slice(0, 5).map(skill => `
                     <div class="skill-item">
                         <span>${skill.concept}</span>
                         <div class="skill-bar">
@@ -2248,85 +2345,85 @@
                         </div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Education profile failed:", e);
+                } catch (e) {
+                    console.warn("Education profile failed:", e);
+                }
             }
-        }
 
-        async function loadCertifications() {
-            try {
-                const response = await fetch('/api/v1/education/certs');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('certs-content');
-                if (!data.certifications || data.certifications.length === 0) return;
+            async function loadCertifications() {
+                try {
+                    const response = await fetch('/api/v1/education/certs');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('certs-content');
+                    if (!data.certifications || data.certifications.length === 0) return;
 
-                container.innerHTML = data.certifications.map(cert => `
+                    container.innerHTML = data.certifications.map(cert => `
                     <div class="cert-badge">🏆 ${cert.title}</div>
                 `).join('');
-            } catch (e) {
-                console.warn("Certs failed:", e);
+                } catch (e) {
+                    console.warn("Certs failed:", e);
+                }
             }
-        }
 
-        async function loadSkillProfile() {
-            try {
-                const response = await fetch('/api/v1/development/profile');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('metrics-radar-list');
-                const metrics = data.profile.cognitive_metrics;
-                if (Object.keys(metrics).length === 0) return;
+            async function loadSkillProfile() {
+                try {
+                    const response = await fetch('/api/v1/development/profile');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('metrics-radar-list');
+                    const metrics = data.profile.cognitive_metrics;
+                    if (Object.keys(metrics).length === 0) return;
 
-                container.innerHTML = Object.values(metrics).slice(0, 4).map(m => `
+                    container.innerHTML = Object.values(metrics).slice(0, 4).map(m => `
                     <div class="metric-item">
                         <div style="font-weight: bold;">${m.name.replace('_', ' ').toUpperCase()}</div>
                         <div style="color: #00c8ff;">${(m.score * 100).toFixed(0)}%</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Skill profile failed:", e);
-            }
-        }
-
-        async function loadOpportunities() {
-            try {
-                const response = await fetch('/api/v1/development/opportunities');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('opps-list');
-                if (!data.opportunities || data.opportunities.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.6rem; opacity: 0.5;">Analizando mercado...</div>';
-                    return;
+                } catch (e) {
+                    console.warn("Skill profile failed:", e);
                 }
+            }
 
-                container.innerHTML = data.opportunities.slice(0, 3).map(opp => `
+            async function loadOpportunities() {
+                try {
+                    const response = await fetch('/api/v1/development/opportunities');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('opps-list');
+                    if (!data.opportunities || data.opportunities.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.6rem; opacity: 0.5;">Analizando mercado...</div>';
+                        return;
+                    }
+
+                    container.innerHTML = data.opportunities.slice(0, 3).map(opp => `
                     <div class="opp-card">
                         <div class="opp-tag">${opp.type}</div>
                         <div style="font-weight: bold; margin: 3px 0;">${opp.title}</div>
                         <div style="font-size: 0.6rem; opacity: 0.8;">Matching: ${(opp.match_score * 100).toFixed(0)}%</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Opportunities failed:", e);
+                } catch (e) {
+                    console.warn("Opportunities failed:", e);
+                }
             }
-        }
 
-        // --- Multi-AI Interface Logic (Phase AB) ---
+            // --- Multi-AI Interface Logic (Phase AB) ---
 
-        function createWindow(config) {
-            const space = document.getElementById('interactive-space');
-            const win = document.createElement('div');
-            win.id = `window-${config.id}`;
-            win.className = 'floating-window';
-            win.style.left = `${config.x}px`;
-            win.style.top = `${config.y}px`;
-            win.style.width = `${config.width}px`;
-            win.style.height = `${config.height}px`;
-            win.style.pointerEvents = 'auto';
-            win.style.opacity = config.opacity;
+            function createWindow(config) {
+                const space = document.getElementById('interactive-space');
+                const win = document.createElement('div');
+                win.id = `window-${config.id}`;
+                win.className = 'floating-window';
+                win.style.left = `${config.x}px`;
+                win.style.top = `${config.y}px`;
+                win.style.width = `${config.width}px`;
+                win.style.height = `${config.height}px`;
+                win.style.pointerEvents = 'auto';
+                win.style.opacity = config.opacity;
 
-            win.innerHTML = `
+                win.innerHTML = `
                 <div class="window-header" onmousedown="startDrag(event, '${win.id}')">
                     <div class="window-title">${config.title}</div>
                     <div class="window-controls">
@@ -2338,101 +2435,101 @@
                     <iframe src="${config.url}" title="${config.title}"></iframe>
                 </div>
             `;
-            space.appendChild(win);
-        }
+                space.appendChild(win);
+            }
 
-        function createAgentIcon(agent) {
-            const orbit = document.getElementById('agent-orbit');
-            const icon = document.createElement('div');
-            icon.className = `agent-icon ${agent.status === 'speaking' ? 'speaking' : ''}`;
-            icon.style.left = `${agent.position.x}%`;
-            icon.style.top = `${agent.position.y}%`;
-            icon.style.pointerEvents = 'auto';
-            icon.innerText = agent.name[0];
-            icon.title = `${agent.name} (${agent.role})`;
-            orbit.appendChild(icon);
-        }
+            function createAgentIcon(agent) {
+                const orbit = document.getElementById('agent-orbit');
+                const icon = document.createElement('div');
+                icon.className = `agent-icon ${agent.status === 'speaking' ? 'speaking' : ''}`;
+                icon.style.left = `${agent.position.x}%`;
+                icon.style.top = `${agent.position.y}%`;
+                icon.style.pointerEvents = 'auto';
+                icon.innerText = agent.name[0];
+                icon.title = `${agent.name} (${agent.role})`;
+                orbit.appendChild(icon);
+            }
 
-        function startDrag(e, id) {
-            const el = document.getElementById(id);
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-
-            document.onmouseup = () => {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            };
-
-            document.onmousemove = (e) => {
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
+            function startDrag(e, id) {
+                const el = document.getElementById(id);
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
                 pos3 = e.clientX;
                 pos4 = e.clientY;
-                el.style.top = (el.offsetTop - pos2) + "px";
-                el.style.left = (el.offsetLeft - pos1) + "px";
-            };
-        }
 
-        async function loadInterfaceState() {
-            try {
-                // Windows
-                const wRes = await fetch('/api/v1/interface/windows');
-                const wData = await wRes.json();
-                wData.windows.forEach(w => {
-                    if (!document.getElementById(`window-${w.id}`)) createWindow(w);
-                });
+                document.onmouseup = () => {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                };
 
-                // Agents
-                const aRes = await fetch('/api/v1/interface/agents');
-                const aData = await aRes.json();
-                const orbit = document.getElementById('agent-orbit');
-                orbit.innerHTML = '';
-                if (aData.agents) aData.agents.forEach(createAgentIcon);
-            } catch (e) {
-                console.warn("Interface state load failed:", e);
+                document.onmousemove = (e) => {
+                    pos1 = pos3 - e.clientX;
+                    pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    el.style.top = (el.offsetTop - pos2) + "px";
+                    el.style.left = (el.offsetLeft - pos1) + "px";
+                };
             }
-        }
 
-        async function loadDomains() {
-            try {
-                const response = await fetch('/api/v1/domains');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('domains-list');
+            async function loadInterfaceState() {
+                try {
+                    // Windows
+                    const wRes = await fetch('/api/v1/interface/windows');
+                    const wData = await wRes.json();
+                    wData.windows.forEach(w => {
+                        if (!document.getElementById(`window-${w.id}`)) createWindow(w);
+                    });
 
-                if (data.domains.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin dominios registrados.</div>';
-                    return;
+                    // Agents
+                    const aRes = await fetch('/api/v1/interface/agents');
+                    const aData = await aRes.json();
+                    const orbit = document.getElementById('agent-orbit');
+                    orbit.innerHTML = '';
+                    if (aData.agents) aData.agents.forEach(createAgentIcon);
+                } catch (e) {
+                    console.warn("Interface state load failed:", e);
                 }
+            }
 
-                container.innerHTML = data.domains.map(d => `
+            async function loadDomains() {
+                try {
+                    const response = await fetch('/api/v1/domains');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('domains-list');
+
+                    if (data.domains.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Sin dominios registrados.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = data.domains.map(d => `
                     <div class="domain-item" onclick="loadProjectList('${d.category}')">
                         <span>${d.name}</span>
                         <span style="font-size: 0.65rem; padding: 2px 6px; background: rgba(255,107,107,0.1); color: #ff6b6b; border-radius: 4px;">Explore</span>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Domains load failed:", e);
-            }
-        }
-
-        async function loadProjectList(domain = null) {
-            try {
-                let url = '/api/v1/collab/projects';
-                if (domain) url += `?domain=${domain}`;
-
-                const response = await fetch(url);
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('projects-list');
-
-                if (data.projects.length === 0) {
-                    container.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.6;">No active projects ${domain ? 'in ' + domain : ''}.</div>`;
-                    return;
+                } catch (e) {
+                    console.warn("Domains load failed:", e);
                 }
+            }
 
-                container.innerHTML = data.projects.map(p => `
+            async function loadProjectList(domain = null) {
+                try {
+                    let url = '/api/v1/collab/projects';
+                    if (domain) url += `?domain=${domain}`;
+
+                    const response = await fetch(url);
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('projects-list');
+
+                    if (data.projects.length === 0) {
+                        container.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.6;">No active projects ${domain ? 'in ' + domain : ''}.</div>`;
+                        return;
+                    }
+
+                    container.innerHTML = data.projects.map(p => `
                     <div class="project-card">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="font-weight: bold; color: var(--accent-color);">${p.title}</div>
@@ -2445,46 +2542,46 @@
                         </div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Projects load failed:", e);
-            }
-        }
-
-        async function loadTimeline(projectName) {
-            const panel = document.getElementById('timeline-panel');
-            const list = document.getElementById('timeline-list');
-            const nameDisp = document.getElementById('timeline-project-name');
-            const progressFill = document.getElementById('timeline-progress-fill');
-            const progressText = document.getElementById('timeline-progress-text');
-
-            panel.style.display = 'flex';
-            list.innerHTML = '<div style="text-align: center; padding: 2rem; opacity: 0.5;">Analizando historia técnica...</div>';
-            nameDisp.innerText = projectName;
-
-            try {
-                const response = await fetch('/api/v1/ai-host/process', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: `ver timeline del proyecto ${projectName}` })
-                });
-
-                if (!response.ok) throw new Error('Timeline API failed');
-                const data = await response.json();
-
-                if (data.status === 'error') {
-                    list.innerHTML = `<div style="text-align: center; color: #ff4444; padding: 2rem;">${data.message}</div>`;
-                    return;
+                } catch (e) {
+                    console.warn("Projects load failed:", e);
                 }
+            }
 
-                const payload = data.payload;
-                const events = payload.timeline;
+            async function loadTimeline(projectName) {
+                const panel = document.getElementById('timeline-panel');
+                const list = document.getElementById('timeline-list');
+                const nameDisp = document.getElementById('timeline-project-name');
+                const progressFill = document.getElementById('timeline-progress-fill');
+                const progressText = document.getElementById('timeline-progress-text');
 
-                // Update Progress
-                progressFill.style.width = `${payload.progress}%`;
-                progressText.innerText = `${payload.progress}%`;
+                panel.style.display = 'flex';
+                list.innerHTML = '<div style="text-align: center; padding: 2rem; opacity: 0.5;">Analizando historia técnica...</div>';
+                nameDisp.innerText = projectName;
 
-                // Render Events
-                list.innerHTML = events.map(e => `
+                try {
+                    const response = await fetch('/api/v1/ai-host/process', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: `ver timeline del proyecto ${projectName}` })
+                    });
+
+                    if (!response.ok) throw new Error('Timeline API failed');
+                    const data = await response.json();
+
+                    if (data.status === 'error') {
+                        list.innerHTML = `<div style="text-align: center; color: #ff4444; padding: 2rem;">${data.message}</div>`;
+                        return;
+                    }
+
+                    const payload = data.payload;
+                    const events = payload.timeline;
+
+                    // Update Progress
+                    progressFill.style.width = `${payload.progress}%`;
+                    progressText.innerText = `${payload.progress}%`;
+
+                    // Render Events
+                    list.innerHTML = events.map(e => `
                     <div class="timeline-item type-${e.type}">
                         <div class="timeline-dot"></div>
                         <div class="timeline-card">
@@ -2496,49 +2593,49 @@
                     </div>
                 `).join('');
 
-            } catch (e) {
-                console.warn("Timeline load failed:", e);
-                list.innerHTML = `<div style="text-align: center; color: #ff4444; padding: 2rem;">Error al conectar con la base de datos de evolución.</div>`;
-            }
-        }
-
-        async function loadLogbook() {
-            try {
-                const response = await fetch('/api/v1/logbook/me');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('log-timeline');
-
-                if (data.entries.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Tu vitácora está vacía. Empieza a crear ideas.</div>';
-                    return;
+                } catch (e) {
+                    console.warn("Timeline load failed:", e);
+                    list.innerHTML = `<div style="text-align: center; color: #ff4444; padding: 2rem;">Error al conectar con la base de datos de evolución.</div>`;
                 }
+            }
 
-                container.innerHTML = data.entries.slice(-5).reverse().map(e => `
+            async function loadLogbook() {
+                try {
+                    const response = await fetch('/api/v1/logbook/me');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('log-timeline');
+
+                    if (data.entries.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Tu vitácora está vacía. Empieza a crear ideas.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = data.entries.slice(-5).reverse().map(e => `
                     <div class="log-entry">
                         <div style="font-weight: bold; color: #00ffc8; text-transform: uppercase; font-size: 0.6rem;">${e.type}</div>
                         <div>${typeof e.content === 'string' ? e.content : JSON.stringify(e.content)}</div>
                         <div style="font-size: 0.6rem; opacity: 0.4; margin-top: 5px;">${new Date(e.timestamp).toLocaleString()}</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Logbook load failed:", e);
-            }
-        }
-
-        async function loadAffinity() {
-            try {
-                const response = await fetch('/api/v1/logbook/affinity');
-                if (!response.ok) return;
-                const data = await response.json();
-                const container = document.getElementById('affinity-list');
-
-                if (!data.suggestions || data.suggestions.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.4;">Buscando afinidades en la red...</div>';
-                    return;
+                } catch (e) {
+                    console.warn("Logbook load failed:", e);
                 }
+            }
 
-                container.innerHTML = data.suggestions.map(s => `
+            async function loadAffinity() {
+                try {
+                    const response = await fetch('/api/v1/logbook/affinity');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const container = document.getElementById('affinity-list');
+
+                    if (!data.suggestions || data.suggestions.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.4;">Buscando afinidades en la red...</div>';
+                        return;
+                    }
+
+                    container.innerHTML = data.suggestions.map(s => `
                     <div class="affinity-suggestion" onclick="connectLogbook('${s.target_logbook_id}')">
                         <div style="display: flex; justify-content: space-between;">
                             <span>Potencial Colaborador</span>
@@ -2547,384 +2644,765 @@
                         <div style="font-size: 0.6rem; opacity: 0.6; margin-top: 3px;">Temas: ${s.matching_topics.join(', ')}</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.warn("Affinity load failed:", e);
+                } catch (e) {
+                    console.warn("Affinity load failed:", e);
+                }
             }
-        }
 
-        async function connectLogbook(targetId) {
-            if (!confirm("¿Deseas conectar con este nodo de conocimiento?")) return;
-            const res = await fetch('/api/v1/logbook/connect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target_user_id: targetId, type: 'collaboration' })
-            });
-            if (res.ok) {
-                alert("Conexión establecida. Sintonía de datos iniciada.");
-                loadLogbook();
-            }
-        }
-
-        // Panel Z-Index Management
-        let topZ = 100;
-        function bringToFront(el) {
-            topZ++;
-            el.style.zIndex = topZ;
-            document.querySelectorAll('.glass-panel').forEach(p => p.classList.remove('active'));
-            el.classList.add('active');
-        }
-
-        document.querySelectorAll('.glass-panel').forEach(panel => {
-            panel.addEventListener('mousedown', () => bringToFront(panel));
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadChips();
-            loadInsights();
-            loadProposals();
-            loadContext();
-            loadGraph();
-            loadAntimodal();
-            loadNodes();
-            loadRuntime();
-            loadSemanticSummary();
-            loadIdeas();
-            loadClusters();
-            loadEducationProfile();
-            loadCertifications();
-            loadSkillProfile();
-            loadOpportunities();
-            loadInterfaceState();
-            loadDomains();
-            loadProjectList();
-            loadLogbook();
-            loadAffinity();
-            loadRuntime();
-            initializeGreeting();
-            // New Project Button
-            document.getElementById('new-project-btn').addEventListener('click', () => {
-                const title = prompt("Project Title:");
-                if (!title) return;
-                const domain = prompt("Domain (science, history, philosophy, technology, etc.):", "science");
-
-                fetch('/api/v1/collab/projects', {
+            async function connectLogbook(targetId) {
+                if (!confirm("¿Deseas conectar con este nodo de conocimiento?")) return;
+                const res = await fetch('/api/v1/logbook/connect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        title: title,
-                        description: "New global knowledge project.",
-                        domain: domain,
-                        user_id: "default_user"
-                    })
-                }).then(() => loadProjectList());
-            });
-
-            // Sliders (Phase AB)
-            document.getElementById('brightness-slider').addEventListener('input', (e) => {
-                document.body.style.filter = `brightness(${e.target.value})`;
-            });
-
-            document.getElementById('transparency-slider').addEventListener('input', (e) => {
-                document.querySelectorAll('.floating-window, .insights-panel, .human-dev-panel, .education-panel, .graph-panel, .runtime-panel').forEach(el => {
-                    el.style.opacity = e.target.value;
+                    body: JSON.stringify({ target_user_id: targetId, type: 'collaboration' })
                 });
+                if (res.ok) {
+                    alert("Conexión establecida. Sintonía de datos iniciada.");
+                    loadLogbook();
+                }
+            }
+
+            // Panel Z-Index Management
+            let topZ = 100;
+            function bringToFront(el) {
+                topZ++;
+                el.style.zIndex = topZ;
+                document.querySelectorAll('.glass-panel').forEach(p => p.classList.remove('active'));
+                el.classList.add('active');
+            }
+
+            document.querySelectorAll('.glass-panel').forEach(panel => {
+                panel.addEventListener('mousedown', () => bringToFront(panel));
             });
 
-            // Periodicals
-            setInterval(loadNodes, 10000);
-            setInterval(loadRuntime, 15000);
-            setInterval(loadInsights, 30000);
-            setInterval(loadProposals, 45000);
-            setInterval(loadSemanticSummary, 20000);
-            setInterval(loadIdeas, 12000);
-            setInterval(loadClusters, 25000);
-            setInterval(loadEducationProfile, 20000);
-            setInterval(loadCertifications, 40000);
-            setInterval(loadSkillProfile, 15000);
-            setInterval(loadOpportunities, 30000);
-            setInterval(loadInterfaceState, 5000);
-            setInterval(loadDomains, 60000);
-            setInterval(loadProjectList, 20000);
-            setInterval(loadLogbook, 30000);
-            setInterval(loadAffinity, 60000);
-        });
+            document.addEventListener('DOMContentLoaded', () => {
+                loadChips();
+                loadInsights();
+                loadProposals();
+                loadContext();
+                loadGraph();
+                loadAntimodal();
+                loadNodes();
+                loadRuntime();
+                loadSemanticSummary();
+                loadIdeas();
+                loadClusters();
+                loadEducationProfile();
+                loadCertifications();
+                loadSkillProfile();
+                loadOpportunities();
+                loadInterfaceState();
+                loadDomains();
+                loadProjectList();
+                loadLogbook();
+                loadAffinity();
+                loadWisdomFeedback();
+                loadWisdomBridge();
+                loadRoadmap();
+                loadRuntime();
+                initializeGreeting();
+                // New Project Button
+                document.getElementById('new-project-btn').addEventListener('click', () => {
+                    const title = prompt("Project Title:");
+                    if (!title) return;
+                    const domain = prompt("Domain (science, history, philosophy, technology, etc.):", "science");
 
-        async function loadSemanticSummary() {
-            try {
-                const response = await fetch('/api/v1/system/semantic/summary');
-                if (!response.ok) return;
-                const data = await response.json();
+                    fetch('/api/v1/collab/projects', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: title,
+                            description: "New global knowledge project.",
+                            domain: domain,
+                            user_id: "default_user"
+                        })
+                    }).then(() => loadProjectList());
+                });
 
-                const container = document.getElementById('knowledge-interface-content');
-                if (!container || !data) return;
+                // Sliders (Phase AB)
+                document.getElementById('brightness-slider').addEventListener('input', (e) => {
+                    document.body.style.filter = `brightness(${e.target.value})`;
+                });
 
-                if (data.total_indexed === 0) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Capa semántica inicializada. Sin conceptos aún.</div>';
-                    return;
+                document.getElementById('transparency-slider').addEventListener('input', (e) => {
+                    document.querySelectorAll('.floating-window, .insights-panel, .human-dev-panel, .education-panel, .graph-panel, .runtime-panel').forEach(el => {
+                        el.style.opacity = e.target.value;
+                    });
+                });
+
+                // Periodicals
+                setInterval(loadNodes, 10000);
+                setInterval(loadRuntime, 15000);
+                setInterval(loadInsights, 30000);
+                setInterval(loadProposals, 45000);
+                setInterval(loadSemanticSummary, 20000);
+                setInterval(loadIdeas, 12000);
+                setInterval(loadClusters, 25000);
+                setInterval(loadEducationProfile, 20000);
+                setInterval(loadCertifications, 40000);
+                setInterval(loadSkillProfile, 15000);
+                setInterval(loadOpportunities, 30000);
+                setInterval(loadInterfaceState, 5000);
+                setInterval(loadDomains, 60000);
+                setInterval(loadProjectList, 20000);
+                setInterval(loadLogbook, 30000);
+                setInterval(loadAffinity, 60000);
+                setInterval(loadWisdomFeedback, 20000);
+                setInterval(loadWisdomBridge, 30000);
+                setInterval(loadRoadmap, 60000);
+                setInterval(loadRoadsideEvents, 30000);
+                setInterval(loadSyncProposals, 45000);
+                setInterval(loadHarvestProposals, 60000);
+            });
+
+            async function loadWisdomFeedback() {
+                try {
+                    const response = await fetch('/api/v1/governance/wisdom/feedback/pending');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const feedbacks = data.payload || [];
+
+                    const panel = document.getElementById('wisdom-feedback-panel');
+                    const container = document.getElementById('feedback-container');
+                    const badge = document.getElementById('feedback-count-badge');
+
+                    if (!panel || !container) return;
+
+                    if (feedbacks.length > 0) {
+                        panel.style.display = 'flex';
+                        panel.style.flexDirection = 'column';
+                        badge.innerText = `${feedbacks.length} PENDING`;
+                    } else {
+                        panel.style.display = 'none';
+                        return;
+                    }
+
+                    container.innerHTML = feedbacks.map(f => {
+                        const stateClass = f.feedback_state === 'WISDOM_CONFIRMED' ? 'aligned' :
+                            f.feedback_state === 'WISDOM_CONTRADICTED' ? 'critical' : 'warning';
+                        const deltaColor = f.proposed_confidence_delta >= 0 ? '#00ff88' : '#ff4444';
+                        const deltaSign = f.proposed_confidence_delta >= 0 ? '+' : '';
+
+                        return `
+                        <div class="drift-mission-card" style="cursor: default; margin-bottom: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <span style="font-size: 0.65rem; opacity: 0.6; font-family: monospace;">${f.source_atlas_node_ref}</span>
+                                <span class="drift-badge ${stateClass}">${f.feedback_state.replace(/_/g, ' ')}</span>
+                            </div>
+                            <div style="font-size: 0.8rem; margin-bottom: 10px; line-height: 1.3;">${f.rationale}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                                <span style="font-size: 0.75rem; font-weight: bold; color: ${deltaColor}">DELTA: ${deltaSign}${f.proposed_confidence_delta.toFixed(2)}</span>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick="applyFeedback('${f.feedback_id}')" style="background: rgba(0,212,255,0.1); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 6px; padding: 4px 12px; font-size: 0.65rem; cursor: pointer; font-weight: 600;">APROBAR</button>
+                                    <button onclick="rejectFeedback('${f.feedback_id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 6px; padding: 4px 12px; font-size: 0.65rem; cursor: pointer;">SALTAR</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }).join('');
+                } catch (e) {
+                    console.warn("Feedback load failed:", e);
                 }
+            }
 
-                let html = `
+            async function applyFeedback(id) {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerText = "...";
+                try {
+                    const res = await fetch(`/api/v1/governance/wisdom/feedback/${id}/confirm`, { method: 'POST' });
+                    if (res.ok) loadWisdomFeedback();
+                } catch (e) { }
+            }
+
+            async function rejectFeedback(id) {
+                const btn = event.target;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(`/api/v1/governance/wisdom/feedback/${id}/reject`, { method: 'POST' });
+                    if (res.ok) loadWisdomFeedback();
+                } catch (e) { }
+            }
+
+            async function loadWisdomBridge() {
+                try {
+                    const response = await fetch('/api/v1/governance/wisdom/bridge/packages');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const packages = data.payload || [];
+
+                    const panel = document.getElementById('wisdom-bridge-panel');
+                    const container = document.getElementById('bridge-container');
+                    const badge = document.getElementById('bridge-count-badge');
+
+                    if (!panel || !container) return;
+
+                    if (packages.length > 0) {
+                        panel.style.display = 'flex';
+                        panel.style.flexDirection = 'column';
+                        badge.innerText = `${packages.length} PACKAGES`;
+                    } else {
+                        panel.style.display = 'none';
+                        return;
+                    }
+
+                    container.innerHTML = packages.map(p => {
+                        const riskClass = p.risk_level === 'HIGH' ? 'critical' : 'warning';
+                        const mission = JSON.parse(p.mission_draft_json);
+                        const advisories = JSON.parse(p.advisory_drafts_json || '[]');
+
+                        return `
+                        <div class="drift-mission-card" style="cursor: default; background: rgba(107, 107, 255, 0.05); border-color: rgba(107, 107, 255, 0.2);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span class="drift-badge info" style="font-size:0.6rem;">${p.package_type.replace(/_/g, ' ')}</span>
+                                <span class="drift-badge ${riskClass}" style="font-size:0.6rem;">RISK: ${p.risk_level}</span>
+                            </div>
+                            <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 5px; color: var(--accent-color);">${p.package_title}</div>
+                            <div style="font-size: 0.75rem; margin-bottom: 10px; opacity: 0.8;">${p.composite_objective}</div>
+                            
+                            <div style="font-size: 0.65rem; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; margin-bottom: 10px;">
+                                <div style="opacity: 0.5; margin-bottom: 3px; font-weight: bold;">COMPONENTES:</div>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <div style="color: #00d4ff;">• Misión: ${mission.title}</div>
+                                    ${advisories.map(a => `<div style="color: #ffbb00;">• Advisory: ${a.title}</div>`).join('')}
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                                <button onclick="handleBridgeDecision('${p.package_id}', 'APPROVED')" 
+                                        style="background: var(--accent-color); color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.65rem; cursor: pointer; font-weight: bold;">REALIZE ALL</button>
+                                <button onclick="handleBridgeDecision('${p.package_id}', 'REJECTED')" 
+                                        style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 4px 10px; font-size: 0.65rem; cursor: pointer;">DISMISS</button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                } catch (e) {
+                    console.warn("Bridge load failed:", e);
+                }
+            }
+
+            async function handleBridgeDecision(id, decision) {
+                const btn = event.target;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(`/api/v1/governance/wisdom/bridge/package/${id}/decision`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ decision: decision })
+                    });
+                    if (res.ok) loadWisdomBridge();
+                } catch (e) { }
+            }
+
+            async function loadRoadmap() {
+                try {
+                    const response = await fetch('/api/v1/governance/roadmap/optimized');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const items = data.payload || [];
+
+                    const container = document.getElementById('roadmap-container');
+                    if (!container) return;
+
+                    if (items.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.7rem; opacity: 0.4; text-align: center;">No hay paquetes pendientes para priorizar.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = items.map(item => {
+                        const bandClass = item.priority_band === 'EXECUTE_NOW' ? 'critical' :
+                            item.priority_band === 'DEFER_LOW_RETURN' ? 'waiting' : 'info';
+                        const locked = item.creator_override_state === 'FIXED';
+
+                        return `
+                        <div class="drift-mission-card" style="margin-bottom: 0; padding: 10px; border-left: 2px solid var(--accent-color); opacity: ${item.priority_band.includes('DEFER') ? 0.6 : 1}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-weight: bold; font-size: 0.75rem; color: #00f0ff;">#${item.suggested_rank}</span>
+                                    <span class="drift-badge ${bandClass}" style="font-size: 0.55rem;">${item.priority_band.replace(/_/g, ' ')}</span>
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button onclick="lockRoadmapItem('${item.item_id}')" title="Pin / Unpin" style="background: none; border: none; color: ${locked ? '#00ff88' : 'rgba(255,255,255,0.2)'}; cursor: pointer; font-size: 0.8rem;">${locked ? '📌' : '📍'}</button>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.75rem; margin-bottom: 5px; font-weight: 600; color: white;">${item.source_id.split('-').slice(1).join('-')}</div>
+                            <div style="font-size: 0.65rem; opacity: 0.7; line-height: 1.3;">${item.rationale}</div>
+                        </div>
+                        `;
+                    }).join('');
+                } catch (e) {
+                    console.warn("Roadmap load failed:", e);
+                }
+            }
+
+            async function triggerOptimization() {
+                const btn = event.target;
+                const oldText = btn.innerText;
+                btn.innerText = "CALC...";
+                try {
+                    await fetch('/api/v1/governance/roadmap/optimize', { method: 'POST' });
+                    loadRoadmap();
+                } catch (e) { }
+                btn.innerText = oldText;
+            }
+
+            async function lockRoadmapItem(id) {
+                try {
+                    await fetch(`/api/v1/governance/roadmap/item/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ state: 'FIXED' })
+                    });
+                    loadRoadmap();
+                } catch (e) { }
+            }
+
+            async function scanRoadside() {
+                try {
+                    await fetch('/api/v1/governance/roadside/scan', { method: 'POST' });
+                    loadRoadsideEvents();
+                } catch (e) { }
+            }
+
+            async function loadRoadsideEvents() {
+                try {
+                    const response = await fetch('/api/v1/governance/roadside/events');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const events = data.payload || [];
+
+                    const panel = document.getElementById('roadside-alerts');
+                    const count = document.getElementById('roadside-count');
+                    const container = document.getElementById('roadside-list');
+
+                    if (!panel || !container || !count) return;
+
+                    if (events.length > 0) {
+                        panel.style.display = 'block';
+                        count.innerText = events.length;
+                        container.innerHTML = events.map(e => `
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,68,68,0.1); border-radius: 4px; padding: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
+                                    <span style="font-size: 0.55rem; color: #ff4444; font-weight: bold; border: 1px solid #ff4444; padding: 1px 3px; border-radius: 2px;">${e.event_type}</span>
+                                    <button onclick="handleRoadsideAction('${e.event_id}', 'IGNORED')" style="background: none; border: none; color: white; opacity: 0.4; cursor: pointer; font-size: 0.8rem;">&times;</button>
+                                </div>
+                                <div style="font-size: 0.6rem; color: white; opacity: 0.8; margin-bottom: 5px;">${e.rationale}</div>
+                                <button onclick="handleRoadsideAction('${e.event_id}', 'ACCEPTED')" style="background: rgba(0,240,255,0.1); color: #00f0ff; border: 1px solid rgba(0,240,255,0.3); font-size: 0.55rem; padding: 2px 4px; border-radius: 3px; cursor: pointer; width: 100%;">ADAPT ROADMAP</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        panel.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.warn("Roadside load failed:", e);
+                }
+            }
+
+            async function handleRoadsideAction(id, decision) {
+                try {
+                    const res = await fetch(`/api/v1/governance/roadside/event/${id}/action`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ decision })
+                    });
+                    if (res.ok) {
+                        if (decision === 'ACCEPTED') triggerOptimization();
+                        loadRoadsideEvents();
+                    }
+                } catch (e) { }
+            }
+
+            async function loadSemanticSummary() {
+                try {
+                    const response = await fetch('/api/v1/system/semantic/summary');
+                    if (!response.ok) return;
+                    const data = await response.json();
+
+                    const container = document.getElementById('knowledge-interface-content');
+                    if (!container || !data) return;
+
+                    if (data.total_indexed === 0) {
+                        container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.6;">Capa semántica inicializada. Sin conceptos aún.</div>';
+                        return;
+                    }
+
+                    let html = `
                     <div style="font-size: 0.8rem; margin-bottom: 10px;">
                         <span style="opacity: 0.7;">Conceptos indexados:</span>
                         <span style="font-weight: bold; color: var(--accent-color);">${data.total_indexed}</span>
                     </div>
                 `;
 
-                if (data.recent_concepts && data.recent_concepts.length > 0) {
-                    html += '<div style="font-size: 0.7rem; opacity: 0.5; margin-bottom: 5px; text-transform: uppercase;">Recientes:</div>';
-                    data.recent_concepts.forEach(c => {
-                        html += `
+                    if (data.recent_concepts && data.recent_concepts.length > 0) {
+                        html += '<div style="font-size: 0.7rem; opacity: 0.5; margin-bottom: 5px; text-transform: uppercase;">Recientes:</div>';
+                        data.recent_concepts.forEach(c => {
+                            html += `
                             <div style="font-size: 0.75rem; padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 4px; border-left: 2px solid #00d4ff;">
                                 ${c.text.substring(0, 35)}${c.text.length > 35 ? '...' : ''}
                             </div>
                         `;
+                        });
+                    }
+                    container.innerHTML = html;
+                } catch (e) {
+                    console.warn("Semantic summary failed:", e);
+                }
+            }
+
+            async function scanSync() {
+                try {
+                    await fetch('/api/v1/governance/wisdom/sync/scan', { method: 'POST' });
+                    loadSyncProposals();
+                } catch (e) { }
+            }
+
+            async function loadSyncProposals() {
+                try {
+                    const response = await fetch('/api/v1/governance/wisdom/sync/pending');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const syncs = data.payload || [];
+
+                    const panel = document.getElementById('post-mission-sync-panel');
+                    const container = document.getElementById('sync-proposals-container');
+
+                    if (!panel || !container) return;
+
+                    if (syncs.length > 0) {
+                        panel.style.display = 'block';
+                        container.innerHTML = syncs.map(s => {
+                            const confColor = s.proposed_confidence_delta >= 0 ? '#00ff88' : '#ff4444';
+                            const typeColor = s.actual_outcome_type.includes('CONFIRMED') ? '#00ff88' :
+                                s.actual_outcome_type.includes('CONTRADICTED') ? '#ff4444' : '#ffbb00';
+
+                            return `
+                            <div class="drift-mission-card" style="margin-bottom: 0; padding: 6px; border-left: 2px solid ${typeColor}; background: rgba(255,255,255,0.02);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 0.5rem; color: ${typeColor}; font-weight: bold; border: 1px solid ${typeColor}; padding: 1px 3px; border-radius: 2px;">${s.actual_outcome_type}</span>
+                                    <div style="font-size: 0.55rem; color: ${confColor}; font-weight: bold;">${s.proposed_confidence_delta > 0 ? '+' : ''}${s.proposed_confidence_delta} Conf.</div>
+                                </div>
+                                <div style="font-size: 0.6rem; color: white; opacity: 0.7; margin-bottom: 6px; line-height: 1.2;">${s.rationale}</div>
+                                <div style="display: flex; gap: 4px;">
+                                    <button onclick="handleSyncAction('${s.sync_id}', 'ACCEPTED')" style="flex: 1; background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); font-size: 0.5rem; padding: 2px; border-radius: 3px; cursor: pointer;">APPLY ADAPTATION</button>
+                                    <button onclick="handleSyncAction('${s.sync_id}', 'REJECTED')" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); font-size: 0.5rem; padding: 2px 6px; border-radius: 3px; cursor: pointer;">DISMISS</button>
+                                </div>
+                            </div>
+                        `}).join('');
+                    } else {
+                        panel.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.warn("Sync proposals load failed:", e);
+                }
+            }
+
+            async function handleSyncAction(id, decision) {
+                try {
+                    const res = await fetch(`/api/v1/governance/wisdom/sync/${id}/decision`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ decision })
                     });
-                }
-                container.innerHTML = html;
-            } catch (e) {
-                console.warn("Semantic summary failed:", e);
+                    if (res.ok) loadSyncProposals();
+                } catch (e) { }
             }
-        }
 
-        // Antimodal logic
-        async function loadAntimodal() {
-            try {
-                const response = await fetch('/api/v1/system/antimodal');
-                if (!response.ok) return;
-                const data = await response.json();
-                updateModeUI(data.mode);
-            } catch (e) { }
-        }
-
-        async function setMode(mode) {
-            try {
-                const response = await fetch(`/api/v1/system/antimodal/mode?mode=${mode}`, { method: 'POST' });
-                if (response.ok) {
-                    updateModeUI(mode);
-                }
-            } catch (e) { }
-        }
-
-        function updateModeUI(mode) {
-            // Remove all mode classes
-            document.body.classList.remove('mode-standard', 'mode-silent', 'mode-compact', 'mode-low_distraction', 'mode-summary_only', 'mode-background');
-            document.body.classList.add(`mode-${mode}`);
-
-            // Update buttons
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.getElementById(`btn-${mode}`);
-            if (activeBtn) activeBtn.classList.add('active');
-
-            // Update description
-            const desc = document.getElementById('current-mode-description');
-            const descriptions = {
-                'standard': 'Interfaz completa habilitada.',
-                'silent': 'Interfaz minimizada. Sin ruido visual.',
-                'compact': 'Respuestas directas y esenciales.',
-                'low_distraction': 'Foco en la tarea actual. Paneles ocultos.',
-                'summary_only': 'Solo resultados y conclusiones clave.',
-                'background': 'El sistema trabaja silenciosamente.'
-            };
-            desc.innerText = descriptions[mode] || mode;
-
-            // Apply Creator Theme if in high-level mode or creator detected
-            const isCreator = mode === 'standard' || localStorage.getItem('omniweb_token') === 'omniweb-dev-secret-token';
-            if (isCreator) {
-                document.body.classList.add('creator-authenticated');
-            } else {
-                document.body.classList.remove('creator-authenticated');
+            async function scanHarvest() {
+                try {
+                    await fetch('/api/v1/governance/wisdom/harvest/scan', { method: 'POST' });
+                    loadHarvestProposals();
+                } catch (e) { }
             }
-        }
 
-        // Stability Loop Tracking
-        let activeLoopTaskId = null;
-        let loopInterval = null;
+            async function loadHarvestProposals() {
+                try {
+                    const response = await fetch('/api/v1/governance/wisdom/harvest/pending');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const harvests = data.payload || [];
 
-        function trackLoop(taskId) {
-            activeLoopTaskId = taskId;
-            document.getElementById('loop-panel').style.display = 'block';
-            if (loopInterval) clearInterval(loopInterval);
-            loopInterval = setInterval(refreshLoopStatus, 1500);
-        }
+                    const panel = document.getElementById('wisdom-harvest-panel');
+                    const container = document.getElementById('harvest-proposals-container');
 
-        async function refreshLoopStatus() {
-            if (!activeLoopTaskId) return;
-            try {
-                const response = await fetch(`/api/v1/system/loop/status?task_id=${activeLoopTaskId}`);
-                if (!response.ok) {
+                    if (!panel || !container) return;
+
+                    if (harvests.length > 0) {
+                        panel.style.display = 'block';
+                        container.innerHTML = harvests.map(h => {
+                            const riskColor = h.transfer_risk > 0.3 ? '#ff4444' : '#00ff88';
+                            return `
+                            <div class="drift-mission-card" style="margin-bottom: 0; padding: 8px; border-left: 2px solid #ffee00; background: rgba(255,255,255,0.02);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="font-size: 0.5rem; color: #ffee00; font-weight: bold; border: 1px solid #ffee00; padding: 1px 4px; border-radius: 3px;">PROMOTE: ${h.proposed_level.replace(/_/g, ' ')}</span>
+                                    <div style="font-size: 0.55rem; color: ${riskColor};">Risk: ${(h.transfer_risk * 100).toFixed(0)}%</div>
+                                </div>
+                                <div style="font-size: 0.65rem; font-weight: bold; color: white; margin-bottom: 4px;">${h.node_title}</div>
+                                <div style="font-size: 0.6rem; color: white; opacity: 0.7; margin-bottom: 8px;">${h.rationale}</div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button onclick="handleHarvestAction('${h.harvest_id}', 'ACCEPTED')" style="flex: 1; background: rgba(255,238,0,0.1); color: #ffee00; border: 1px solid rgba(255,238,0,0.3); font-size: 0.55rem; padding: 3px; border-radius: 4px; cursor: pointer;">PROMOTE</button>
+                                    <button onclick="handleHarvestAction('${h.harvest_id}', 'REJECTED')" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); font-size: 0.55rem; padding: 3px 10px; border-radius: 4px; cursor: pointer;">STAY LOCAL</button>
+                                </div>
+                            </div>
+                        `}).join('');
+                    } else {
+                        panel.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.warn("Harvest proposals load failed:", e);
+                }
+            }
+
+            async function handleHarvestAction(id, decision) {
+                try {
+                    const res = await fetch(`/api/v1/governance/wisdom/harvest/${id}/decision`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ decision })
+                    });
+                    if (res.ok) loadHarvestProposals();
+                } catch (e) { }
+            }
+
+            // Antimodal logic
+            async function loadAntimodal() {
+                try {
+                    const response = await fetch('/api/v1/system/antimodal');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    updateModeUI(data.mode);
+                } catch (e) { }
+            }
+
+            async function setMode(mode) {
+                try {
+                    const response = await fetch(`/api/v1/system/antimodal/mode?mode=${mode}`, { method: 'POST' });
+                    if (response.ok) {
+                        updateModeUI(mode);
+                    }
+                } catch (e) { }
+            }
+
+            function updateModeUI(mode) {
+                // Remove all mode classes
+                document.body.classList.remove('mode-standard', 'mode-silent', 'mode-compact', 'mode-low_distraction', 'mode-summary_only', 'mode-background');
+                document.body.classList.add(`mode-${mode}`);
+
+                // Update buttons
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`btn-${mode}`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Update description
+                const desc = document.getElementById('current-mode-description');
+                const descriptions = {
+                    'standard': 'Interfaz completa habilitada.',
+                    'silent': 'Interfaz minimizada. Sin ruido visual.',
+                    'compact': 'Respuestas directas y esenciales.',
+                    'low_distraction': 'Foco en la tarea actual. Paneles ocultos.',
+                    'summary_only': 'Solo resultados y conclusiones clave.',
+                    'background': 'El sistema trabaja silenciosamente.'
+                };
+                desc.innerText = descriptions[mode] || mode;
+
+                // Apply Creator Theme if in high-level mode or creator detected
+                const isCreator = mode === 'standard' || localStorage.getItem('omniweb_token') === 'omniweb-dev-secret-token';
+                if (isCreator) {
+                    document.body.classList.add('creator-authenticated');
+                } else {
+                    document.body.classList.remove('creator-authenticated');
+                }
+            }
+
+            // Stability Loop Tracking
+            let activeLoopTaskId = null;
+            let loopInterval = null;
+
+            function trackLoop(taskId) {
+                activeLoopTaskId = taskId;
+                document.getElementById('loop-panel').style.display = 'block';
+                if (loopInterval) clearInterval(loopInterval);
+                loopInterval = setInterval(refreshLoopStatus, 1500);
+            }
+
+            async function refreshLoopStatus() {
+                if (!activeLoopTaskId) return;
+                try {
+                    const response = await fetch(`/api/v1/system/loop/status?task_id=${activeLoopTaskId}`);
+                    if (!response.ok) {
+                        stopTrackingLoop();
+                        return;
+                    }
+                    const data = await response.json();
+                    updateLoopUI(data);
+
+                    if (data.current_step === 'COMPLETE' || data.current_step === 'FAILED' || data.current_step === 'ROLLBACK') {
+                        setTimeout(stopTrackingLoop, 5000);
+                    }
+                } catch (e) {
                     stopTrackingLoop();
-                    return;
                 }
-                const data = await response.json();
-                updateLoopUI(data);
-
-                if (data.current_step === 'COMPLETE' || data.current_step === 'FAILED' || data.current_step === 'ROLLBACK') {
-                    setTimeout(stopTrackingLoop, 5000);
-                }
-            } catch (e) {
-                stopTrackingLoop();
             }
-        }
 
-        function stopTrackingLoop() {
-            clearInterval(loopInterval);
-            loopInterval = null;
-            setTimeout(() => {
-                if (!loopInterval) document.getElementById('loop-panel').style.display = 'none';
-            }, 10000);
-        }
+            function stopTrackingLoop() {
+                clearInterval(loopInterval);
+                loopInterval = null;
+                setTimeout(() => {
+                    if (!loopInterval) document.getElementById('loop-panel').style.display = 'none';
+                }, 10000);
+            }
 
-        function updateLoopUI(data) {
-            const stepsDiv = document.getElementById('loop-steps');
-            const cycleDiv = document.getElementById('loop-cycle');
-            const taskInfo = document.getElementById('loop-task-info');
+            function updateLoopUI(data) {
+                const stepsDiv = document.getElementById('loop-steps');
+                const cycleDiv = document.getElementById('loop-cycle');
+                const taskInfo = document.getElementById('loop-task-info');
 
-            taskInfo.innerText = `Task ID: ${data.task_id.substring(0, 8)}...`;
-            cycleDiv.innerText = `Ciclo: ${data.cycle_count} / ${data.max_cycles} | Intentos reparación: ${data.repair_attempts}`;
+                taskInfo.innerText = `Task ID: ${data.task_id.substring(0, 8)}...`;
+                cycleDiv.innerText = `Ciclo: ${data.cycle_count} / ${data.max_cycles} | Intentos reparación: ${data.repair_attempts}`;
 
-            const allSteps = [
-                'AUDIT_SYSTEM', 'ANALYZE_TASK', 'PLAN_EXECUTION',
-                'APPLY_CHANGE', 'RUN_TESTS', 'VERIFY_STABILITY',
-                'REPAIR', 'COMPLETE'
-            ];
+                const allSteps = [
+                    'AUDIT_SYSTEM', 'ANALYZE_TASK', 'PLAN_EXECUTION',
+                    'APPLY_CHANGE', 'RUN_TESTS', 'VERIFY_STABILITY',
+                    'REPAIR', 'COMPLETE'
+                ];
 
-            stepsDiv.innerHTML = allSteps.map(step => `
+                stepsDiv.innerHTML = allSteps.map(step => `
                 <div class="loop-step ${data.current_step === step ? 'active' : ''}">
                     ${step}
                 </div>
             `).join('');
-        }
-
-
-        // Modify renderVisualResponse or similar to hook into the message result
-        // For now, let's just make trackLoop global so it can be called from console or other triggers
-        window.trackLoop = trackLoop;
-
-        async function sendToAI() {
-            const message = aiInput.value.trim();
-            if (!message) return;
-
-            addMessage('user', message);
-            aiInput.value = '';
-
-            try {
-                const token = localStorage.getItem('omniweb_token') || 'omniweb-dev-secret-token';
-                const response = await fetch('/api/v1/ai-host/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ message })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    addMessage('ai', data.message || "Comando procesado.");
-
-                    if (data.payload && data.payload.loop_id) {
-                        trackLoop(data.payload.loop_id);
-                    }
-
-                    if (data.payload && data.payload.visual) {
-                        renderVisualResponse(data.payload.visual);
-                    }
-
-                    if (data.intent && data.intent.startsWith('knowledge_')) {
-                        renderKnowledge(data);
-                    }
-
-                    if (data.payload && data.payload.is_supercommand) {
-                        trackSuperCommand(data.payload);
-                    }
-
-                    setTimeout(() => {
-                        loadChips();
-                        loadInsights();
-                        loadProposals();
-                        loadContext();
-                        loadGraph();
-                    }, 1000);
-                } else {
-                    addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
-                }
-            } catch (error) {
-                console.error(error);
-                addMessage('ai', "Error al conectar con el AI Host.");
             }
-        }
 
-        function trackSuperCommand(payload) {
-            const panel = document.getElementById('supercommand-panel');
-            const titleElem = document.getElementById('super-task-title');
-            const descElem = document.getElementById('super-task-desc');
-            const stepsContainer = document.getElementById('super-task-steps');
-            const progressFill = document.getElementById('super-task-progress-fill');
-            const progressText = document.getElementById('super-task-progress-text');
 
-            panel.style.display = 'block';
-            titleElem.innerText = payload.display_data?.task_title || "Tarea Desconocida";
-            descElem.innerText = payload.display_data?.description || "Iniciando proceso autónomo...";
+            // Modify renderVisualResponse or similar to hook into the message result
+            // For now, let's just make trackLoop global so it can be called from console or other triggers
+            window.trackLoop = trackLoop;
 
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 20;
-                if (progress > 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                    setTimeout(() => {
-                        panel.style.boxShadow = payload.status === 'completed' ? '0 0 30px rgba(0, 255, 136, 0.2)' : '0 0 30px rgba(255, 68, 68, 0.2)';
-                    }, 500);
+            async function sendToAI() {
+                const message = aiInput.value.trim();
+                if (!message) return;
+
+                addMessage('user', message);
+                aiInput.value = '';
+
+                try {
+                    const token = localStorage.getItem('omniweb_token') || 'omniweb-dev-secret-token';
+                    const response = await fetch('/api/v1/ai-host/process', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ message })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        addMessage('ai', data.message || "Comando procesado.");
+
+                        if (data.payload && data.payload.loop_id) {
+                            trackLoop(data.payload.loop_id);
+                        }
+
+                        if (data.payload && data.payload.visual) {
+                            renderVisualResponse(data.payload.visual);
+                        }
+
+                        if (data.intent && data.intent.startsWith('knowledge_')) {
+                            renderKnowledge(data);
+                        }
+
+                        if (data.payload && data.payload.is_supercommand) {
+                            trackSuperCommand(data.payload);
+                        }
+
+                        setTimeout(() => {
+                            loadChips();
+                            loadInsights();
+                            loadProposals();
+                            loadContext();
+                            loadGraph();
+                        }, 1000);
+                    } else {
+                        addMessage('ai', `Error: ${data.detail || 'Fallo en la comunicación'}`);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    addMessage('ai', "Error al conectar con el AI Host.");
                 }
-                progressFill.style.width = `${progress}%`;
-                progressText.innerText = `${progress}%`;
-            }, 300);
+            }
 
-            stepsContainer.innerHTML = (payload.actions || ["Audit initialization", "System stabilization"]).map((a, i) => `
+            function trackSuperCommand(payload) {
+                const panel = document.getElementById('supercommand-panel');
+                const titleElem = document.getElementById('super-task-title');
+                const descElem = document.getElementById('super-task-desc');
+                const stepsContainer = document.getElementById('super-task-steps');
+                const progressFill = document.getElementById('super-task-progress-fill');
+                const progressText = document.getElementById('super-task-progress-text');
+
+                panel.style.display = 'block';
+                titleElem.innerText = payload.display_data?.task_title || "Tarea Desconocida";
+                descElem.innerText = payload.display_data?.description || "Iniciando proceso autónomo...";
+
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 20;
+                    if (progress > 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            panel.style.boxShadow = payload.status === 'completed' ? '0 0 30px rgba(0, 255, 136, 0.2)' : '0 0 30px rgba(255, 68, 68, 0.2)';
+                        }, 500);
+                    }
+                    progressFill.style.width = `${progress}%`;
+                    progressText.innerText = `${progress}%`;
+                }, 300);
+
+                stepsContainer.innerHTML = (payload.actions || ["Audit initialization", "System stabilization"]).map((a, i) => `
                 <div class="task-step completed">
                     <span style="margin-right: 10px;">✓</span>
                     <span>${a}</span>
                 </div>
             `).join('');
-        }
+            }
 
-        // CAPA 3 (PHASE 83): LIVE DASHBOARD LOGIC
-        async function loadDriftHealth() {
-            try {
-                const response = await fetch('/api/v1/ai-host/execution/portfolio/drift/health');
-                if (!response.ok) return;
-                const data = await response.json();
-                const portfolio = data.portfolio || [];
+            // CAPA 3 (PHASE 83): LIVE DASHBOARD LOGIC
+            async function loadDriftHealth() {
+                try {
+                    const response = await fetch('/api/v1/ai-host/execution/portfolio/drift/health');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const portfolio = data.portfolio || [];
 
-                const container = document.getElementById('drift-missions-container');
-                const countBadge = document.getElementById('drift-count-badge');
-                const lastUpdate = document.getElementById('drift-last-update');
+                    const container = document.getElementById('drift-missions-container');
+                    const countBadge = document.getElementById('drift-count-badge');
+                    const lastUpdate = document.getElementById('drift-last-update');
 
-                if (!container) return;
+                    if (!container) return;
 
-                countBadge.innerText = `${portfolio.length} ACTIVE MISSIONS`;
-                lastUpdate.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    countBadge.innerText = `${portfolio.length} ACTIVE MISSIONS`;
+                    lastUpdate.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-                if (portfolio.length === 0) {
-                    container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.5; text-align: center; padding: 20px;">Sin derivas detectadas. Sistema alineado.</div>';
-                    return;
-                }
+                    if (portfolio.length === 0) {
+                        container.innerHTML = '<div style="font-size: 0.8rem; opacity: 0.5; text-align: center; padding: 20px;">Sin derivas detectadas. Sistema alineado.</div>';
+                        return;
+                    }
 
-                container.innerHTML = portfolio.map(m => {
-                    const driftClass = m.drift_class.toLowerCase().includes('critical') ? 'critical' :
-                        m.drift_class.toLowerCase().includes('warning') ? 'warning' :
-                            m.drift_class.toLowerCase().includes('attention') ? 'attention_required' : 'aligned';
-                    const scoreColor = driftClass === 'critical' ? '#ff4444' : driftClass === 'warning' ? '#ffbb00' : driftClass === 'attention_required' ? '#00d4ff' : '#00ff88';
-                    const trendIcon = m.drift_trend === 'UP' ? '<span class="trend-up">▲</span>' :
-                        m.drift_trend === 'DOWN' ? '<span class="trend-down">▼</span>' : '●';
+                    container.innerHTML = portfolio.map(m => {
+                        const driftClass = m.drift_class.toLowerCase().includes('critical') ? 'critical' :
+                            m.drift_class.toLowerCase().includes('warning') ? 'warning' :
+                                m.drift_class.toLowerCase().includes('attention') ? 'attention_required' : 'aligned';
+                        const scoreColor = driftClass === 'critical' ? '#ff4444' : driftClass === 'warning' ? '#ffbb00' : driftClass === 'attention_required' ? '#00d4ff' : '#00ff88';
+                        const trendIcon = m.drift_trend === 'UP' ? '<span class="trend-up">▲</span>' :
+                            m.drift_trend === 'DOWN' ? '<span class="trend-down">▼</span>' : '●';
 
-                    const recoveryTag = m.healing_state === 'HEALING_ACTIVE' ?
-                        `<span style="font-size: 0.55rem; color: #00ff88; margin-left: 5px; border: 1px solid #00ff88; padding: 0 4px; border-radius: 4px;">HEALING</span>` : '';
+                        const recoveryTag = m.healing_state === 'HEALING_ACTIVE' ?
+                            `<span style="font-size: 0.55rem; color: #00ff88; margin-left: 5px; border: 1px solid #00ff88; padding: 0 4px; border-radius: 4px;">HEALING</span>` : '';
 
-                    const governanceIcon = m.governance_state === 'GREEN' ? '🛡️' : '⚠️';
+                        const governanceIcon = m.governance_state === 'GREEN' ? '🛡️' : '⚠️';
 
-                    return `
+                        return `
                         <div class="drift-mission-card" onclick="window.location.href='/shell/?view=mission&id=${m.mission_id}'">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                                 <div style="flex: 1; overflow: hidden;">
@@ -2951,38 +3429,38 @@
                             </div>
                         </div>
                     `;
-                }).join('');
+                    }).join('');
 
-                // Visual Pulse
-                const pulse = document.getElementById('drift-pulse');
-                if (pulse) {
-                    pulse.style.background = portfolio.some(m => m.drift_score > 60) ? '#ff4444' : '#00ff88';
-                    pulse.style.boxShadow = `0 0 10px ${pulse.style.background}`;
+                    // Visual Pulse
+                    const pulse = document.getElementById('drift-pulse');
+                    if (pulse) {
+                        pulse.style.background = portfolio.some(m => m.drift_score > 60) ? '#ff4444' : '#00ff88';
+                        pulse.style.boxShadow = `0 0 10px ${pulse.style.background}`;
+                    }
+
+                } catch (error) {
+                    console.warn('Drift monitoring failed:', error);
                 }
-
-            } catch (error) {
-                console.warn('Drift monitoring failed:', error);
             }
-        }
 
-        // Polling loop
-        setInterval(loadDriftHealth, 5000);
-        setTimeout(loadDriftHealth, 1000);
+            // Polling loop
+            setInterval(loadDriftHealth, 5000);
+            setTimeout(loadDriftHealth, 1000);
 
-        // Event Listeners
-        sendBtn.addEventListener('click', sendToAI);
-        aiInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendToAI();
-        });
-        // Service Worker Registration for PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker registered', reg))
-                    .catch(err => console.error('Service Worker failed', err));
+            // Event Listeners
+            sendBtn.addEventListener('click', sendToAI);
+            aiInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendToAI();
             });
-        }
-    </script>
+            // Service Worker Registration for PWA
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(reg => console.log('Service Worker registered', reg))
+                        .catch(err => console.error('Service Worker failed', err));
+                });
+            }
+        </script>
 </body>
 
 </html>

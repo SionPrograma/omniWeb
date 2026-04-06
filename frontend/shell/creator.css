@@ -311,7 +311,7 @@
     font-size: 11px;
     letter-spacing: 0.05em;
     color: rgba(255, 255, 255, 0.6);
-    z-index: 100;
+    z-index: 8000;
 }
 
 .system-status-bar::after {
@@ -1751,4 +1751,210 @@ body.creator-authenticated #creator-toolbar {
     border-color: var(--creator-gold);
     color: var(--creator-gold);
     background: rgba(212, 175, 55, 0.1);
+}
+/* OMNIWEB — MOBILE UX GOVERNANCE PASS */
+@media screen and (max-width: 768px) {
+    /* 1. Cockpits & Grid Adaptations */
+    .forensic-summary-row, .learning-grid, .heatmap-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    .forensic-card, .learning-item-card, .autopsy-card {
+        padding: 1rem !important;
+        border-radius: 8px !important;
+    }
+    
+    .card-value {
+        font-size: 1.5rem !important;
+    }
+    
+    /* 2. Modal Refinement */
+    .governance-modal-content {
+        width: 95% !important;
+        padding: 1rem !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+        padding: 12px !important;
+    }
+
+    /* 3. Mobile Quick Actions Bar */
+    .mobile-quick-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(10, 10, 15, 0.95);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid var(--accent-transparent);
+        display: flex;
+        justify-content: space-around;
+        padding: 10px 0;
+        z-index: 9999;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    }
+    
+    .mobile-action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-muted);
+        background: none;
+        border: none;
+        font-size: 0.65rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    
+    .mobile-action-btn.active {
+        color: var(--accent);
+    }
+    
+    .mobile-action-btn .icon {
+        font-size: 1.2rem;
+        margin-bottom: 2px;
+    }
+
+    /* 4. Trace Table -> Card Transformation */
+    .forensic-trace-table {
+        display: block;
+    }
+    .forensic-trace-table thead {
+        display: none;
+    }
+    .forensic-trace-table tr {
+        display: flex;
+        flex-direction: column;
+        background: rgba(255,255,255,0.03);
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    .forensic-trace-table td {
+        display: block;
+        padding: 4px 0 !important;
+        border: none !important;
+    }
+    .trace-cell-id::before { content: "ID: "; opacity: 0.5; }
+    .trace-cell-domain::before { content: "DOMAIN: "; opacity: 0.5; }
+    
+    /* 5. HUD Spacer */
+    body { padding-bottom: 70px; }
+}
+
+/* OMNIWEB — MOBILE UX HARMONY */
+@media screen and (max-width: 768px) {
+    #main-content {
+        padding: 5px !important;
+        margin-top: 40px !important;
+    }
+    
+    .forensic-header h1, .learning-surface h1 {
+        font-size: 1.2rem !important;
+    }
+    
+    .forensic-description {
+        font-size: 0.75rem !important;
+    }
+    
+    /* Touch Target Optimization */
+    button, .mobile-action-btn, .hotspot-pill, .outcome-badge {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Quick Action Button for Mobile Forensic */
+    .mobile-return-btn {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 10001;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+}
+
+/* OMNIWEB — MOBILE UX V2: PRIORITY & BADGES */
+@media screen and (max-width: 768px) {
+    .mobile-action-btn { position: relative; }
+    .mobile-badge {
+        position: absolute;
+        top: -5px;
+        right: 0px;
+        background: #EF4444;
+        color: white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        font-size: 0.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--bg-primary);
+        font-weight: 900;
+        animation: badgePop 0.3s ease;
+    }
+    
+    .mobile-critical-banner {
+        position: fixed;
+        top: 40px;
+        left: 0;
+        width: 100%;
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        text-align: center;
+        padding: 5px;
+        font-size: 0.65rem;
+        font-weight: bold;
+        z-index: 10002;
+        letter-spacing: 0.5px;
+    }
+
+    @keyframes badgePop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+}
+
+/* OMNIWEB — PREDICTIVE ADVISOR STYLES */
+.predictive-card {
+    background: rgba(45, 0, 90, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+.predictive-state-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 900;
+}
+.state-HIGH_DRIFT_PROBABILITY { background: #F97316; color: white; }
+.state-PREVENTIVE_ACTION_RECOMMENDED { background: #EF4444; color: white; animation: pulseRed 2s infinite; }
+.state-WATCH_CLOSELY { background: #8B5CF6; color: white; }
+
+.predictive-confidence {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--accent);
 }

@@ -139,6 +139,498 @@ async def get_mission_simulation(mission_id: str):
 async def get_mission_details(mission_id: str):
     return FileResponse("frontend/dashboard/index.html")
 
+@app.get("/api/v1/roadmap/macro")
+async def get_macro_roadmap(branch_id: str = "main"):
+    """
+    OMNIWEB — BLOQUE: COGNITIVE ROADMAP AGGREGATOR.
+    Provides a strategic macro view of the system's progress for a specific branch.
+    """
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.get_macro_roadmap(branch_id=branch_id)
+
+@app.get("/api/v1/roadmap/preview/{group_id}")
+async def get_domain_rebase_preview(group_id: str):
+    """
+    OMNIWEB — BLOQUE: DOMAIN REBASE PREVIEW.
+    Generates an atomic rebase plan for a specific domain.
+    """
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.get_domain_preview(group_id)
+
+@app.post("/api/v1/roadmap/push/start/{group_id}")
+async def start_atomic_push(group_id: str):
+    """
+    OMNIWEB — BLOQUE: ATOMIC PUSH EXECUTION.
+    Starts a governed push session for a domain.
+    """
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.start_push_session(group_id)
+
+@app.get("/api/v1/roadmap/push/{push_id}")
+async def get_push_status(push_id: str):
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.get_session(push_id)
+
+@app.post("/api/v1/roadmap/push/{push_id}/next")
+async def execute_push_next_step(push_id: str):
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.execute_next_step(push_id)
+
+@app.post("/api/v1/roadmap/push/{push_id}/abort")
+async def abort_atomic_push(push_id: str):
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        roadmap_aggregator.abort_push(push_id)
+        return {"status": "aborted"}
+
+@app.post("/api/v1/roadmap/push/{push_id}/authority")
+async def inject_push_authority(push_id: str, payload: dict):
+    """
+    OMNIWEB — BLOQUE: AUTHORITY HUD INTEGRATION.
+    Injects authority (PIN) into a blocked push session.
+    """
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    pin = payload.get("pin")
+    if not pin:
+        raise HTTPException(status_code=400, detail="Missing PIN")
+        
+    with set_chip_context("core"):
+        try:
+            return roadmap_aggregator.inject_authority(push_id, pin)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+@app.get("/api/v1/roadmap/push/{push_id}/forensics")
+async def get_push_forensics(push_id: str):
+    """
+    OMNIWEB — BLOQUE: TACTICAL TELEMETRY & FORENSICS.
+    Retrieves the historical forensic log of a push session.
+    """
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.get_forensics(push_id)
+
+@app.get("/api/v1/roadmap/push/{push_id}/rollback/preview")
+async def get_rollback_preview(push_id: str):
+    """
+    OMNIWEB — BLOQUE: GOVERNED ROLLBACK LOGIC.
+    Generates a preview of what can be reverted for a given push.
+    """
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.preview_rollback(push_id)
+
+@app.post("/api/v1/roadmap/rollback/{rollback_id}/start")
+async def start_rollback(rollback_id: str):
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.start_rollback(rollback_id)
+
+@app.post("/api/v1/roadmap/rollback/{rollback_id}/next")
+async def execute_rollback_step(rollback_id: str):
+    from backend.core.ai_host.memory.roadmap_aggregator import roadmap_aggregator
+    with set_chip_context("core"):
+        return roadmap_aggregator.execute_next_rollback_step(rollback_id)
+
+@app.get("/api/v1/roadmap/schedule/{schedule_id}")
+async def get_schedule(schedule_id: str):
+    from backend.core.ai_host.memory.scheduler_manager import scheduler_manager
+    with set_chip_context("core"):
+        return scheduler_manager.get_schedule(schedule_id)
+
+@app.post("/api/v1/roadmap/schedule/{schedule_id}/reorder/analyze")
+async def analyze_reorder(schedule_id: str, proposed_order: List[str]):
+    from backend.core.ai_host.memory.scheduler_manager import scheduler_manager
+    with set_chip_context("core"):
+        return scheduler_manager.analyze_reorder(schedule_id, proposed_order)
+
+@app.post("/api/v1/roadmap/schedule/{schedule_id}/reorder/apply")
+async def apply_reorder(schedule_id: str, proposed_order: List[str]):
+    from backend.core.ai_host.memory.scheduler_manager import scheduler_manager
+    with set_chip_context("core"):
+        scheduler_manager.update_order(schedule_id, proposed_order)
+        return {"status": "success", "new_order": proposed_order}
+
+@app.get("/api/v1/roadmap/synergy/analyze")
+async def analyze_synergy():
+    """
+    OMNIWEB — BLOQUE: MISSION SYNERGY & REDUNDANCY PURGE.
+    Detects redundancies and synergies in the current backlog.
+    """
+    from backend.core.ai_host.memory.synergy_manager import synergy_manager
+    with set_chip_context("core"):
+        return synergy_manager.analyze_backlog()
+
+@app.post("/api/v1/roadmap/synergy/apply")
+async def apply_synergy_insight(insight_json: Dict[str, Any]):
+    from backend.core.ai_host.memory.synergy_manager import synergy_manager, SynergyInsight
+    with set_chip_context("core"):
+        insight = SynergyInsight(**insight_json)
+        return synergy_manager.apply_insight(insight)
+
+@app.get("/api/v1/roadmap/opportunities/scan")
+async def scan_opportunities():
+    """
+    OMNIWEB — BLOQUE: TACTICAL OPPORTUNITY SCANNER.
+    Scans the system for friction patterns and proactive improvements.
+    """
+    from backend.core.ai_host.memory.opportunity_scanner import opportunity_scanner
+    with set_chip_context("core"):
+        return opportunity_scanner.scan_for_opportunities()
+
+@app.post("/api/v1/roadmap/opportunities/{opportunity_id}/convert")
+async def convert_opportunity(opportunity_id: str):
+    from backend.core.ai_host.memory.opportunity_scanner import opportunity_scanner
+    with set_chip_context("core"):
+        return opportunity_scanner.convert_to_mission(opportunity_id)
+
+@app.get("/api/v1/roadmap/sync/audit")
+async def audit_sync():
+    """
+    OMNIWEB — BLOQUE: CROSS-DOMAIN SYNC AUDITOR.
+    Audit connections and readiness dependencies across distinct domains.
+    """
+    from backend.core.ai_host.memory.sync_auditor import sync_auditor
+    with set_chip_context("core"):
+        return sync_auditor.audit_cross_domain_sync()
+
+@app.post("/api/v1/roadmap/sync/{relation_id}/suggest")
+async def suggest_sync_mission(relation_id: str):
+    from backend.core.ai_host.memory.sync_auditor import sync_auditor
+    from backend.core.ai_host.memory.handoff_manager import handoff_manager
+    with set_chip_context("core"):
+        suggestion = sync_auditor.get_coordination_mission_suggestion(relation_id)
+        if suggestion:
+            mission = handoff_manager.add_proposal(suggestion, source="sync_auditor")
+            return mission.model_dump()
+        return {"error": "Relation not found"}
+
+@app.get("/api/v1/handoffs/{id}/audit")
+async def audit_mission(id: str):
+    """
+    OMNIWEB — BLOQUE: CONSTITUTIONAL SELF-AUDIT SUITE.
+    Audits a proposed mission against the system constitution.
+    """
+    from backend.core.ai_host.memory.handoff_manager import handoff_manager
+    from backend.core.ai_host.memory.constitutional_auditor import constitutional_auditor
+    with set_chip_context("core"):
+        mission = handoff_manager.get_proposal(id)
+        if not mission: return {"error": "Mission not found"}
+        return constitutional_auditor.audit_mission(mission).model_dump()
+
+@app.post("/api/v1/handoffs/{id}/fix_branding")
+async def fix_mission_branding(id: str):
+    from backend.core.ai_host.memory.handoff_manager import handoff_manager
+    with set_chip_context("core"):
+        mission = handoff_manager.get_proposal(id)
+        if not mission: return {"error": "Mission not found"}
+        
+        # Automatic correction of 'OmniShell' for branding compliance
+        import re
+        mission.objective = re.sub(r'OmniShell', 'OmniWeb', mission.objective, flags=re.IGNORECASE)
+        mission.briefing_title = re.sub(r'OmniShell', 'OmniWeb', mission.briefing_title, flags=re.IGNORECASE)
+        
+        handoff_manager.update_proposal(id, mission.model_dump())
+        return {"status": "success", "new_objective": mission.objective}
+
+@app.get("/api/v1/personas")
+async def get_personas():
+    from backend.core.ai_host.memory.persona_sync import persona_sync
+    return {k: v.model_dump() for k, v in persona_sync.personas.items()}
+
+@app.get("/api/v1/personas/conflicts")
+async def get_vision_conflicts():
+    from backend.core.ai_host.memory.persona_sync import persona_sync
+    with set_chip_context("core"):
+        conflicts = persona_sync.detect_vision_conflicts()
+        return [c.model_dump() for c in conflicts]
+
+@app.post("/api/v1/personas/conflicts/{id}/arbitrate")
+async def arbitrate_vision_conflict(id: str):
+    from backend.core.ai_host.memory.persona_sync import persona_sync
+    with set_chip_context("core"):
+        return persona_sync.arbitrate_by_constitution(id)
+
+@app.post("/api/v1/handoffs/{id}/persona")
+async def set_mission_persona(id: str, persona: str):
+    from backend.core.ai_host.memory.handoff_manager import handoff_manager
+    with set_chip_context("core"):
+        mission = handoff_manager.get_proposal(id)
+        if not mission: return {"error": "Mission not found"}
+        mission.origin_persona = persona
+        handoff_manager.update_proposal(id, mission.model_dump())
+        return {"status": "success", "origin_persona": persona}
+
+# Note: get_macro_roadmap moved to top for organization
+
+@app.get("/api/v1/governance/debt/cockpit")
+async def get_governance_debt_cockpit(current_user: OmniUser = Depends(get_current_user)):
+    """
+    OMNIWEB — BLOQUE: GOVERNANCE DEBT COCKPIT.
+    Returns a unified view of structural risk overrides, pressure, and degradation.
+    """
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        enforce_permission("creator_access")
+        dashboard = branch_manager.get_accepted_debt_dashboard()
+        return dashboard
+
+@app.get("/api/v1/governance/fusion/{target_id}")
+async def get_governance_fusion(target_id: str, target_type: str = 'MISSION', current_user: OmniUser = Depends(get_current_user)):
+    """
+    OMNIWEB — BLOQUE: GOVERNANCE FUSION ENDPOINT.
+    Returns a composite governance snapshot for a mission, domain or handoff.
+    """
+    from backend.core.ai_host.observability.governance_fusion_engine import fusion_engine
+    from backend.core.permissions import enforce_permission
+    with set_chip_context("core"):
+        enforce_permission("creator_access")
+        snapshot = fusion_engine.get_fusion_snapshot(target_id, target_type)
+        return snapshot
+
+@app.get("/api/v1/roadmap/simulate")
+async def simulate_roadmap(branch_id: str = "main"):
+    """
+    OMNIWEB — BLOQUE: STRATEGIC SIMULATION MODE.
+    Projects future roadmaps and friction.
+    """
+    from backend.core.ai_host.memory.strategic_sim import strategic_simulator
+    with set_chip_context("core"):
+        scenarios = strategic_simulator.generate_scenarios(branch_id=branch_id)
+        return [s.model_dump() for s in scenarios]
+
+@app.get("/api/v1/roadmap/branches/{id}/dossier")
+async def get_branch_dossier(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_branch_dossier(id)
+
+@app.post("/api/v1/roadmap/branches/{id}/arbitrate")
+async def apply_arbitration(id: str, data: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.apply_arbitration_decision(
+            id, data["decision"], data["rationale"], data.get("conditions", [])
+        )
+
+@app.get("/api/v1/roadmap/exceptions/{id}/recovery")
+async def get_recovery_proposals(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        proposals = branch_manager.generate_recovery_proposals(id)
+        return [p.model_dump() for p in proposals]
+
+@app.post("/api/v1/roadmap/recovery/inject")
+async def inject_recovery(data: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager, RecoveryProposal
+    proposal = RecoveryProposal(**data)
+    with set_chip_context("core"):
+        return branch_manager.apply_recovery_proposal(proposal)
+
+@app.get("/api/v1/roadmap/oracle/{type}/{id}")
+async def get_health_oracle(type: str, id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        forecasts = branch_manager.project_constitutional_health(id, type)
+        return [f.model_dump() for f in forecasts]
+
+@app.get("/api/v1/roadmap/exceptions-report")
+async def get_exceptions_report():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_exceptions_report()
+
+@app.post("/api/v1/roadmap/exceptions/{id}/resolve")
+async def resolve_exception(id: str, data: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.resolve_exception(id, data.get("state", "FULFILLED"))
+
+@app.get("/api/v1/roadmap/healing/proposals")
+async def get_healing_proposals():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return [p.model_dump() for p in branch_manager.generate_healing_packages()]
+
+@app.post("/api/v1/roadmap/healing/apply")
+async def apply_healing(payload: Dict[str, Any]):
+    from backend.core.ai_host.memory.branch_manager import branch_manager, HealingPackage
+    pkg = HealingPackage(**payload["package"])
+    with set_chip_context("core"):
+        return branch_manager.apply_healing_actions(payload["action_ids"], pkg)
+
+@app.get("/api/v1/roadmap/pruning/candidates")
+async def get_pruning_candidates():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return [c.model_dump() for c in branch_manager.get_pruning_candidates()]
+
+@app.post("/api/v1/roadmap/pruning/apply")
+async def apply_pruning(payload: Dict[str, Any]):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.archive_signals(payload["signal_ids"])
+
+@app.get("/api/v1/governance/pre-mission-check/{target_id}")
+async def pre_mission_check(target_id: str, type: str = "PROPOSAL"):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        check = branch_manager.perform_pre_mission_check(target_id, type)
+        return check.model_dump()
+
+@app.post("/api/v1/governance/pre-mission-check/{check_id}/decision")
+async def register_pre_mission_decision(check_id: str, data: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        success = branch_manager.register_precheck_decision(check_id, data["decision"])
+        return {"status": "success" if success else "error"}
+
+@app.get("/api/v1/governance/debt/cockpit")
+async def get_debt_cockpit():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_accepted_debt_dashboard()
+
+@app.post("/api/v1/roadmap/advisory/accept")
+async def accept_advisory(payload: Dict[str, Any]):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.accept_governance_advisory(payload["advisory_id"])
+
+@app.get("/api/v1/roadmap/advisory/dashboard")
+async def get_advisory_dashboard():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_governance_advisory_dashboard()
+
+@app.get("/api/v1/roadmap/advisory/rebase-recommendations")
+async def get_rebase_recommendations(branch_id: str = "main"):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_mission_rebase_recommendations(branch_id=branch_id)
+
+@app.post("/api/v1/roadmap/advisory/rebase-recommendations/{id}/action")
+async def update_rebase_recommendation(id: str, payload: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    state = payload.get("state")
+    if not state: raise HTTPException(status_code=400, detail="Missing state")
+    with set_chip_context("core"):
+        return branch_manager.update_rebase_recommendation(id, state)
+
+@app.get("/api/v1/roadmap/advisory/rebase-recommendations/{id}/preview")
+async def get_rebase_recommendation_preview(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        preview = branch_manager.get_rebase_recommendation_preview(id)
+        if not preview: raise HTTPException(status_code=404, detail="Recommendation not found")
+        return preview
+
+@app.post("/api/v1/roadmap/advisory/risk-override")
+async def apply_risk_override(payload: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager, RiskOverride
+    from datetime import datetime
+    
+    # Simple mapping
+    override = RiskOverride(
+        recommendation_id=payload["recommendation_id"],
+        target_id=payload["target_id"],
+        override_type=payload.get("override_type", "ACCEPTED_RISK"),
+        risk_level=payload["risk_level"],
+        rationale=payload["rationale"],
+        conditions=payload.get("conditions"),
+        expiry_at=datetime.fromisoformat(payload["expiry_at"]) if payload.get("expiry_at") else None
+    )
+    
+    with set_chip_context("core"):
+        return branch_manager.apply_risk_override(override)
+
+@app.get("/api/v1/roadmap/advisory/accepted-debt")
+async def get_accepted_debt_dashboard():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_accepted_debt_dashboard()
+
+@app.post("/api/v1/roadmap/advisory/risk-override/{id}/review")
+async def review_risk_override(id: str, payload: dict):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    decision = payload.get("decision") # RENEW, CLOSE, ESCALATE
+    rationale = payload.get("rationale")
+    if not decision or not rationale: raise HTTPException(status_code=400, detail="Missing decision or rationale")
+    
+    with set_chip_context("core"):
+        return branch_manager.review_risk_override(id, decision, rationale)
+
+@app.get("/api/v1/roadmap/pressure-timeline/{id}")
+async def get_pressure_timeline(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_pressure_timeline(id).model_dump()
+
+@app.get("/api/v1/roadmap/forensics/{id}/replay")
+async def get_forensics_replay(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_forensics_replay(id).model_dump()
+
+@app.get("/api/v1/roadmap/strategic-dashboard")
+async def get_strategic_dashboard():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.get_strategic_dashboard()
+
+@app.get("/api/v1/roadmap/branches")
+async def list_branches():
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    return [b.model_dump() for b in branch_manager.get_branches()]
+
+@app.post("/api/v1/roadmap/branches")
+async def create_branch(name: str, origin: str = "main", branch_type: str = "tactical"):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.create_branch(name, origin=origin, branch_type=branch_type).model_dump()
+
+@app.get("/api/v1/roadmap/branches/{id}/diff")
+async def get_branch_diff(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    diff = branch_manager.compare_with_main(id)
+    if not diff: raise HTTPException(status_code=404, detail="Branch not found")
+    return diff.model_dump()
+
+@app.get("/api/v1/roadmap/branches/{id}/persona-sim")
+async def get_branch_persona_sim(id: str):
+    from backend.core.ai_host.memory.persona_simulator import persona_simulator
+    sim = persona_simulator.simulate_branch_reaction(id)
+    if not sim: raise HTTPException(status_code=404, detail="Branch not found")
+    return sim.model_dump()
+
+@app.post("/api/v1/roadmap/branches/{id}/merge")
+async def merge_branch(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    return branch_manager.merge_branch(id)
+
+@app.post("/api/v1/roadmap/branches/{id}/compensations/{comp_id}/inject")
+async def inject_compensation(id: str, comp_id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.inject_compensation(id, comp_id)
+
+@app.post("/api/v1/roadmap/branches/{id}/compensations/{mission_id}/revert")
+async def revert_compensation(id: str, mission_id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    with set_chip_context("core"):
+        return branch_manager.revert_compensation(id, mission_id)
+
+@app.delete("/api/v1/roadmap/branches/{id}")
+async def discard_branch(id: str):
+    from backend.core.ai_host.memory.branch_manager import branch_manager
+    branch_manager.delete_branch(id)
+    return {"status": "discarded", "branch_id": id}
+
 @app.get("/dashboard")
 async def dashboard():
     return FileResponse("frontend/dashboard/index.html")

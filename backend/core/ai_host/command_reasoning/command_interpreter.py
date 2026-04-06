@@ -25,6 +25,7 @@ class InterpretedCommand(BaseModel):
     frozen_paths: List[str] = []
     frozen_layers: List[str] = []
     aggressiveness: str = "balanced" # surgical, balanced, ambitious
+    source_draft_id: Optional[str] = None
 
 class CommandInterpreter:
     """
@@ -143,6 +144,12 @@ class CommandInterpreter:
         elif "conservador" in msg:
             aggressiveness = "surgical"
 
+        # 2.5 SOURCE DRAFT EXTRACTION (Phase 113 Traceability)
+        source_draft_id = None
+        draft_match = re.search(r"--source_draft=([\w\-]+)", prompt, re.IGNORECASE)
+        if draft_match:
+            source_draft_id = draft_match.group(1).strip()
+
         
         for pattern, template in constraint_patterns:
             matches = re.finditer(pattern, msg, re.IGNORECASE)
@@ -232,7 +239,8 @@ class CommandInterpreter:
             allowed_paths=list(set(allowed_paths)),
             frozen_paths=list(set(frozen_paths)),
             frozen_layers=list(set(frozen_layers)),
-            aggressiveness=aggressiveness
+            aggressiveness=aggressiveness,
+            source_draft_id=source_draft_id
         )
         
         logger.info(f"[INTERPRETER] Result -> Goal: {interpreted.goal} | Scale: {scale} | Constr: {len(constraints)}")

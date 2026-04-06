@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: #050508;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            padding: 100px 20px;
+        }
+
+        .test-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10000;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        .mock-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(20, 20, 30, 0.9);
+            border-left: 1px solid #00d4ff;
+            z-index: 5000;
+            display: none;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="omni-hud" class="omni-hud-container">
+        <!-- HUD Content (Will be filled by script) -->
+        <div class="hud-main-info">
+            <div class="hud-mission-focal">
+                <span class="hud-label">MISIÓN ACTIVA</span>
+                <span id="hud-mission-name" class="hud-value">Cargando...</span>
+            </div>
+            <div id="hud-status-badge" class="hud-status-badge">NOMINAL</div>
+        </div>
+
+        <div class="hud-tactical-indicators">
+            <div class="hud-indicator drift-indicator">
+                <span class="indicator-icon">🧠</span>
+                <span id="hud-drift-msg" class="indicator-label">Salud Nominal</span>
+            </div>
+            <div id="hud-authority-indicator" class="hud-indicator authority-indicator" style="display:none">
+                <span class="indicator-icon">🛡️</span>
+                <span class="indicator-label">AUTH ACTIVA</span>
+            </div>
+            <div id="hud-parallel-indicator" class="hud-indicator parallel-indicator" style="display:none">
+                <span class="indicator-icon">⚠️</span>
+                <span id="hud-parallel-count" class="indicator-label">1 Alerta</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="mock-drawer" class="mock-drawer">
+        <h2>Panel de Auditoría</h2>
+        <p>Este panel debe cubrir el HUD porque tiene z-index 5000.</p>
+        <button onclick="document.getElementById('mock-drawer').style.display='none'">Cerrar</button>
+    </div>
+
+    <div class="test-controls">
+        <button onclick="setNominal()">Nominal</button>
+        <button onclick="setWarning()">Warning</button>
+        <button onclick="setCritical()">Critical</button>
+        <button onclick="setHealing()">Healing</button>
+        <button onclick="setAuthority()">Authority</button>
+        <button onclick="setParallel()">Parallel Alerts</button>
+        <button onclick="toggleDrawer()">Toggle Drawer</button>
+    </div>
+
+    <script>
+        const hud = document.getElementById('omni-hud');
+        const name = document.getElementById('hud-mission-name');
+        const badge = document.getElementById('hud-status-badge');
+        const drift = document.getElementById('hud-drift-msg');
+        const auth = document.getElementById('hud-authority-indicator');
+        const parallel = document.getElementById('hud-parallel-indicator');
+        const parallelCount = document.getElementById('hud-parallel-count');
+
+        function reset() {
+            hud.classList.remove('alert-mode', 'active');
+            badge.classList.remove('warning', 'critical', 'healing');
+            auth.style.display = 'none';
+            parallel.style.display = 'none';
+            hud.classList.add('active');
+        }
+
+        function setNominal() {
+            reset();
+            name.textContent = "Arquitectura Core OmniWeb";
+            badge.textContent = "NOMINAL";
+            drift.textContent = "Salud Nominal";
+        }
+
+        function setWarning() {
+            reset();
+            name.textContent = "Refactor de Auth Router";
+            badge.textContent = "DERIVA";
+            badge.classList.add('warning');
+            drift.textContent = "Deriva Detectada: Foco en UI";
+        }
+
+        function setCritical() {
+            reset();
+            hud.classList.add('alert-mode');
+            name.textContent = "Mutación de Base de Datos";
+            badge.textContent = "BLOQUEO";
+            badge.classList.add('critical');
+            drift.textContent = "CRÍTICO: Zona Restringida";
+        }
+
+        function setHealing() {
+            reset();
+            name.textContent = "Auto-Sanación Activa";
+            badge.textContent = "HEALING";
+            badge.classList.add('healing');
+            drift.textContent = "Re-alineando capas...";
+        }
+
+        function setAuthority() {
+            reset();
+            name.textContent = "Intervención del Creador";
+            badge.textContent = "OVERRIDE";
+            auth.style.display = 'flex';
+            drift.textContent = "Sujeto a Authority Session";
+        }
+
+        function setParallel() {
+            reset();
+            name.textContent = "Misión Principal";
+            parallel.style.display = 'flex';
+            parallelCount.textContent = "3 Alertas Paralelas";
+        }
+
+        function toggleDrawer() {
+            const d = document.getElementById('mock-drawer');
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Default
+        setNominal();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+/* OMNIWEB — BLOQUE: TACTICAL WISDOM REASONER STYLES */
+
+.wisdom-reasoner-panel {
+    background: rgba(10, 12, 16, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.2rem;
+    padding: 1.2rem;
+    backdrop-filter: blur(10px);
+    margin-bottom: 2rem;
+    display: none;
+}
+
+.wisdom-reasoner-panel.active {
+    display: block;
+    animation: slideDownIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.reasoner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.reasoner-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.reasoner-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.reasoner-suggestion {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 1rem;
+    padding: 1rem;
+    border-left: 4px solid #94a3b8;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.reasoner-suggestion:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(4px);
+}
+
+.suggestion-type {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+}
+
+.type-high {
+    border-color: #60a5fa;
+    color: #60a5fa;
+}
+
+.type-warn {
+    border-color: #f87171;
+    color: #f87171;
+}
+
+.type-tactic {
+    border-color: #4ade80;
+    color: #4ade80;
+}
+
+.type-ref {
+    border-color: #a78bfa;
+    color: #a78bfa;
+}
+
+.suggestion-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.suggestion-rationale {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 0.8rem;
+}
+
+.suggestion-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+}
+
+.suggestion-confidence {
+    color: #475569;
+}
+
+.btn-use-tactic {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.4rem;
+    font-size: 0.65rem;
+}

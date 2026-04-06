@@ -20,6 +20,7 @@ class HumanInputInterpreter:
             "signals": self._extract_signals(refined_text),
             "clarity": self._assess_clarity(refined_text),
             "user_state": self._detect_user_state(refined_text),
+            "structured_mission": self._extract_structured_mission(refined_text),
             "original_text": text,
             "refined_text": refined_text
         }
@@ -187,5 +188,75 @@ class HumanInputInterpreter:
         if any(w in msg for w in ["mirá", "probá", "chequeá", "dale", "fijate"]):
             return "exploratory"
         return "neutral"
+
+    def _extract_structured_mission(self, msg: str) -> Dict[str, Any]:
+        """
+        Deep Intake Layer (Phase 1):
+        Transforms human intentions into operational technical blocks.
+        """
+        # 1. Action & Surface Mapping
+        surfaces = {
+            "shell": ["shell", "ui", "interfaz", "interfaz pública", "shell público"],
+            "auth": ["auth", "login", "seguridad", "permisos", "sesión", "session"],
+            "dashboard": ["dashboard", "pizarrón", "pizarron", "misiones", "cockpit"],
+            "core": ["núcleo", "core", "backend", "procesamiento", "lógica interna"],
+            "mobile": ["móvil", "celular", "mobile", "ios", "android"],
+            "creator": ["creator mode", "creador", "workspace", "workspace del creador"]
+        }
+        
+        detected_surfaces = []
+        for s, keywords in surfaces.items():
+            if any(k in msg for k in keywords):
+                detected_surfaces.append(s)
+
+        # 2. Constraint & Stop Condition Extraction
+        # Look for "sin", "no toques", "pero no", "si afecta", "frená"
+        constraints = []
+        stop_conditions = []
+        
+        c_matches = re.findall(r"(?:sin|pero no|no toques|no rompas|no afectes|sin afectar)\s+([^,.]+)", msg)
+        for sub in c_matches:
+            constraints.append(sub.strip())
+            
+        s_matches = re.findall(r"si\s+([^,.]+)\s+(?:frená|avisame|pará|parar|escalar)", msg)
+        for sub in s_matches:
+            stop_conditions.append(sub.strip())
+
+        # 3. Execution Style
+        execution_style = "standard"
+        if any(w in msg for w in ["auditá", "audita", "revisá", "inspeccioná", "audit_only"]):
+            execution_style = "audit_first"
+        if any(w in msg for w in ["patch mínimo", "mínimo impacto", "no rompas nada", "con cuidado"]):
+            execution_style = "surgical_patch"
+        if any(w in msg for w in ["avisame", "frená", "confirmar", "preguntame"]):
+             execution_style += "_with_confirmation"
+
+        # 4. Risk Level (Heuristic based on sensitive layers)
+        risk = "low"
+        sensitive_layers = ["auth", "core", "seguridad", "permisos"]
+        if any(s in detected_surfaces for s in ["auth", "core"]):
+            risk = "high"
+        elif "has_constraints" in msg or constraints:
+            risk = "medium"
+
+        # 5. Objective Extraction (Approximation)
+        # Attempt to strip common introductory verbs
+        objective = msg
+        intro_verbs = [r"^optimizá\s+", r"^optimiza\s+", r"^arreglá\s+", r"^arregla\s+", r"^auditá\s+", r"^audita\s+", r"^creá\s+", r"^crea\s+"]
+        for verb in intro_verbs:
+            objective = re.sub(verb, "", objective)
+        # Cut objective before constraints
+        objective = re.split(r"(?:sin|pero no|no toques|no rompas|no afectes|si afecta)", objective)[0].strip()
+
+        return {
+            "objective": objective,
+            "surface_affected": detected_surfaces,
+            "constraints": constraints,
+            "stop_conditions": stop_conditions,
+            "risk_level": risk,
+            "execution_style": execution_style,
+            "expected_outcome": "Misión técnica estabilizada" if risk != "high" else "Actualización segura del núcleo",
+            "sensitive_layers_detected": [s for s in detected_surfaces if s in sensitive_layers]
+        }
 
 human_interpreter = HumanInputInterpreter()

@@ -1,0 +1,235 @@
+/* ============================================================
+   ACCEPTED DEBT COCKPIT — GOVERNANCE DEBT DASHBOARD
+   ============================================================ */
+
+.debt-cockpit-panel {
+    background: rgba(10, 10, 20, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 25px;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    animation: slideInDown 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cockpit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.cockpit-title {
+    font-family: 'Outfit', sans-serif;
+    color: var(--pizarron-accent);
+    letter-spacing: 2px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cockpit-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.summary-pill {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.summary-pill .val {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    font-family: 'Outfit';
+    margin-bottom: 4px;
+}
+
+.summary-pill label {
+    font-size: 0.55rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.summary-pill.urgent {
+    border-color: rgba(255, 85, 85, 0.3);
+    background: rgba(255, 85, 85, 0.05);
+}
+
+.summary-pill.urgent .val {
+    color: var(--pizarron-critical);
+}
+
+.debt-domains-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.domain-debt-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 15px;
+    border-top: 3px solid #666;
+}
+
+.domain-debt-card.status-CRITICAL {
+    border-top-color: var(--pizarron-critical);
+}
+
+.domain-debt-card.status-WARNING {
+    border-top-color: var(--pizarron-warn);
+}
+
+.domain-debt-card.status-ACTIVE {
+    border-top-color: var(--pizarron-safe);
+}
+
+.domain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.domain-name {
+    font-family: 'Outfit';
+    font-size: 0.9rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.domain-burden {
+    font-size: 0.6rem;
+    opacity: 0.6;
+    color: var(--pizarron-accent);
+}
+
+.ov-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ov-item {
+    font-size: 0.7rem;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.2s;
+    cursor: default;
+}
+
+.ov-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ov-item.lvl-CRITICAL {
+    border-left-color: var(--pizarron-critical);
+}
+
+.ov-item.lvl-HIGH {
+    border-left-color: #ffaa00;
+}
+
+.ov-item.lvl-MEDIUM {
+    border-left-color: #00ccff;
+}
+
+.ov-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.6rem;
+    opacity: 0.6;
+}
+
+.ov-status-badge {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.55rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.ov-status-badge.state-OVERDUE {
+    background: rgba(255, 85, 85, 0.2);
+    color: #ff5555;
+}
+
+.ov-status-badge.state-DEGRADED {
+    background: rgba(255, 170, 0, 0.2);
+    color: #ffaa00;
+}
+
+.ov-status-badge.state-REVIEW_DUE {
+    background: rgba(0, 229, 255, 0.2);
+    color: #00e5ff;
+}
+
+.ov-status-badge.state-ACTIVE {
+    background: rgba(50, 255, 150, 0.1);
+    color: #32ff96;
+}
+
+.intervention-alerts {
+    margin-top: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 15px;
+}
+
+.alert-item {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background: rgba(255, 85, 85, 0.05);
+    border: 1px solid rgba(255, 85, 85, 0.1);
+    border-radius: 10px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+}
+
+.alert-item.lvl-CRITICAL {
+    border-left: 4px solid var(--pizarron-critical);
+}
+
+.alert-info {
+    flex: 1;
+}
+
+.alert-reason {
+    font-size: 0.75rem;
+    color: #fff;
+    margin-bottom: 3px;
+}
+
+.alert-target {
+    font-size: 0.6rem;
+    opacity: 0.5;
+    font-family: 'Courier New';
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

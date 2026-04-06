@@ -134,6 +134,12 @@ class MissionState(BaseModel):
     telemetry_snap: Dict[str, Any] = Field(default_factory=dict)
     visual_context: Optional[Dict[str, Any]] = None
     multimodal_history: List[Dict[str, Any]] = Field(default_factory=list)
+    source_draft_id: Optional[str] = None # Traceability to Atlas draft
+    friction: float = 1.0 # 0.0 to 1.0 (Phase 115)
+    preconditions_ok: int = 1 # 1 = OK, 0 = FAIL (Phase 115)
+    
+    # PHASE 82: Authority Session Persistence (Hardening)
+    authority_session: Dict[str, Any] = Field(default_factory=dict)
     
     parent_id: Optional[str] = None
     child_ids: List[str] = Field(default_factory=list)

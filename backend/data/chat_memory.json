@@ -1,143 +1,5 @@
 [
   {
-    "timestamp": "2026-04-02T08:56:28.702699",
-    "prompt": "list master logbook",
-    "response": "Revisando el estado, se han recuperado 50 eventos del registro maestro.",
-    "intent": "master_list_entries"
-  },
-  {
-    "timestamp": "2026-04-02T09:06:44.107595",
-    "prompt": "start mission for this",
-    "response": "Te escucho. Decime por dónde querés que sigamos hoy.",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-04-02T17:21:36.037304",
-    "prompt": "[visual_evidence] overlapping bug on mobile",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T17:21:36.065230",
-    "prompt": "[visual_evidence] overlapping bug on mobile",
-    "response": "Verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "creator_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T17:21:48.786971",
-    "prompt": "get master snapshot",
-    "response": "Instantánea global del capturada y procesada.",
-    "intent": "master_snapshot"
-  },
-  {
-    "timestamp": "2026-04-02T17:21:49.045998",
-    "prompt": "list master logbook",
-    "response": "Se han recuperado 50 eventos del registro maestro.",
-    "intent": "master_list_entries"
-  },
-  {
-    "timestamp": "2026-04-02T17:54:31.495287",
-    "prompt": "load_evidence \"c:\\users\\propietario\\desktop\\plan actual\\07-proyectosgrandes\\01-omniweb\\frontend\\shell\\test_image.png\"",
-    "response": "El informa estado nominal The community is stable. No urgent governance actions detected. All testers are behaving within expected parameters.",
-    "intent": "governance_advisor"
-  },
-  {
-    "timestamp": "2026-04-02T17:56:23.539514",
-    "prompt": "@attach \"c:\\users\\propietario\\desktop\\plan actual\\07-proyectosgrandes\\01-omniweb\\frontend\\shell\\test_image.png\"",
-    "response": "El informa estado nominal The community is stable. No urgent governance actions detected. All testers are behaving within expected parameters.",
-    "intent": "governance_advisor"
-  },
-  {
-    "timestamp": "2026-04-02T17:59:52.358684",
-    "prompt": "diagnosticar esta evidencia",
-    "response": "Interesante. ¿Cómo querés que enfoquemos esto?",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-04-02T18:04:49.441657",
-    "prompt": "diagnosticar esta evidencia",
-    "response": "Interesante. ¿Cómo querés que enfoquemos esto?",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-04-02T18:06:43.440948",
-    "prompt": "generar hipótesis de diagnóstico para las anotaciones vinculadas",
-    "response": "Acá estoy. Te sigo el ritmo, ¿qué tenés en mente?",
-    "intent": "ANALYSIS_INTENT"
-  },
-  {
-    "timestamp": "2026-04-02T18:06:43.485298",
-    "prompt": "generar hipótesis de diagnóstico para las anotaciones vinculadas",
-    "response": "He estado dándole vueltas a lo de 'diagnosticar esta ' y Acá estoy. Te sigo el ritmo, ¿qué tenés en mente?",
-    "intent": "general_chat"
-  },
-  {
-    "timestamp": "2026-04-02T18:07:51.760049",
-    "prompt": "get master snapshot",
-    "response": "Actualmente, instantánea global del capturada y procesada.",
-    "intent": "master_snapshot"
-  },
-  {
-    "timestamp": "2026-04-02T18:07:51.848759",
-    "prompt": "list master logbook",
-    "response": "Se han recuperado 50 eventos del registro maestro.",
-    "intent": "master_list_entries"
-  },
-  {
-    "timestamp": "2026-04-02T19:22:44.576737",
-    "prompt": "analiza esta evidencia para diagnóstico",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T19:22:44.600192",
-    "prompt": "analiza esta evidencia para diagnóstico",
-    "response": "Actualmente, he estado dándole vueltas a lo de 'list master logbook'. verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "creator_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:00:29.561057",
-    "prompt": "upload diagnostic image: c:\\users\\propietario\\.gemini\\antigravity\\brain\\a76ca39c-57b7-4041-9e35-b70a755772db\\diagnostic_image_1_1775151754202.png",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:00:29.580230",
-    "prompt": "upload diagnostic image: c:\\users\\propietario\\.gemini\\antigravity\\brain\\a76ca39c-57b7-4041-9e35-b70a755772db\\diagnostic_image_1_1775151754202.png",
-    "response": "He estado dándole vueltas a lo de 'analiza esta para diagnóstico'. verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "creator_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:21:54.903767",
-    "prompt": "analiz",
-    "response": "Se detectan irregularidades en el flujo Uh, hubo un fallo técnico real procesando eso. ¿Probamos de nuevo?",
-    "intent": "chat"
-  },
-  {
-    "timestamp": "2026-04-02T20:22:17.855520",
-    "prompt": "analiza esta evidencia visual",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:22:17.857515",
-    "prompt": "analiza esta evidencia visual",
-    "response": "Revisando el estado, he estado dándole vueltas a lo de 'analiz'. verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "creator_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:26:30.136874",
-    "prompt": "show mission tree for visual analysis",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.\n\n⚙️ **MISIÓN ACTIVA:** Misión de memory_saturation (0/2 pasos)",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:26:30.140901",
-    "prompt": "show mission tree for visual analysis",
-    "response": "Verificado. Esperando aprobación manual para ejecutar acciones peligrosas. ️ ACTIVA: de memory_saturation (0/2 pasos).",
-    "intent": "creator_analysis"
-  },
-  {
     "timestamp": "2026-04-02T20:40:26.142384",
     "prompt": "upload c:\\users\\propietario\\desktop\\plan actual\\07-proyectosgrandes\\01-omniweb\\frontend\\shell\\test_image.png",
     "response": "Revisando el estado, el informa estado nominal The community is stable. No urgent governance actions detected. All testers are behaving within expected parameters.",
@@ -298,5 +160,143 @@
     "prompt": "list master logbook",
     "response": "Se han recuperado 50 eventos del registro maestro.",
     "intent": "master_list_entries"
+  },
+  {
+    "timestamp": "2026-04-04T03:57:22.774292",
+    "prompt": "Refactorizar el nucleo",
+    "response": "Propuesto.",
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T03:57:22.911012",
+    "prompt": "Refactorizar el nucleo",
+    "response": "De acuerdo a los datos, propuesto.",
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T03:58:01.942975",
+    "prompt": "Refactorizar el nucleo",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T03:58:02.089478",
+    "prompt": "Refactorizar el nucleo",
+    "response": null,
+    "intent": "orchestrator_fallback"
+  },
+  {
+    "timestamp": "2026-04-04T03:59:35.894201",
+    "prompt": "Refactorizar el nucleo",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T03:59:36.041441",
+    "prompt": "Refactorizar el nucleo",
+    "response": null,
+    "intent": "orchestrator_fallback"
+  },
+  {
+    "timestamp": "2026-04-04T04:20:24.606659",
+    "prompt": "Actualizar kernel",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:20:24.822132",
+    "prompt": "Actualizar kernel",
+    "response": null,
+    "intent": "orchestrator_fallback"
+  },
+  {
+    "timestamp": "2026-04-04T04:28:05.653903",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:28:31.357460",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:28:52.796522",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:30:13.062396",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:30:31.866070",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:31:00.305035",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:31:37.464323",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:32:05.722535",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:32:50.589243",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:33:21.569079",
+    "prompt": "Muestrame la gobernanza global",
+    "response": null,
+    "intent": "chat"
+  },
+  {
+    "timestamp": "2026-04-04T04:51:52.021261",
+    "prompt": "status",
+    "response": "Te escucho. Decime por dónde querés que sigamos hoy.",
+    "intent": "FOLLOW_UP_INTENT"
+  },
+  {
+    "timestamp": "2026-04-04T04:52:54.298878",
+    "prompt": "status",
+    "response": "Interesante. ¿Cómo querés que enfoquemos esto?",
+    "intent": "FOLLOW_UP_INTENT"
+  },
+  {
+    "timestamp": "2026-04-04T04:52:56.648711",
+    "prompt": "check security",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-04T05:09:33.824411",
+    "prompt": "inicia una nueva mision de prueba para el hud",
+    "response": "Acá estoy. Te sigo el ritmo, ¿qué tenés en mente?",
+    "intent": "BUILD_INTENT"
+  },
+  {
+    "timestamp": "2026-04-04T09:20:59.951039",
+    "prompt": "SHOW MISSION SCHEDULE",
+    "response": null,
+    "intent": "leadership_welcome"
   }
 ]

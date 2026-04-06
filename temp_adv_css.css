@@ -1,0 +1,76 @@
+/* OMNIWEB: GOVERNANCE ADVISORY LOOP */
+.pattern-advisory {
+    background: rgba(147, 112, 219, 0.08) !important;
+    border: 1px dashed rgba(179, 136, 255, 0.5) !important;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 15px 0;
+    box-shadow: inset 0 0 15px rgba(179, 136, 255, 0.05);
+    animation: fadeIn 0.4s ease-out;
+}
+
+.adv-label {
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #b388ff;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+    text-shadow: 0 0 8px rgba(179, 136, 255, 0.5);
+}
+
+.adv-type {
+    font-size: 0.8rem;
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.pattern-advisory p {
+    font-size: 0.8rem;
+    color: #ccc;
+    line-height: 1.4;
+    margin: 0 0 12px 0;
+    font-style: italic;
+}
+
+.adv-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.adv-accept-btn {
+    background: #b388ff !important;
+    color: #000 !important;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.adv-accept-btn:hover {
+    background: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(179, 136, 255, 0.6);
+}
+
+.adv-ignore-btn {
+    background: rgba(40, 40, 40, 0.5);
+    color: #888;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.adv-ignore-btn:hover {
+    color: #fff;
+    border-color: #777;
+    background: #444;
+}

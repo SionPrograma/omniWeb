@@ -1,0 +1,162 @@
+/* OMNIWEB — BLOQUE: WISDOM GRAPH EXPLORER STYLES */
+
+.wisdom-graph-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 12, 16, 0.98);
+    z-index: 2100;
+    display: none;
+    flex-direction: column;
+    padding: 2rem;
+    backdrop-filter: blur(20px);
+}
+
+.wisdom-graph-layer.active {
+    display: flex;
+}
+
+.graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.graph-title-section h2 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, #fff 0%, #888 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+}
+
+.graph-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.wisdom-graph-viewport {
+    flex: 1;
+    background: radial-gradient(circle at 50% 50%, rgba(30, 40, 60, 0.2) 0%, transparent 80%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.wisdom-graph-viewport:active {
+    cursor: grabbing;
+}
+
+#wisdom-graph-svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Node Styles */
+.graph-node {
+    cursor: pointer;
+    transition: filter 0.3s ease;
+}
+
+.graph-node:hover {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+}
+
+.node-circle {
+    fill: #1e2229;
+    stroke-width: 2;
+}
+
+.node-label {
+    fill: #fff;
+    font-size: 10px;
+    font-family: 'Outfit', sans-serif;
+    pointer-events: none;
+    text-anchor: middle;
+}
+
+/* Edge Styles */
+.graph-edge {
+    stroke-opacity: 0.25;
+    stroke-width: 1.5;
+    transition: stroke-opacity 0.3s ease;
+}
+
+.graph-edge.CONFIRMED_BY {
+    stroke: #4ade80;
+}
+
+.graph-edge.CONTRADICTED_BY {
+    stroke: #f87171;
+}
+
+.graph-edge.VALIDATES_TACTIC {
+    stroke: #60a5fa;
+}
+
+.graph-edge.BASELINE_SOURCE {
+    stroke: #fbbf24;
+}
+
+.graph-edge.RELATED_DOMAIN {
+    stroke: #a78bfa;
+}
+
+/* Legend */
+.graph-legend {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.legend-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Floating Actions */
+.graph-floating-actions {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.btn-graph-action {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 0.6rem;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s ease;
+}
+
+.btn-graph-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+}

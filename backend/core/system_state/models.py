@@ -56,3 +56,4 @@ class SystemState(BaseModel):
     mission_events: List[Dict[str, Any]] = [] # MISSION CRITICAL TELEMETRY
     portfolio_pulse: List[Dict[str, Any]] = [] # MISSION CRITICAL TELEMETRY
     recommended_focus: Optional[Dict[str, Any]] = None # Phase 22: Mission Scheduling
+    schedules: List[Dict[str, Any]] = [] # Block: MULTI-MISSION SCHEDULER

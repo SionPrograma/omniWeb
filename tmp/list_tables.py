@@ -1,0 +1,5 @@
+import sqlite3
+conn = sqlite3.connect('backend/data/omniweb.db')
+cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+print([t[0] for t in cursor.fetchall()])
+conn.close()

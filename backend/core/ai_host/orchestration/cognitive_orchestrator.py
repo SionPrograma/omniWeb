@@ -1,4 +1,6 @@
 import logging
+import re
+import random
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from backend.core.ai_host.processors.base import AICommandResponse
@@ -16,6 +18,7 @@ from backend.core.ai_host.orchestration.execution_tree import tree_planner, Exec
 from backend.core.ai_host.orchestration.scope_lock import DeviationDetector
 from backend.core.ai_host.orchestration.evidence_loop import evidence_loop
 from backend.core.ai_host.synthesis.copilot_normalizer import copilot_normalizer
+from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -366,9 +369,9 @@ class CognitiveOrchestrator:
         
         # 6.1 Cognitive Unification
         is_technical = (
-            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write", "system_memory_report", "operational_diagnostic"] or 
-            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM", "MEMORY_INTENT", "OPERATIONAL_DIAGNOSTIC"] or
-            understanding.get("mode") in ["constrained_output", "operational_diagnostic"]
+            brain_response.intent in ["system_audit", "copilot_proposal", "fs_diff", "fs_read", "fs_write", "system_memory_report", "operational_diagnostic", "mission_control"] or 
+            understanding.get("intent_group") in ["SYSTEM_AUDIT_INTENT", "COPILOT_PROPOSAL_INTENT", "FILESYSTEM", "MEMORY_INTENT", "OPERATIONAL_DIAGNOSTIC", "MISSION_INTENT", "CREATOR_INTENT"] or
+            understanding.get("mode") in ["constrained_output", "operational_diagnostic", "technical"]
         )
         
         if understanding.get("mode") == "natural_chat" and not is_technical:
@@ -446,6 +449,16 @@ class CognitiveOrchestrator:
             brain_response.payload["policy_result"] = policy_result
             brain_response.payload["task_tree"] = task_tree
             
+            # CAPA 2 (Phase 83): Global Governance Aggregation
+            global_governance = None
+            msg_low = message.lower()
+            if "governance" in msg_low or "gobernanza" in msg_low or "dashboard global" in msg_low or "seguridad" in msg_low:
+                try:
+                    from backend.core.ai_host.observability.governance_dashboard import governance_dashboard
+                    global_governance = governance_dashboard.get_global_snapshot()
+                except Exception as e:
+                    logger.error(f"[GOVERNANCE_DASHBOARD] Failed to collect snapshot: {e}")
+
             # CAPA 5: DEVIATION DETECTOR (Check for Drift)
             if understanding.get("compiled_mission"):
                 detector = DeviationDetector()
@@ -455,6 +468,232 @@ class CognitiveOrchestrator:
                     brain_response.payload["drift_detected"] = drift_check["drifts"]
                     if drift_check["is_blocked"]:
                          brain_response.message = "> [!CAUTION]\n> **DESVIACIÓN DE MISIÓN:** Se han detectado acciones fuera de scope. Operación bloqueada por Scope Lock.\n\n" + brain_response.message
+            
+            # --- MISSION EXPRESSION LAYER (Step 3: Tactical Overlay) ---
+            # Construct a clear technical contract for the frontend
+            # --- MISSION EXPRESSION LAYER (Step 3: Tactical Overlay) ---
+            # Construct a clear technical contract for the frontend
+            ctx = understanding.get("context")
+            interpretation = ctx.interpretation if ctx and hasattr(ctx, "interpretation") else {}
+            mission = interpretation.get("structured_mission")
+            
+            if mission:
+                from backend.core.ai_host.orchestration.mission_orchestrator import mission_orchestrator
+                from backend.core.ai_host.memory.mission_manager import mission_manager
+                
+                # CAPA 3 & 4 (Phase 82): Audit Telemetry & Authority Integrity
+                active_mission = mission_manager.get_active_mission()
+                audit_trail = []
+                authority_info = {"active": False, "reason": "No session"}
+                
+                # CAPA 5 (PHASE 85): CRITICAL MISSION GATE HOOK
+                provided_pin = None
+                pin_match = re.search(r"--pin=([\w]+)", message, re.IGNORECASE)
+                if pin_match: provided_pin = pin_match.group(1)
+
+                if active_mission:
+                    try:
+                        from backend.core.ai_host.memory.mission_telemetry import mission_telemetry
+                        events = mission_telemetry.get_recent_events(active_mission.mission_id, limit=5)
+                        audit_trail = [
+                            {"type": e.event_type, "msg": e.message, "actor": e.source_actor, "ts": e.timestamp.strftime("%H:%M")}
+                            for e in events
+                        ]
+                        
+                        sess = active_mission.authority_session or {}
+                        if sess.get("authority_granted"):
+                            # Check time if not already cleared by orchestrator
+                            expires_at = datetime.fromisoformat(sess["authority_expires_at"])
+                            is_active = expires_at > datetime.now()
+                            authority_info = {
+                                "active": is_active,
+                                "expires_at": sess["authority_expires_at"],
+                                "granted_at": sess["authority_granted_at"],
+                                "reason": "SESSION_VALID" if is_active else "EXPIRED"
+                            }
+                        else:
+                            authority_info["reason"] = sess.get("authority_invalidated_reason", "LOGOFF")
+                    except: pass
+                
+                # GATE EVALUATION
+                gate = self._evaluate_mission_gate(mission, authority_info)
+                force_intake = False
+                gate_error = None
+
+                # Hardening: If they try to confirm a critical mission without proper credentials
+                if "--confirmed=true" in message.lower() and gate["required"]:
+                    if gate["type"] == "PIN":
+                        if provided_pin == settings.CREATOR_PIN:
+                            logger.info(f"[SECURITY] Critical Mission PIN Verified.")
+                            gate["required"] = False # Gate satisfied
+                            # Persistent authority for this session (Simplified)
+                            authority_info["active"] = True
+                        else:
+                            logger.warning(f"[GOVERNANCE] Critical Mission access denied: PIN mismatch or missing.")
+                            force_intake = True
+                            gate_error = "PIN_REQUIRED" if not provided_pin else "PIN_INVALID"
+
+                # INTAKE LOGIC: If we are in workspace and it's a new mission intent, trigger intake panel
+                is_intake = (
+                    source_surface == "workspace" and 
+                    interpretation.get("intent") == "new_mission_intent" and 
+                    (not active_mission or active_mission.status in ["COMPLETED", "FAILED", "ARCHIVED"]) and
+                    ("--confirmed=true" not in message.lower() or force_intake)
+                )
+                
+                blocked_phase = next((p for p in mission_orchestrator.phases if p.status == "BLOQUEADO"), None)
+                orch_report = mission_orchestrator.format_orchestration_report()
+
+                # CAPA 6 (Phase 86): MULTI-HANDOFF BACKLOG
+                from backend.core.ai_host.memory.handoff_manager import handoff_manager
+                
+                # Command Interception
+                is_backlog_request = "SHOW MISSION HANDOFF QUEUE" in message.upper()
+                is_inspect_request = "INSPECT MISSION HANDOFF" in message.upper()
+                is_archive_request = "ARCHIVE MISSION HANDOFF" in message.upper()
+                is_rebase_request = "REBASE MISSION HANDOFF" in message.upper()
+                rebase_report = None
+
+                if is_archive_request:
+                    h_id_match = re.search(r"HANDOFF\s+([\w\-]+)", message, re.IGNORECASE)
+                    if h_id_match:
+                        handoff_manager.update_proposal(h_id_match.group(1), {"readiness_state": "ARCHIVED"})
+                    is_backlog_request = True # Show list after archiving
+
+                if is_rebase_request:
+                    h_id_match = re.search(r"HANDOFF\s+([\w\-]+)", message, re.IGNORECASE)
+                    if h_id_match:
+                        h_id = h_id_match.group(1)
+                        h_prop = handoff_manager.get_proposal(h_id)
+                        if h_prop:
+                            # CAPA 3: Versioning (Add as new proposal)
+                            m_data = h_prop.model_dump() if hasattr(h_prop, "model_dump") else h_prop.dict()
+                            new_h = handoff_manager.add_proposal(m_data, h_prop.gate_data, source=f"REBASE_{h_id}")
+                            handoff_manager.update_proposal(new_h.handoff_id, {
+                                "briefing_title": f"{h_prop.briefing_title} (REBASED)"
+                            })
+                            brain_response.message = f"Propuesta rebaseada satisfactoriamente (ID: {new_h.handoff_id})."
+                    is_backlog_request = True
+                
+                if is_inspect_request:
+                    h_id_match = re.search(r"HANDOFF\s+([\w\-]+)", message, re.IGNORECASE)
+                    if h_id_match:
+                        h_prop = handoff_manager.get_proposal(h_id_match.group(1))
+                        if h_prop:
+                            mission = h_prop.model_dump() if hasattr(h_prop, "model_dump") else h_prop.dict()
+                            gate = self._evaluate_mission_gate(mission, authority_info)
+                            is_intake = True # Force intake view for target handoff
+                            # CAPA 2: Calulate Rebase Status
+                            rebase_report = handoff_manager.check_rebase(h_id_match.group(1))
+                
+                # CAPA 8: MULTI-MISSION SCHEDULER (BLOCK 88)
+                from backend.core.ai_host.memory.scheduler_manager import scheduler_manager
+                
+                is_scheduler_request = "SHOW MISSION SCHEDULE" in message.upper()
+                is_create_sched = "CREATE MISSION SCHEDULE" in message.upper()
+                is_add_to_sched = "ADD TO MISSION SCHEDULE" in message.upper()
+                is_reorder_sched = "REORDER MISSION SCHEDULE" in message.upper()
+                is_apply_rec = "APPLY RECOMMENDED SEQUENCE" in message.upper()
+                is_execute_sched = "EXECUTE MISSION SCHEDULE" in message.upper()
+                is_inspect_sched = "INSPECT MISSION SCHEDULE" in message.upper()
+
+                if is_apply_rec:
+                    s_id_match = re.search(r"SCHEDULE\s+([\w\-]+)", message, re.IGNORECASE)
+                    if s_id_match:
+                         s_id = s_id_match.group(1)
+                         sched = scheduler_manager.get_schedule(s_id)
+                         if sched and sched.recommended_sequence:
+                             scheduler_manager.update_sequence(s_id, sched.recommended_sequence)
+                             brain_response.message = "Secuencia optimizada aplicada correctamente."
+                         else:
+                             brain_response.message = "No hay una secuencia recomendada válida para aplicar."
+
+                if is_create_sched:
+                    new_sched = scheduler_manager.create_schedule(f"Draft Schedule {datetime.now().strftime('%H:%M')}")
+                    brain_response.message = f"Nuevo Tactical Schedule creado (ID: {new_sched.schedule_id})."
+                
+                if is_add_to_sched:
+                    h_id_match = re.search(r"HANDOFF\s+([\w\-]+)", message, re.IGNORECASE)
+                    if h_id_match:
+                        h_id = h_id_match.group(1)
+                        # Find the first DRAFT schedule to add to, or create one
+                        all_scheds = scheduler_manager.get_all()
+                        target_sched = next((s for s in all_scheds if s.status == "DRAFT"), None)
+                        if not target_sched:
+                             target_sched = scheduler_manager.create_schedule("Active Planner")
+                        
+                        scheduler_manager.add_mission_to_sequence(target_sched.schedule_id, h_id)
+                        brain_response.message = f"Misión {h_id} añadida al Scheduler Tactical."
+                
+                if is_reorder_sched:
+                    # Syntax: REORDER MISSION SCHEDULE <id> SEQUENCE <id1>,<id2>
+                    s_id_match = re.search(r"SCHEDULE\s+([\w\-]+)", message, re.IGNORECASE)
+                    seq_match = re.search(r"SEQUENCE\s+([\w\s,\-]+)", message, re.IGNORECASE)
+                    if s_id_match and seq_match:
+                         s_id = s_id_match.group(1)
+                         new_seq = [x.strip() for x in seq_match.group(1).split(",")]
+                         scheduler_manager.update_sequence(s_id, new_seq)
+                         brain_response.message = "Secuencia del Scheduler actualizada y re-analizada."
+
+                if is_scheduler_request:
+                    is_intake = False # Force scheduler view
+                    is_backlog_request = False # We want the specific planner view
+                
+                if is_backlog_request:
+                    is_intake = False # Force backlog view instead of individual intake
+                
+                # Register new handoff only if it's a fresh human intent (not an internal reload/inspect)
+                if is_intake and not is_inspect_request and "--confirmed=true" not in message.lower() and not gate_error:
+                    handoff_manager.add_proposal(mission, gate, source=source_surface)
+
+                # Collect all available handoffs for the Multi-Handoff View
+                all_raw = handoff_manager.get_all()
+                handoff_backlog = [h.model_dump() if hasattr(h, "model_dump") else h.dict() for h in all_raw]
+
+                tactical_overlay = {
+                    "branding": "OmniWeb Core",
+                    "mission_id": active_mission.mission_id if active_mission else None,
+                    "is_intake": is_intake,
+                    "is_scheduler": is_scheduler_request or is_inspect_sched,
+                    "proposed_mission": mission if is_intake else None,
+                    "handoff_backlog": handoff_backlog, # BACKLOG LAYER
+                    "schedules": schedules, # SCHEDULER LAYER
+                    "rebase_report": rebase_report, # REBASE LAYER (Phase 87)
+                    "understood_intent": mission.get("objective"),
+                    "mission_summary": f"Operación técnica sobre {', '.join(mission.get('surface_affected', []))}",
+                    "affected_surface": mission.get("surface_affected"),
+                    "constraints": mission.get("constraints"),
+                    "risk_state": mission.get("risk_level"),
+                    "governance_state": "AUDIT_LOCK_ACTIVE" if blocked_phase else "NOMINAL",
+                    "execution_path": [p.to_dict() for p in mission_orchestrator.phases],
+                    "next_action": "Resuelva el bloqueo de seguridad para continuar" if blocked_phase else ("Esperando validación de Preview" if "with_confirmation" in mission.get("execution_style", "") else "Proveer feedback sobre el plan sugerido"),
+                    "audit_trail": audit_trail,
+                    "authority_info": authority_info,
+                    "global_governance": global_governance,
+                    "confirmation_gate": gate if is_intake else None,
+                    "gate_error": gate_error
+                }
+                
+                if blocked_phase:
+                    tactical_overlay["lock_info"] = {
+                        "reason": blocked_phase.detail,
+                        "authority_gate": "MANUAL_OVERRIDE_REQUIRED" if mission.get("risk_level") == "high" else "APPROVAL_REQUIRED"
+                    }
+                    tactical_overlay["actions"] = [
+                        {"label": "Autorizar (PIN)", "action": "request_override", "style": "primary"},
+                        {"label": "Abortar Misión", "action": "abort_mission", "style": "danger"}
+                    ]
+                
+                if brain_response.payload is None: brain_response.payload = {}
+                brain_response.payload["tactical_overlay"] = tactical_overlay
+                brain_response.payload["mission_report"] = orch_report # Backward compatibility
+            elif global_governance:
+                if brain_response.payload is None: brain_response.payload = {}
+                brain_response.payload["tactical_overlay"] = {
+                    "branding": "OmniWeb Governance",
+                    "global_governance": global_governance,
+                    "understood_intent": "Auditoría Global de Gobernanza"
+                }
         else:
             brain_response.message = self._unify_response(
                 text=brain_response.message,
@@ -468,6 +707,15 @@ class CognitiveOrchestrator:
                 surface=source_surface
             )
             
+            # CAPA 3 (Phase 83): Global Governance Fallback Overlay
+            if global_governance:
+                if brain_response.payload is None: brain_response.payload = {}
+                brain_response.payload["tactical_overlay"] = {
+                    "branding": "OmniWeb Governance",
+                    "global_governance": global_governance,
+                    "understood_intent": "Auditoría Global de Gobernanza"
+                }
+
             # --- COPILOT NORMALIZATION (Workspace Only) ---
             if source_surface == "workspace" and is_technical:
                 # Apply high-quality technical formatting for Creator Cab
@@ -1072,7 +1320,47 @@ class CognitiveOrchestrator:
             result = result[0].upper() + result[1:]
             if not result[-1] in ['.', '!', '?']: result += '.'
         
-        return result
+    def _evaluate_mission_gate(self, mission_data: Dict[str, Any], authority_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CAPA 5 (PHASE 85): CRITICAL MISSION CONFIRMATION GATE.
+        Determines the required validation level based on risk and tactical surface.
+        """
+        risk = (mission_data.get("risk_level") or "low").lower()
+        surface = set(mission_data.get("surface_affected") or [])
+        
+        # Constitutional Hardening (Critical Core Systems)
+        critical_surfaces = {"core", "auth", "security", "infra", "governance"}
+        is_constitutional_sensitive = any(s in surface for s in critical_surfaces)
+        
+        gate = {
+            "required": False,
+            "level": "NORMAL",
+            "type": "CONFIRM", # [CONFIRM, REINFORCED, PIN, BLOCKED]
+            "reason": ""
+        }
+
+        if risk == "critical" or is_constitutional_sensitive:
+            gate["required"] = True
+            gate["level"] = "CRITICAL"
+            gate["type"] = "PIN"
+            gate["reason"] = f"INTEGRIDAD CRÍTICA: La misión afecta sub-sistemas de base ({', '.join(surface)}) con riesgo alto. Se requiere PIN de Autoridad."
+        elif risk == "high":
+            gate["required"] = True
+            gate["level"] = "HIGH"
+            gate["type"] = "REINFORCED"
+            gate["reason"] = f"RIESGO ELEVADO: Confirmación reforzada requerida para ejecución técnica en {', '.join(surface)}."
+        elif risk == "medium":
+            gate.update({"level": "MEDIUM", "type": "CONFIRM"})
+        else:
+            gate.update({"level": "LOW", "type": "CONFIRM"})
+            
+        # Re-validate against current authority (If already validated, lower requirement)
+        if authority_info.get("active") and gate["type"] != "BLOCKED":
+            # If we have an active session, we don't need the gate again for this interaction
+            gate["required"] = False
+            gate["reason"] += " (Autoridad Activa detectada)"
+            
+        return gate
 
 
 orchestrator = None # Will be initialized by CommandRouter

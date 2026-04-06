@@ -1,0 +1,436 @@
+/* 
+ * OMNIWEB — FORENSIC DECISION COCKPIT STYLES
+ * Global Governance Effectiveness Dashboard
+ */
+
+.forensic-cockpit-container {
+    padding: 2rem;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.forensic-header {
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.forensic-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin: 0;
+}
+
+.forensic-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+}
+
+/* Strategic Summary Row */
+.forensic-summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.forensic-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.forensic-card:hover {
+    border-color: var(--accent-transparent);
+}
+
+.card-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.card-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.card-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.text-effective {
+    color: #10B981;
+}
+
+.text-degraded {
+    color: #EF4444;
+}
+
+.text-pending {
+    color: #F59E0B;
+}
+
+/* Insights Layer */
+.forensic-insights-box {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid var(--accent);
+    padding: 1.5rem;
+    border-radius: 0 8px 8px 0;
+}
+
+.insight-item {
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.insight-item::before {
+    content: "•";
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* Hotspots Grid */
+.forensic-hotspots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.hotspot-pill {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hotspot-count {
+    background: var(--degraded);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+/* Main Trace List */
+.forensic-list-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 2px solid var(--accent);
+    display: inline-block;
+    padding-bottom: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.forensic-trace-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.forensic-trace-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    text-transform: uppercase;
+}
+
+.forensic-trace-row {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.15s;
+    cursor: pointer;
+}
+
+.forensic-trace-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.forensic-trace-row td {
+    padding: 1.25rem 1rem;
+    font-size: 0.85rem;
+}
+
+.trace-cell-id {
+    font-family: monospace;
+    color: var(--accent);
+}
+
+.trace-cell-domain {
+    font-weight: 500;
+}
+
+.trace-cell-action {
+    color: var(--text-primary);
+    opacity: 0.9;
+}
+
+.outcome-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.outcome-effective {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+    border: 1px solid #10B981;
+}
+
+.outcome-degraded {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    border: 1px solid #EF4444;
+}
+
+.outcome-partial {
+    background: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+    border: 1px solid #F59E0B;
+}
+
+.outcome-pending {
+    background: rgba(255, 255, 255, 0.05);
+    color: #9CA3AF;
+    border: 1px solid #4B5563;
+}
+
+.trace-cell-rationale {
+    max-width: 400px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.trace-cell-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Branch Autopsy Section */
+.autopsy-section {
+    margin-top: 3rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+}
+
+.autopsy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.autopsy-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.autopsy-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.autopsy-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-merged {
+    background: #10B981;
+    color: white;
+}
+
+.badge-discarded {
+    background: #6B7280;
+    color: white;
+}
+
+.autopsy-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+    font-family: 'Outfit', sans-serif;
+}
+
+.autopsy-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.autopsy-summary {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+
+.autopsy-stats {
+    display: flex;
+    gap: 1rem;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 1rem;
+}
+
+.stat-item {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-val {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+@media (max-width: 1024px) {
+    .forensic-summary-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .forensic-summary-row {
+        grid-template-columns: 1fr;
+    }
+
+    .forensic-trace-table th:nth-child(4),
+    .forensic-trace-table td:nth-child(4) {
+        display: none;
+    }
+}
+/* Learning Surface Section */
+.learning-surface-container {
+    padding: 2rem;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.learning-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.learning-item-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border-top: 4px solid var(--accent);
+    transition: all 0.2s ease;
+}
+
+.learning-item-card.antipattern {
+    border-top-color: #EF4444;
+}
+
+.learning-type-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.learning-confidence-bar {
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    width: 60%;
+    margin-top: 0.5rem;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+.antipattern .confidence-fill { background: #EF4444; }
+
+.learning-lesson {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+.learning-behavior {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.03);
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px dashed var(--border-subtle);
+}
+
+.learning-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+}
