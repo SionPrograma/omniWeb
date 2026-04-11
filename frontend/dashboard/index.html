@@ -1667,6 +1667,28 @@
         </div>
     </div>
 
+    <!-- CATALYST SYSTEM CONTROL (PHASE 121) -->
+    <div class="glass-panel" id="catalyst-control-panel"
+        style="margin-top: 15px; border-color: rgba(0, 217, 255, 0.3); background: rgba(0, 217, 255, 0.02);">
+        <div class="drift-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-status-dot" id="catalyst-status-dot"
+                    style="background: #00d9ff; box-shadow: 0 0 10px #00d9ff;"></div>
+                <span style="font-weight: bold; font-size: 0.8rem; letter-spacing: 1px;">OMNI CATALYST</span>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="toggleCatalyst('CATALYST_ENABLED')" id="btn-toggle-catalyst"
+                    style="font-size: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px; padding: 2px 6px; cursor: pointer;">ON</button>
+                <button onclick="toggleCatalyst('CATALYST_MEMORY_BRIDGE_ENABLED')" id="btn-bridge-catalyst"
+                    style="font-size: 0.6rem; background: rgba(0, 217, 255, 0.05); border: 1px solid rgba(0, 217, 255, 0.2); color: #00d9ff; border-radius: 4px; padding: 2px 6px; cursor: pointer;">BRIDGE</button>
+                <button onclick="toggleCatalyst('CATALYST_FREEZE')" id="btn-freeze-catalyst"
+                    style="font-size: 0.6rem; background: rgba(255,68,68,0.1); border: 1px solid #ff4444; color: #ff4444; border-radius: 4px; padding: 2px 6px; cursor: pointer;">FREEZE</button>
+            </div>
+        </div>
+        <p style="font-size: 0.55rem; opacity: 0.6; margin: 5px 10px;">Aceleración externa gobernada. <span
+                id="catalyst-summary-status">NOMINAL</span></p>
+    </div>
+
     <!-- Tactical Wisdom Recalibration Panel (Phase 114) -->
     <div class="glass-panel" id="wisdom-feedback-panel"
         style="top: 42rem; right: 2rem; width: 380px; max-height: 35vh; display: none; border-color: rgba(255, 187, 0, 0.3);">
@@ -1801,11 +1823,13 @@
                     card.innerHTML = `
                     <span class="chip-title">${displayName}</span>
                     <span class="chip-status">${displayStatus}</span>
+                    <span class="chip-desc" style="display:block; font-size:0.65rem; opacity:0.6; margin-top:5px;">${chip.metadata?.description || ''}</span>
                 `;
 
-                    if (chip.metadata?.type === 'placeholder') {
+                    if (chip.metadata?.type === 'placeholder' || chip.metadata?.has_frontend === false) {
                         card.classList.add('coming-soon');
                         card.removeAttribute('href');
+                        if (chip.metadata?.has_frontend === false) card.style.cursor = 'default';
                     }
 
                     chipsGrid.appendChild(card);
@@ -2753,6 +2777,8 @@
                 setInterval(loadRoadsideEvents, 30000);
                 setInterval(loadSyncProposals, 45000);
                 setInterval(loadHarvestProposals, 60000);
+                setInterval(loadCatalystSettings, 45000);
+                loadCatalystSettings();
             });
 
             async function loadWisdomFeedback() {
@@ -3161,6 +3187,59 @@
                         body: JSON.stringify({ decision })
                     });
                     if (res.ok) loadHarvestProposals();
+                } catch (e) { }
+            }
+
+            async function loadCatalystSettings() {
+                try {
+                    const response = await fetch('/api/v1/governance/catalyst/settings');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const s = data.payload || {};
+
+                    const dot = document.getElementById('catalyst-status-dot');
+                    const text = document.getElementById('catalyst-summary-status');
+                    const btnOn = document.getElementById('btn-toggle-catalyst');
+                    const btnBridge = document.getElementById('btn-bridge-catalyst');
+                    const btnFreeze = document.getElementById('btn-freeze-catalyst');
+
+                    if (s.CATALYST_FREEZE) {
+                        dot.style.background = '#ff4444';
+                        dot.style.boxShadow = '0 0 10px #ff4444';
+                        text.innerText = "FROZEN (Security Override)";
+                        btnFreeze.innerText = "UNFREEZE";
+                        btnFreeze.style.background = 'rgba(255,68,68,0.3)';
+                    } else if (s.CATALYST_ENABLED) {
+                        dot.style.background = '#00d9ff';
+                        dot.style.boxShadow = '0 0 10px #00d9ff';
+                        text.innerText = `ACTIVE Accelerator${s.CATALYST_MEMORY_BRIDGE_ENABLED ? " (Bridged)" : ""}`;
+                        btnOn.innerText = "DISABLE";
+                        btnFreeze.innerText = "FREEZE";
+                        btnFreeze.style.background = 'rgba(255,68,68,0.1)';
+
+                        btnBridge.innerText = s.CATALYST_MEMORY_BRIDGE_ENABLED ? "BRIDGE: ON" : "BRIDGE: OFF";
+                        btnBridge.style.background = s.CATALYST_MEMORY_BRIDGE_ENABLED ? 'rgba(0, 217, 255, 0.2)' : 'rgba(255,255,255,0.05)';
+                    } else {
+                        dot.style.background = '#444';
+                        dot.style.boxShadow = 'none';
+                        text.innerText = "OFF (Strict Native Mode)";
+                        btnOn.innerText = "ENABLE";
+                    }
+                } catch (e) { }
+            }
+
+            async function toggleCatalyst(key) {
+                try {
+                    const res = await fetch('/api/v1/governance/catalyst/settings');
+                    const data = await res.json();
+                    const current = data.payload[key];
+
+                    await fetch('/api/v1/governance/catalyst/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key, value: !current })
+                    });
+                    loadCatalystSettings();
                 } catch (e) { }
             }
 

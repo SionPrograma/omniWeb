@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from enum import Enum
+from backend.core.governance.mode_registry import OmniMode
 
 class SystemHealth(str, Enum):
     HEALTHY = "healthy"
@@ -28,6 +29,7 @@ class ChipState(BaseModel):
 class SystemState(BaseModel):
     version: str
     system_mode: SystemMode = SystemMode.LIVE
+    mode: OmniMode = OmniMode.PUBLIC
     maintenance_info: Optional[Dict[str, Any]] = None
     announcement: Optional[Dict[str, Any]] = None
     git_branch: str

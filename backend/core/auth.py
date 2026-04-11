@@ -9,6 +9,7 @@ import secrets
 from backend.core.config import settings
 from backend.core.database import db_manager
 from backend.core.permissions import set_chip_context
+from backend.core.governance.mode_registry import OmniMode, ModePermission, mode_registry
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -20,7 +21,27 @@ class OmniUser(BaseModel):
     id: str
     username: str
     role: str
+    mode: OmniMode
     is_active: bool = True
+
+    @classmethod
+    def resolve_mode(cls, username: str, role: str, stored_mode: str = None) -> OmniMode:
+        """OMNIWEB V1.0: Maps legacy roles or stored values to formal modes."""
+        # 1. Admin/Root override
+        if username == "admin": return OmniMode.CREATOR
+        
+        # 2. Prefer stored mode if valid
+        if stored_mode:
+            try:
+                return OmniMode(stored_mode)
+            except ValueError:
+                pass
+        
+        # 3. Fallback to role mapping
+        if role == "creator": return OmniMode.CREATOR
+        if role == "admin": return OmniMode.ADMIN
+        if role == "tester": return OmniMode.TESTER
+        return OmniMode.PUBLIC
 
 class Session(BaseModel):
     id: str
@@ -33,7 +54,7 @@ def get_user_by_username(username: str) -> Optional[OmniUser]:
     with set_chip_context("core"):
         with db_manager.get_connection() as conn:
             row = conn.execute(
-                "SELECT id, username, role, is_active FROM users WHERE username = ?",
+                "SELECT id, username, role, mode, is_active FROM users WHERE username = ?",
                 (username,)
             ).fetchone()
             if row:
@@ -41,6 +62,7 @@ def get_user_by_username(username: str) -> Optional[OmniUser]:
                     id=row["id"],
                     username=row["username"],
                     role=row["role"],
+                    mode=OmniUser.resolve_mode(row["username"], row["role"], row["mode"]),
                     is_active=bool(row["is_active"])
                 )
     return None
@@ -104,7 +126,7 @@ def get_current_user(token: Optional[str] = Security(oauth2_scheme)) -> OmniUser
     user = None
     # 1. Check legacy/static admin token
     if token == settings.ADMIN_TOKEN:
-        user = OmniUser(id="1", username="admin", role="admin")
+        user = OmniUser(id="1", username="admin", role="admin", mode=OmniMode.CREATOR)
 
     # 2. Check dynamic sessions
     if not user:
@@ -112,7 +134,7 @@ def get_current_user(token: Optional[str] = Security(oauth2_scheme)) -> OmniUser
             with db_manager.get_connection() as conn:
                 row = conn.execute(
                     """
-                    SELECT u.id, u.username, u.role, u.is_active 
+                    SELECT u.id, u.username, u.role, u.mode, u.is_active 
                     FROM users u 
                     JOIN sessions s ON u.id = s.user_id 
                     WHERE s.token = ? AND s.expires_at > ?
@@ -125,6 +147,7 @@ def get_current_user(token: Optional[str] = Security(oauth2_scheme)) -> OmniUser
                         id=row["id"],
                         username=row["username"],
                         role=row["role"],
+                        mode=OmniUser.resolve_mode(row["username"], row["role"], row["mode"]),
                         is_active=bool(row["is_active"])
                     )
 
@@ -160,6 +183,21 @@ def require_role(required_role: str):
         return current_user
     return role_checker
 
-def get_admin_user(current_user: OmniUser = Security(require_role("admin"))):
-    """Convenience dependency for admin operations."""
+def get_admin_user(current_user: OmniUser = Security(get_current_user)):
+    """Convenience dependency for admin operations (V1.0 Mode aware)."""
+    if not mode_registry.has_permission(current_user.mode, ModePermission.SYSTEM_MAINTENANCE):
+        raise HTTPException(status_code=403, detail="Admin level privileges required.")
     return current_user
+
+def require_permission(perm: ModePermission):
+    """
+    V1.0 Mode-based permission guard.
+    """
+    def permission_checker(current_user: OmniUser = Security(get_current_user)):
+        if not mode_registry.has_permission(current_user.mode, perm):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Operation requires permission: {perm.value} in {current_user.mode.value} mode."
+            )
+        return current_user
+    return permission_checker

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Security, Depends, Request
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from backend.core.auth import get_current_user, OmniUser
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,6 +14,8 @@ from backend.core.database import db_manager
 from backend.core.self_check import run_self_checks
 from backend.core.permissions import _current_chip_ctx, set_chip_context
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 # --- Initialize Persistence (Phase 42: Boot Priority) ---
 with set_chip_context("core"):
@@ -59,7 +62,8 @@ run_self_checks()
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    root_path=settings.ROOT_PATH
 )
 
 # --- Middleware ---
@@ -72,7 +76,7 @@ if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins if not allow_all else ["*"],
-        allow_credentials=not allow_all, # False if using wildcard to comply with browser security
+        allow_credentials=not allow_all and settings.ENVIRONMENT == "dev", # Stricter in non-dev
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -93,6 +97,7 @@ class ChipContextMiddleware(BaseHTTPMiddleware):
             _current_chip_ctx.reset(token)
 
 app.add_middleware(ChipContextMiddleware)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=settings.PROXY_TRUSTED_HOSTS)
 
 # --- Base Routes ---
 @app.get("/")
@@ -678,10 +683,11 @@ app.include_router(qr_router, prefix=f"{settings.API_V1_STR}/qr", tags=["qr-gate
 @app.on_event("startup")
 async def startup_event():
     # Security Check
-    if not settings.IS_ADMIN_TOKEN_SAFE:
+    if not settings.IS_ADMIN_TOKEN_SAFE or not settings.IS_CREATOR_PIN_SAFE:
         print("\n" + "!"*60)
-        print("WARNING: Using default OMNIWEB_ADMIN_TOKEN.")
-        print("THIS IS INSECURE FOR PRODUCTION ENVIRONMENTS.")
+        print("WARNING: Using default INSECURE OMNIWEB_ADMIN_TOKEN or PIN.")
+        print(f"ENVIRONMENT: {settings.ENVIRONMENT}")
+        print("THIS IS INSECURE FOR STAGING/PRODUCTION ENVIRONMENTS.")
         print("!"*60 + "\n")
 
     with set_chip_context("core"):
@@ -748,5 +754,10 @@ app.mount("/shell", StaticFiles(directory="frontend/shell", html=True), name="sh
 app.mount("/dashboard-static", StaticFiles(directory="frontend/dashboard"), name="dashboard_static")
 app.mount("/core", StaticFiles(directory="core"), name="core_static")
 
+# Lingua & Global Outputs (Hardened for Staging)
+if not os.path.exists("outputs"): os.makedirs("outputs")
+app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs_static")
+
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+    is_dev = settings.ENVIRONMENT == "dev"
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=is_dev)

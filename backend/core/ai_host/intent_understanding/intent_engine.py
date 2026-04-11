@@ -40,6 +40,11 @@ class IntentEngine:
             elif active_mission:
                 refined_msg = f"Continúa con la misión: {active_mission.active_goal}. Acción específica: {refined_msg}"
                 print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Mission: {active_mission.active_goal}")
+            elif ctx.history.last_suggested_action and any(w in refined_msg for w in ["dale", "ok", "hacelo", "aplica", "procede"]):
+                 action_type = ctx.history.last_suggested_action.get("action_type") or "strategy_swap"
+                 payload_id = ctx.history.last_suggested_action.get("id", "last")
+                 refined_msg = f"governed_action: {action_type}. Reference: {payload_id}. Apply suggest."
+                 print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Suggested Action: {action_type}")
             elif ctx.history.last_topic and ctx.history.last_topic not in ["greeting", "smalltalk", "identity", "how_are_you"]:
                 refined_msg = f"Continúa hablando de/haciendo: {ctx.history.last_topic}. Acción específica: {refined_msg}"
                 print(f"DEBUG: [RECONSTRUCTION] Follow-up mapped to Topic: {ctx.history.last_topic}")
@@ -49,11 +54,17 @@ class IntentEngine:
                 print(f"DEBUG: [RECONSTRUCTION] Contextless Follow-up mapped to last Response")
 
         elif clarity == "vague":
+            res_val = None
             if ctx.history.last_referenced_entity:
-                refined_msg = refined_msg.replace("eso", ctx.history.last_referenced_entity)
-                refined_msg = refined_msg.replace("ese", ctx.history.last_referenced_entity)
-                refined_msg = f"{refined_msg} (Referencia: {ctx.history.last_referenced_entity})"
-                print(f"DEBUG: [RECONSTRUCTION] Vague resolved to: {ctx.history.last_referenced_entity}")
+                res_val = ctx.history.last_referenced_entity
+            elif ctx.history.active_providers:
+                res_val = ctx.history.active_providers[0]
+                
+            if res_val:
+                refined_msg = refined_msg.replace("eso", res_val)
+                refined_msg = refined_msg.replace("ese", res_val)
+                refined_msg = f"{refined_msg} (Referencia: {res_val})"
+                print(f"DEBUG: [RECONSTRUCTION] Vague resolved to: {res_val}")
             elif ctx.history.active_panel_id:
                 panel_name = ctx.history.active_panel_id.replace("-", " ")
                 refined_msg = f"{refined_msg} (En el panel: {panel_name})"

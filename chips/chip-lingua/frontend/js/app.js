@@ -21,6 +21,7 @@ document.getElementById('translator-form').addEventListener('submit', async (e) 
 
     try {
         const { job_id } = await api.startJob(formData);
+        ui.currentJobId = job_id;
         ui.addLog(`Job created: ${job_id}`, 'info');
         pollStatus(job_id);
     } catch (error) {
@@ -36,6 +37,7 @@ async function pollStatus(jobId) {
     const interval = setInterval(async () => {
         try {
             const data = await api.getJobStatus(jobId);
+            ui.currentJobId = jobId;
             ui.updateStages(data.progress);
 
             // Log stage changes
@@ -50,9 +52,9 @@ async function pollStatus(jobId) {
                 }
             });
 
-            if (data.status === 'completed' || data.status === 'partial_success') {
+            if (data.status === 'completed' || data.status === 'partial_success' || data.status === 'purged') {
                 clearInterval(interval);
-                ui.showResult(data.result_url, data.status, data.error);
+                ui.showResult(data.result_url, data.status, data.error, data.is_purged);
                 lastStages.clear();
             } else if (data.status === 'failed') {
                 clearInterval(interval);
@@ -70,3 +72,7 @@ async function pollStatus(jobId) {
         }
     }, 2000);
 }
+// Trigger ML Warmup (Phase 76)
+api.warmup().then(() => {
+    console.log("Lingua: Background ML Warmup initiated.");
+});

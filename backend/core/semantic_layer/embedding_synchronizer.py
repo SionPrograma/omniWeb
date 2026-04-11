@@ -15,12 +15,14 @@ class EmbeddingSynchronizer:
         """
         Incremental synchronization by default. Set force=True to re-index all.
         """
-        logger.info(f"Semantic Layer: Starting {'full' if force else 'incremental'} synchronization...")
-        existing_ids = set() if force else vector_store.get_all_ids()
-        
-        await self.sync_knowledge_nodes(existing_ids)
-        await self.sync_memories(existing_ids)
-        logger.info("Semantic Layer: Synchronization complete.")
+        from backend.core.permissions import set_chip_context
+        with set_chip_context("system:semantic_layer"):
+            logger.info(f"Semantic Layer: Starting {'full' if force else 'incremental'} synchronization...")
+            existing_ids = set() if force else vector_store.get_all_ids()
+            
+            await self.sync_knowledge_nodes(existing_ids)
+            await self.sync_memories(existing_ids)
+            logger.info("Semantic Layer: Synchronization complete.")
 
     async def sync_knowledge_nodes(self, existing_ids: set):
         from backend.core.knowledge_graph.graph_store import GraphStore

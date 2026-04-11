@@ -1,0 +1,49 @@
+{
+  "scrub_patterns": [
+    [
+      "[a-zA-Z]:\\\\[^\"'\\s]+",
+      "[PROTECTED_PATH]"
+    ],
+    [
+      "(^|\\s)\\/[a-zA-Z0-9._-]+\\/[a-zA-Z0-9._\\/-]+",
+      "[PROTECTED_PATH]"
+    ],
+    [
+      "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "[PROTECTED_UUID]"
+    ],
+    [
+      "(OMNI|LEDG|SYNC|DRAFT|CAT|MNODE|WNODE|ID|B)-(?=[A-Z0-9]{6,})[A-Z0-9]+",
+      "[PROTECTED_SYSTEM_ID]"
+    ],
+    [
+      "static_admin_token_[a-zA-Z0-9_]+",
+      "[PROTECTED_TOKEN]"
+    ]
+  ],
+  "forbidden_regex": [
+    "eval\\s*\\(",
+    "exec\\s*\\(",
+    "__import__\\s*\\(",
+    "os\\s*\\.\\s*system",
+    "subprocess\\s*\\.\\s*",
+    "getattr\\s*\\(",
+    "setattr\\s*\\(",
+    "sudo\\s+",
+    "chmod\\s+",
+    "chown\\s+",
+    "rm\\s+-rf",
+    "powershell\\s+",
+    "cmd\\.exe",
+    "\\/bin\\/bash",
+    "ignore\\s+policy",
+    "bypass\\s+governance",
+    "override\\s+protection",
+    "escalate\\s+authority",
+    "disable\\s+audit",
+    "sudo-v2"
+  ],
+  "version": 4,
+  "last_updated": "2026-04-06T11:18:21.769690",
+  "last_proposal_id": "PROP-0406-SUDO-V2"
+}

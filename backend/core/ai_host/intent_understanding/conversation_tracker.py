@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Dict, Any, List
-from datetime import datetime
-from pydantic import BaseModel
+from datetime import datetime, timedelta
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -10,11 +10,14 @@ class SessionContext(BaseModel):
     last_intent: Optional[str] = None
     last_mission_goal: Optional[str] = None
     last_referenced_entity: Optional[str] = None # For 'eso', 'este'
+    last_suggested_action: Optional[Dict[str, Any]] = None # For 'dale', 'hacelo'
+    active_providers: List[str] = [] # Tracked providers (openai, deepseek, etc.)
     active_panel_id: Optional[str] = None # For 'ese panel', 'acá'
     active_swarm_id: Optional[str] = None
     history: List[Dict[str, str]] = [] # [{"role": "user", "content": "..."}, {"role": "omni", "content": "..."}]
     metadata: Dict[str, Any] = {}
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
+    confidence_score: float = 1.0 # Strength of current conversational thread
 
 class ConversationTracker:
     """
@@ -55,9 +58,17 @@ class ConversationTracker:
     def get_context(self, session_id: str) -> SessionContext:
         if session_id not in self.sessions:
             self.sessions[session_id] = SessionContext()
+        
+        # Check staleness (5 minute TTL for active strategic context)
+        ctx = self.sessions[session_id]
+        if (datetime.now() - ctx.timestamp).total_seconds() > 300:
+             logger.info(f"[TRACKER] Context for {session_id} stale. Refreshing.")
+             # Preserve last 5 history turns for continuity but reset trackers
+             self.sessions[session_id] = SessionContext(history=ctx.history[-5:])
+             
         return self.sessions[session_id]
 
-    def update_context(self, session_id: str, message: str, intent: str, topic: Optional[str] = None, role: str = "user"):
+    def update_context(self, session_id: str, message: str, intent: str, topic: Optional[str] = None, role: str = "user", payload: Optional[Dict[str, Any]] = None):
         print(f"DEBUG: [TRACKER] update_context called for {session_id} with {role} msg: '{message[:30]}...'")
         ctx = self.get_context(session_id)
         
@@ -71,14 +82,28 @@ class ConversationTracker:
         if role == "user":
             # ENTITY SCANNING (Identify what the user is talking about right now)
             msg_lower = message.lower()
-            entities = ["chip-finanzas", "chip-reparto", "chip-idiomas", "logbook", "context-panel", "system inspection", "dashboard", "creator", "editor"]
+            
+            # Expanded entities for Block 84 (Forge Providers + Core Components)
+            entities = ["openai", "deepseek", "anthropic", "aws", "elevenlabs", "local", "azure", "google", "lingua", "forge", "ledger", "logbook", "dashboard", "editor"]
+            
+            detected_providers = []
             for ent in entities:
                  if ent in msg_lower:
                       ctx.last_referenced_entity = ent
-                      print(f"DEBUG: [TRACKER] Entity detected: {ent}")
+                      # Collect providers separately
+                      if ent in ["openai", "deepseek", "anthropic", "aws", "elevenlabs", "local", "azure", "google"]:
+                           detected_providers.append(ent)
+                      
                       if "panel" in ent or "logbook" in ent or "dashboard" in ent:
                            ctx.active_panel_id = ent
-                      break
+            
+            if detected_providers:
+                 ctx.active_providers = detected_providers
+                 print(f"DEBUG: [TRACKER] Providers detected in context: {detected_providers}")
+
+        if payload:
+             ctx.last_suggested_action = payload
+             print(f"DEBUG: [TRACKER] Suggested action payload cached in context.")
 
         if topic and intent not in ["NATURAL_CHAT", "GREETING", "acknowledgment", "identity", "how_are_you", "greeting", "smalltalk"]:
             ctx.last_topic = topic

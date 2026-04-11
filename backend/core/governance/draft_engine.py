@@ -20,6 +20,9 @@ class MissionDraft(BaseModel):
     risk_level: str
     confidence: float
     rationale: str
+    catalyst_assisted: bool = False
+    catalyst_trace_id: Optional[str] = None
+    steps: List[Dict[str, Any]] = []
 
 class MissionDraftEngine:
     """
@@ -45,6 +48,22 @@ class MissionDraftEngine:
         node_title = suggestion.get("title", "Wisdom Node")
         title = f"Intervención: {node_title}"
         objective = f"Aplicar sabiduría contextual: {suggestion.get('rationale', '')}"
+        
+        # PHASE 121: Catalyst Acceleration Attempt (Format Synthesis)
+        from backend.core.governance.catalyst_engine import catalyst_engine
+        catalyst_res = catalyst_engine.execute_formatting_task({
+            "objective": objective,
+            "context_text": f"Rationale: {suggestion.get('rationale')}. Domain: {context.get('target_domain')}",
+            "tactic_id": suggestion.get("node_id")
+        })
+
+        assisted = False
+        trace_id = None
+        if catalyst_res:
+            objective = catalyst_res.get("objective", objective)
+            assisted = True
+            trace_id = catalyst_res.get("catalyst_trace_id")
+            logger.info(f"Draft {title} accelerated by catalyst {trace_id}")
         
         # Extract Constraints/Preconditions from Reasoner output or Origin Node?
         # For now, we use standard logic based on type.
@@ -76,32 +95,37 @@ class MissionDraftEngine:
             preconditions=preconditions,
             risk_level=risk,
             confidence=suggestion.get("confidence", 0.5),
-            rationale=suggestion.get("rationale", "Generación automática basada en precedente táctico.")
+            rationale=suggestion.get("rationale", "Generación nativa."),
+            catalyst_assisted=assisted,
+            catalyst_trace_id=trace_id,
+            steps=catalyst_res.get("steps", []) if catalyst_res else []
         )
         
         self._persist_draft(draft, suggestion.get("suggestion_id", "manual"), context)
         return draft
 
     def _persist_draft(self, draft: MissionDraft, suggestion_id: str, context: Dict[str, Any]):
-        with db_manager.get_connection() as conn:
-            try:
-                conn.execute("""
-                    INSERT INTO governance_mission_auto_drafts (
-                        draft_id, source_reasoner_result_id, source_atlas_node_ref, 
-                        draft_type, target_context_ref, title_suggestion, 
-                        objective_suggestion, affected_domains, rationale, 
-                        suggested_constraints, recommended_preconditions, risk_notes, 
-                        confidence
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    draft.draft_id, suggestion_id, draft.source_node_id,
-                    draft.draft_type, json.dumps(context), draft.title,
-                    draft.objective, json.dumps(draft.surface_affected), draft.rationale,
-                    json.dumps(draft.constraints), json.dumps(draft.preconditions), 
-                    f"Generated as {draft.risk_level}", draft.confidence
-                ))
-                conn.commit()
-            except Exception as e:
-                logger.error(f"Draft persistence failed: {e}")
+        with set_chip_context("governance"):
+            with db_manager.get_connection() as conn:
+                try:
+                    conn.execute("""
+                        INSERT INTO governance_mission_auto_drafts (
+                            draft_id, source_reasoner_result_id, source_atlas_node_ref, 
+                            draft_type, target_context_ref, title_suggestion, 
+                            objective_suggestion, affected_domains, rationale, 
+                            suggested_constraints, recommended_preconditions, risk_notes, 
+                            confidence, suggested_steps, catalyst_trace_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        draft.draft_id, suggestion_id, draft.source_node_id,
+                        draft.draft_type, json.dumps(context), draft.title,
+                        draft.objective, json.dumps(draft.surface_affected), draft.rationale,
+                        json.dumps(draft.constraints), json.dumps(draft.preconditions), 
+                        f"Generated as {draft.risk_level}", draft.confidence,
+                        json.dumps(draft.steps), draft.catalyst_trace_id
+                    ))
+                    conn.commit()
+                except Exception as e:
+                    logger.error(f"Draft persistence failed: {e}")
 
 draft_engine = MissionDraftEngine()

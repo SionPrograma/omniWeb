@@ -1,0 +1,20 @@
+{
+  "name": "omni_parche_creator_unison_v0.1",
+  "purpose": "Additive creator-driven orchestration patch for OmniWeb",
+  "contains": [
+    "strategic prompts",
+    "patch docs",
+    "python scaffolds"
+  ],
+  "execution_order": [
+    "00_MASTER_PATCH_MISSION.md",
+    "01_PREFLIGHT_AUDIT_PROMPT.md",
+    "02_CREATOR_COMMAND_GATEWAY_PROMPT.md",
+    "03_OSS_ORCHESTRATOR_PROMPT.md",
+    "04_WORKSPACE_BRIDGE_PROMPT.md",
+    "05_FILE_GUARD_AND_CHECKPOINTS_PROMPT.md",
+    "06_RESPONSE_CRITIC_PROMPT.md",
+    "07_EVALUATION_LEDGER_PROMPT.md",
+    "08_FINAL_HARMONIZATION_PROMPT.md"
+  ]
+}

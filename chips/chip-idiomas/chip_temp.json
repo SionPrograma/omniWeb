@@ -1,0 +1,14 @@
+﻿{
+    "id": "chip-idiomas",
+    "slug": "idiomas",
+    "name": "Idiomas",
+    "description": "Multi-language enhancement, translation, and fluent composition engine.",
+    "version": "1.0.0",
+    "type": "hybrid",
+    "has_frontend": false,
+    "has_backend": true,
+    "active": true,
+    "permissions": [
+        "text_processing"
+    ]
+}

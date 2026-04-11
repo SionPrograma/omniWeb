@@ -22,6 +22,14 @@ class DatabaseManager:
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
             logger.info(f"Created data directory: {data_dir}")
+        
+        # --- Phase 0: DB Awareness ---
+        try:
+            db_files = [f for f in os.listdir(data_dir) if f.endswith(".db")]
+            if len(db_files) > 1:
+                logger.warning(f"DB AWARENESS: Multiple database files detected in {data_dir}: {db_files}. Using {os.path.basename(self.db_path)} as Source of Truth.")
+        except Exception as e:
+            logger.debug(f"DB AWARENESS: Could not list directory {data_dir}: {e}")
 
     def get_connection(self, internal: bool = False):
         """
@@ -70,7 +78,7 @@ class DatabaseManager:
         Initializes core system tables.
         """
         logger.info(f"Initializing SQLite persistence at {self.db_path}")
-        with self.get_connection() as conn:
+        with self.get_connection(internal=True) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS system_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -434,6 +442,26 @@ class DatabaseManager:
                 """, p)
             
             conn.commit()
+            
+            # --- Phase 0: Identity Seeding (Idempotent) ---
+            SYSTEM_UUID = "00000000-0000-0000-0000-000000000000"
+            try:
+                row = conn.execute("SELECT 1 FROM users WHERE id = ?", (SYSTEM_UUID,)).fetchone()
+                if not row:
+                    conn.execute("""
+                        INSERT INTO users (id, username, hashed_password, role)
+                        VALUES (?, 'system', 'system-vault-locked', 'admin')
+                    """, (SYSTEM_UUID,))
+                    conn.commit()
+                    logger.info(f"IDENTITY SEEDING: Created System User (id={SYSTEM_UUID})")
+                else:
+                    logger.debug(f"IDENTITY SEEDING: System User already exists.")
+            except sqlite3.OperationalError as e:
+                if "no such table: users" in str(e):
+                    logger.warning("IDENTITY SEEDING: 'users' table not yet available (waiting for migrations).")
+                else:
+                    logger.error(f"IDENTITY SEEDING: Unexpected error seeding system user: {e}")
+
         logger.info("System core tables initialized.")
 
     def run_migrations(self):
@@ -445,7 +473,7 @@ class DatabaseManager:
         migrations_dir = os.path.join(data_dir, "migrations")
         os.makedirs(migrations_dir, exist_ok=True)
             
-        with self.get_connection() as conn:
+        with self.get_connection(internal=True) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS system_migrations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

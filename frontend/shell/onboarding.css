@@ -1,0 +1,140 @@
+/* OMNIWEB — ONBOARDING INFRASTRUCTURE V1 */
+:root {
+    --onboarding-accent: #00d4ff;
+    --onboarding-bg: rgba(10, 10, 20, 0.98);
+    --onboarding-glass: rgba(255, 255, 255, 0.05);
+    --onboarding-z: 20000;
+}
+
+#onboarding-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: var(--onboarding-z);
+    pointer-events: none;
+    display: none;
+    transition: opacity 0.4s ease;
+}
+
+#onboarding-overlay.active {
+    display: block;
+    pointer-events: auto;
+}
+
+.onboarding-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+#onboarding-overlay.active .onboarding-backdrop {
+    opacity: 1;
+}
+
+/* SPOTLIGHT EFFECT */
+.onboarding-spotlight {
+    position: absolute;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
+    border-radius: 12px;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    z-index: 1;
+    pointer-events: none;
+    border: 2px solid var(--onboarding-accent);
+}
+
+/* ONBOARDING CARD */
+.onboarding-card {
+    position: absolute;
+    width: 320px;
+    background: var(--onboarding-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    transform: translateY(10px);
+    opacity: 0;
+    transition: all 0.4s ease;
+    backdrop-filter: blur(20px);
+}
+
+.onboarding-card.visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.onboarding-card h4 {
+    margin: 0 0 10px;
+    font-family: 'Outfit', sans-serif;
+    color: var(--onboarding-accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.onboarding-card p {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    opacity: 0.8;
+    margin-bottom: 20px;
+}
+
+.onboarding-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.onboarding-nav-group {
+    display: flex;
+    gap: 8px;
+}
+
+.onboarding-btn {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+}
+
+.onboarding-btn.primary {
+    background: var(--onboarding-accent);
+    color: #000;
+    border: none;
+}
+
+.onboarding-btn.secondary {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.onboarding-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+}
+
+/* MOBILE ADAPTATION */
+@media (max-width: 768px) {
+    .onboarding-card {
+        width: calc(100vw - 40px);
+        left: 20px !important;
+        right: 20px !important;
+        bottom: 40px !important;
+        top: auto !important;
+        transform: translateY(20px);
+    }
+}

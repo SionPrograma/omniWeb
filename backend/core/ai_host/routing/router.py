@@ -10,15 +10,21 @@ ai_router = CommandRouter()
 
 from ..execution.router import router as copilot_router
 from ..execution.editor_router import router as editor_router
+from ..forge.api import router as forge_router
+from ..cognition.locale_manager import LocaleContext
 ai_host_router.include_router(copilot_router, prefix="/copilot", tags=["copilot"])
 ai_host_router.include_router(copilot_router, prefix="/execution", tags=["execution"])
 ai_host_router.include_router(editor_router, prefix="/editor", tags=["editor"])
+ai_host_router.include_router(forge_router, prefix="/forge", tags=["forge"])
 
 class ProcessRequest(BaseModel):
     message: str
     modality: Optional[str] = "text"
     multimodal_evidence: List[Dict[str, Any]] = []
     source_surface: Optional[str] = "chat"
+
+from ..synthesis.public_normalizer import public_normalizer
+from backend.core.governance.mode_registry import OmniMode
 
 @ai_host_router.post("/process")
 async def process_message(request: ProcessRequest, current_user: OmniUser = Depends(get_current_user)):
@@ -41,12 +47,26 @@ async def process_message(request: ProcessRequest, current_user: OmniUser = Depe
     
     # Adapt response using InterfaceAdapter if needed
     from ..interface_adapter import adapter
-    formatted = adapter.format_response(cmd_res.message, cmd_res.payload)
+    
+    # MISSION BLOCK 03: Governed Result Filtering (Public Mode)
+    final_message, final_payload = public_normalizer.normalize_response(
+        cmd_res.message, 
+        cmd_res.payload, 
+        current_user.mode
+    )
+
+    formatted = adapter.format_response(final_message, final_payload)
     formatted["intent"] = cmd_res.intent # Add intent to response for frontend logic
-    formatted["gov_enrichment"] = {
-        "signals": [s.model_dump() for s in gov_signals],
-        "count": len(gov_signals)
-    }
+    
+    # Only rich enrichment for non-public modes
+    if current_user.mode != OmniMode.PUBLIC:
+        formatted["gov_enrichment"] = {
+            "signals": [s.model_dump() for s in gov_signals],
+            "count": len(gov_signals)
+        }
+    else:
+        # Minimal public signal
+        formatted["gov_enrichment"] = {"count": len(gov_signals)}
     
     return formatted
 
@@ -79,3 +99,39 @@ async def get_portfolio_drift_health(
         enforce_permission("creator_access")
         health = mission_manager.get_portfolio_cognitive_health(limit=limit)
         return {"status": "success", "portfolio": health}
+
+@ai_host_router.get("/locale")
+async def get_ui_locale(current_user: OmniUser = Depends(get_current_user)):
+    """
+    V1.0 Block 02: UI Locale Fetcher.
+    Returns the rich locale context and translation dictionaries for the active session.
+    """
+    from ..cognition.locale_manager import locale_manager
+    from ..sessions import session_state
+    
+    locale = session_state.get_locale(current_user.id)
+    return {
+        "status": "success",
+        "context": locale.model_dump(),
+        "translations": locale_manager._dictionaries.get(locale.ui_language, {}),
+        "fallback": locale_manager._dictionaries.get(locale.fallback_language, {})
+    }
+
+@ai_host_router.post("/locale")
+async def update_ui_locale(
+    request: LocaleContext, 
+    current_user: OmniUser = Depends(get_current_user)
+):
+    """
+    V1.0 Block 03: UI Locale Updater.
+    Syncs the client's detected timezone, region, and locale preference to the session.
+    """
+    from ..sessions import session_state
+    
+    # Preserve language if not explicitly provided in the sync request
+    current_locale = session_state.get_locale(current_user.id)
+    if not request.ui_language:
+        request.ui_language = current_locale.ui_language
+    
+    session_state.update_locale(current_user.id, request)
+    return {"status": "success", "context": request.model_dump()}

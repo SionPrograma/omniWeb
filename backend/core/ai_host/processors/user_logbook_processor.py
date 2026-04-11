@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime
 from typing import Dict, Any, Optional, List
 from .base import CommandProcessor, AICommandResponse
 from backend.core.user_logbook.models import UserLogbookEntry, UserEntryType
@@ -30,6 +31,10 @@ class UserLogbookProcessor(CommandProcessor):
         if any(x in cmd for x in ["summary", "resumen", "actividad"]):
             return await self._handle_summary(user_id)
             
+        # 1.1 Export to File (V1.0 Block 02)
+        if any(x in cmd for x in ["export", "archivo", "file", "documento"]):
+            return await self._handle_export(user_id)
+
         # 2. Query Notes/Tasks
         if any(x in cmd for x in ["show", "list", "ver", "mis"]):
             return await self._handle_list(user_id, cmd)
@@ -110,3 +115,49 @@ class UserLogbookProcessor(CommandProcessor):
             message=summary,
             payload={"counts": counts}
         )
+
+    async def _handle_export(self, user_id: str) -> AICommandResponse:
+        from backend.core.identity.space_registry import space_registry
+        from backend.core.identity.models import OwnedArtifact
+        import os
+
+        entries = logbook_manager.list_entries(user_id, limit=100)
+        if not entries:
+            return AICommandResponse(intent="export", status="error", message="No hay entradas para exportar.")
+            
+        # 1. Format Content
+        doc = f"# Bitácora Personal de Usuario {user_id}\n\n"
+        doc += f"Generado por Omni Core el {datetime.now().isoformat()}\n\n---\n"
+        for e in entries:
+            doc += f"### [{e.entry_type.value.upper()}] {e.created_at}\n{e.content}\n\n"
+            
+        # 2. Resolve Path in Personal Space
+        filename = f"logbook_export_{user_id}.md"
+        path = space_registry.get_artifact_write_path(user_id, filename, "note")
+        
+        # 3. Physical Write (Owned Artifact)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(doc)
+            
+            # 4. Register Metadata
+            artifact = OwnedArtifact(
+                artifact_id=f"doc_{user_id}_{int(os.path.getctime(path))}",
+                user_id=user_id,
+                space_id=space_registry.resolve_space(user_id).space_id,
+                artifact_type="NOTE",
+                filename=filename,
+                relative_path=os.path.relpath(path, os.getcwd()),
+                governance_class="PRIVATE"
+            )
+            space_registry.register_artifact(artifact)
+            
+            return AICommandResponse(
+                intent="user_logbook_exported",
+                status="success",
+                message=f"✅ He exportado tu bitácora personal a tu Espacio Seguro.\nArchivo: `{filename}`\nRuta: `spaces/{user_id}/artifacts/note/`",
+                payload={"file": filename, "artifact": artifact.model_dump(mode='json')}
+            )
+        except Exception as e:
+            logger.error(f"[LOGBOOK_EXPORT] Failed: {e}")
+            return AICommandResponse(intent="export", status="error", message=f"No pude exportar el archivo: {str(e)}")

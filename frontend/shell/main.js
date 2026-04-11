@@ -3,6 +3,15 @@
     const loadPlaceholder = document.getElementById('js-load-placeholder');
     if (loadPlaceholder) loadPlaceholder.remove();
 
+    // --- OMNI ONBOARDING INFRASTRUCTURE ---
+    const onboardingScript = document.createElement('script');
+    onboardingScript.src = '/shell/onboarding_manager.js?v=v1_infra';
+    document.head.appendChild(onboardingScript);
+
+    onboardingScript.onload = () => {
+        if (window.onboardingManager) window.onboardingManager.init();
+    };
+
     // --- OMNI SAFE-MODE CACHE CLEANUP ---
     const CACHE_RESET_ID = "omni_v6_mobile_safe";
     try {
@@ -50,6 +59,115 @@
 
     const navItems = document.querySelectorAll('.nav-item');
     const contextPanel = document.getElementById('context-panel');
+
+    // --- Phase 86: I18N Frontend Bridge (Block 02 Shell I18n) ---
+    window.omniI18n = {
+        ctx: { ui_language: 'es' },
+        translations: {},
+        fallback: {},
+        loaded: false
+    };
+
+    function t(key, params = {}) {
+        const keys = key.split('.');
+        const resolve = (obj, path) => path.reduce((prev, curr) => prev && prev[curr], obj);
+
+        // 1. Try Target
+        let val = resolve(window.omniI18n.translations, keys);
+        // 2. Try Fallback
+        if (val === undefined) val = resolve(window.omniI18n.fallback, keys);
+
+        if (val === undefined) return `[MISSING: ${key}]`;
+
+        // Handle params
+        let result = String(val);
+        Object.entries(params).forEach(([k, v]) => {
+            result = result.replace(`{${k}}`, v);
+        });
+        return result;
+    }
+    window.t = t;
+
+    function applyI18n() {
+        // Text Content
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            el.textContent = t(key);
+        });
+        // Attributes (e.g. data-i18n-attr="placeholder:shell.input.placeholder")
+        document.querySelectorAll('[data-i18n-attr]').forEach(el => {
+            const mapping = el.getAttribute('data-i18n-attr');
+            if (!mapping) return;
+            const [attr, key] = mapping.split(':');
+            if (attr && key) el.setAttribute(attr, t(key));
+        });
+        console.log("[I18N] Shell applied.");
+    }
+
+    // --- Phase 86.1: Timezone / Region Normalization (Block 03) ---
+    window.omniTime = {
+        format: (val, options = {}) => {
+            if (!val) return '-';
+            const date = new Date(val);
+            if (isNaN(date.getTime())) return val; // Honest fallback
+
+            const defaultOptions = {
+                timeZone: window.omniI18n.ctx.timezone || 'UTC',
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            };
+
+            try {
+                return new Intl.DateTimeFormat(window.omniI18n.ctx.locale_code || 'es-ES', {
+                    ...defaultOptions,
+                    ...options
+                }).format(date);
+            } catch (e) {
+                console.warn("[OMNI_TIME] Formatting error:", e);
+                return date.toISOString(); // Safest truth
+            }
+        }
+    };
+
+    async function initI18n() {
+        try {
+            console.log("[I18N] Contacting Core for locale...");
+            const res = await fetch('/api/v1/ai-host/locale');
+            const data = await res.json();
+            if (data.status === 'success') {
+                window.omniI18n.ctx = data.context;
+                window.omniI18n.translations = data.translations;
+                window.omniI18n.fallback = data.fallback;
+
+                // Auto-detect & Sync Timezone/Region if not explicitly set
+                const clientTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const clientLocale = navigator.language || 'es-ES';
+
+                if (window.omniI18n.ctx.timezone !== clientTZ || window.omniI18n.ctx.locale_code !== clientLocale) {
+                    console.log("[I18N] Timezone drift detected, syncing...", clientTZ);
+                    const syncRes = await fetch('/api/v1/ai-host/locale', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...window.omniI18n.ctx,
+                            timezone: clientTZ,
+                            locale_code: clientLocale
+                        })
+                    });
+                    const syncData = await syncRes.json();
+                    if (syncData.status === 'success') {
+                        window.omniI18n.ctx = syncData.context;
+                    }
+                }
+
+                window.omniI18n.loaded = true;
+                applyI18n();
+            }
+        } catch (e) {
+            console.warn("[I18N] Initialization failed. Staying in safety fallback ES.", e);
+        }
+    }
+    initI18n();
 
     const shellInput = document.getElementById('shell-input');
     const shellForm = document.getElementById('shell-input-form');
@@ -372,7 +490,13 @@
             </div>`;
 
             if (payload && payload.tactical_overlay) {
-                innerHTML += renderTacticalOverlay(payload.tactical_overlay);
+                // Block 01: Suppress tactical complexity for PUBLIC mode
+                const isPublic = document.body.classList.contains('user-mode');
+                if (!isPublic) {
+                    innerHTML += renderTacticalOverlay(payload.tactical_overlay);
+                } else {
+                    console.info("[PUBLIC_MODE] Tactical overlay suppressed from chat bubble.");
+                }
             }
         }
 
@@ -1105,6 +1229,16 @@
     function handleVisualResponse(visual) {
         if (!visual) return;
 
+        // Block 01: Suppress technical visual responses for PUBLIC mode
+        const isPublic = document.body.classList.contains('user-mode');
+        if (isPublic) {
+            const technicalTypes = ['task-report', 'chip-modification-success', 'file-list', 'logbook-list', 'visual-diff'];
+            if (technicalTypes.includes(visual.type)) {
+                console.info(`[PUBLIC_MODE] Technical visual response (${visual.type}) suppressed.`);
+                return;
+            }
+        }
+
         // Skip empty task reports
         if (visual.type === 'task-report') {
             const hasActions = visual.data && visual.data.actions && visual.data.actions.length > 0;
@@ -1156,6 +1290,10 @@
 
         // Visual Diff Mini-Preview in Chat (Phase 21)
         if (payload && payload.visual_diff && payload.visual_context) {
+            // Block 01: Visual Diff is high-complexity technical telemetry
+            if (document.body.classList.contains('user-mode')) {
+                return;
+            }
             const vCtx = payload.visual_context;
             const diff = payload.visual_diff;
             const diffEl = document.createElement('div');

@@ -344,3 +344,244 @@
 .feedback-item.MISAPPLIED {
     border-left-color: #6366f1;
 }
+
+/* OMNIWEB — BLOQUE: ATLAS EVIDENCE UI STYLES */
+.evidence-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.summary-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.summary-badge:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.summary-badge label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.summary-badge .count {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.summary-badge.conf {
+    border-bottom: 3px solid #10b981;
+}
+
+.summary-badge.partial {
+    border-bottom: 3px solid #f59e0b;
+}
+
+.summary-badge.contradicted {
+    border-bottom: 3px solid #ef4444;
+}
+
+.summary-badge.biased {
+    border-bottom: 3px solid #6366f1;
+}
+
+.sync-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.history-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid #ccc;
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+}
+
+.history-item.sync-success {
+    border-left-color: #10b981;
+}
+
+.history-item.sync-partial {
+    border-left-color: #f59e0b;
+}
+
+.history-item.sync-fail {
+    border-left-color: #ef4444;
+}
+
+.history-item.sync-biased {
+    border-left-color: #6366f1;
+}
+
+.history-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.sync-date {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.sync-outcome {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pending-badge {
+    background: #f59e0b;
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
+.history-rationale {
+    font-size: 0.85rem;
+    color: #ccc;
+    line-height: 1.4;
+    margin-bottom: 15px;
+}
+
+.history-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 10px;
+}
+
+.history-trace {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.catalyst-tag {
+    background: rgba(79, 70, 229, 0.2);
+    color: #a5b4fc;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    margin-left: 8px;
+}
+
+.history-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.atlas-btn.mini {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+    border-radius: 6px;
+}
+
+.atlas-btn.tertiary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.atlas-btn.tertiary:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* OMNI_CATALYST_TRACE_AUDIT — CSS PATCH */
+.catalyst-tag.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(79, 70, 229, 0.4);
+}
+
+.catalyst-tag.clickable:hover {
+    background: rgba(79, 70, 229, 0.4);
+    transform: scale(1.05);
+}
+
+.trace-inspector-overlay {
+    z-index: 1100;
+    /* Above regular detail */
+}
+
+.trace-inspector-panel {
+    max-width: 600px;
+    border-color: #4ade80;
+    box-shadow: 0 0 30px rgba(74, 222, 128, 0.15);
+}
+
+.trace-event-item {
+    animation: slideInLeft 0.4s ease-out both;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.loading-spinner {
+    padding: 40px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    font-size: 0.8rem;
+}
+
+/* AUDIT FIELD STYLES */
+.audit-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.audit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.audit-field label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.3) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.audit-field span,
+.audit-field p {
+    font-size: 0.8rem;
+    color: #eee;
+    margin: 0;
+}
+
+.audit-field p {
+    line-height: 1.4;
+    word-break: break-word;
+}

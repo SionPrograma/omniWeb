@@ -9,13 +9,18 @@ class Settings(BaseSettings):
     APP_NAME: str = "OmniWeb VideoTranslator MVP"
     DEBUG: bool = True
     
+    # Proxy Hardening (Phase 75)
+    ROOT_PATH: str = os.getenv("OMNIWEB_ROOT_PATH", "")
+    
     # Base paths relative to the project root
     BASE_DIR: Path = PROJECT_ROOT
     OUTPUT_DIR: Path = PROJECT_ROOT / "outputs"
     TEMP_DIR: Path = PROJECT_ROOT / "temp"
+    DATA_DIR: Path = PROJECT_ROOT / "data"
+    DB_PATH: Path = PROJECT_ROOT / "data" / "lingua.db"
     
     # Integration URLs
-    LIBRETRANSLATE_URL: str = "http://localhost:5000"
+    LIBRETRANSLATE_URL: str = os.getenv("LIBRETRANSLATE_URL", "http://localhost:5000")
     
     # --- Performance & Memory Configurations ---
     # CPU-friendly mode (forces lighter models and aggressive memory cleanup)
@@ -39,6 +44,12 @@ class Settings(BaseSettings):
     TRANSLATION_OUTPUT: Path = OUTPUT_DIR / "translations"
     MERGED_OUTPUT: Path = OUTPUT_DIR / "merged"
 
+    # --- Governance & Retention Policies ---
+    RETENTION_DAYS_COMPLETED: int = 7  # Keep successful jobs for 7 days
+    RETENTION_DAYS_FAILED: int = 3     # Keep failed jobs for 3 days
+    PRUNING_ENABLED: bool = True
+    # --------------------------------------
+
     # Load .env from the project root
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"), 
@@ -51,6 +62,7 @@ class Settings(BaseSettings):
         directories = [
             self.OUTPUT_DIR,
             self.TEMP_DIR,
+            self.DATA_DIR,
             self.AUDIO_OUTPUT,
             self.SUBTITLE_OUTPUT,
             self.TRANSCRIPT_OUTPUT,

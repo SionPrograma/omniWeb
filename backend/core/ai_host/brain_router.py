@@ -51,6 +51,43 @@ class BrainRouter:
              msg = re.sub(r"^(escuchame|omni|che omni|por favor|podrias)\s+", "", msg)
         msg_clean = self._normalize_request(msg)
         
+        # OMNI_PATCH (Phases B-I): Creator Unison Orchestration
+        if source_surface == "chat":
+            try:
+                from backend.core.creator_patch.orchestration_router import orchestration_router
+                from backend.core.creator_patch.creator_command_gateway import creator_command_gateway
+                
+                # 1. Gateway normalization
+                creator_cmd = creator_command_gateway.normalize(msg_clean, context)
+                if context is None: context = {}
+                context["creator_command"] = creator_cmd
+                
+                # 2. Orchestration Routing (Capability + Safety Policy)
+                routing_info = orchestration_router.process_command(creator_cmd, context)
+                context["capability_routing"] = routing_info
+                logger.info(f"[CREATOR_UNISON] Command routed to {routing_info['capability_class']}")
+
+                # 3. Additive Workspace Guardrails (Evidence/Checkpoints)
+                if routing_info["capability_class"] == "OPERATIONAL_AUDIT":
+                    try:
+                        from backend.core.creator_patch.workspace_bridge import workspace_bridge
+                        context["runtime_evidence"] = await workspace_bridge.collect_runtime_evidence()
+                        logger.info("[CREATOR_UNISON] Runtime evidence collected.")
+                    except: pass
+                
+                if routing_info["capability_class"] == "CODE_MUTATION":
+                    try:
+                        from backend.core.creator_patch.checkpoint_manager import checkpoint_manager
+                        ctx_files = context.get("target_files", [])
+                        m_id = context.get("mission_id", "global_creator")
+                        ckpt_id = checkpoint_manager.create_creator_checkpoint(m_id, f"Pre: {creator_cmd.intent}", ctx_files)
+                        context["pre_mutation_checkpoint"] = ckpt_id
+                        logger.info(f"[CREATOR_UNISON] State snapshot secured: {ckpt_id}")
+                    except: pass
+                    
+            except Exception as e:
+                logger.warning(f"[CREATOR_UNISON_FAIL] Orchestration pipeline error: {e}")
+
         if not understanding:
             from .intent_understanding.intent_engine import intent_engine
             understanding = await intent_engine.understand(msg_clean, session_id)
@@ -58,6 +95,18 @@ class BrainRouter:
         # SEMANTIC RECONSTRUCTION: Final override
         if understanding.get("refined_message"):
              msg_clean = understanding["refined_message"]
+
+        # 0.9 DIALOGUE BRIDGE: NATURAL CONFIRMATION (Block 86)
+        # Check if user is confirming a pending proposal (e.g., Forge Swap or Healing Mission)
+        from .cognition.dialogue_action_bridge import dialogue_action_bridge
+        confirmed_proposal = dialogue_action_bridge.resolve_confirmation(session_id, msg_clean)
+        if confirmed_proposal:
+             logger.info(f"[DIALOGUE_BRIDGE] Resolved confirm for: {confirmed_proposal.get('action_type')}")
+             # If it's a specific strategic payload, we reconstruct it into a direct command
+             msg_clean = f"mission: {confirmed_proposal.get('goal') or 'execute proposed action'}"
+             # We can also inject the payload into the understanding if needed
+             understanding["confirmed_payload"] = confirmed_proposal.get("payload")
+             understanding["intent"] = confirmed_proposal.get("action_type") or "MISSION_INTENT"
              logger.info(f"[BRAIN_RECONSTRUCTION] Overriding msg with: {msg_clean}")
 
         # Inject understanding into context for all sub-processors
@@ -91,7 +140,7 @@ class BrainRouter:
             try:
                 res = await self._handle_natural_chat(msg_clean, None, lang)
                 if res:
-                    return await self._finalize_interaction(msg_clean, res, intent_group)
+                    return await self._finalize_interaction(msg_clean, res, intent_group, session_id, context)
             except Exception as conv_err:
                 logger.warning(f"[FAST_CONV_FAIL] {conv_err}. Falling through to full pipeline.")
 
@@ -125,21 +174,21 @@ class BrainRouter:
             if specific_intent in fast_intents or intent_group == "GREETING":
                  res = await self._handle_direct_command(specific_intent or intent_group, msg_clean, context)
                  # Si el comando directo falla o no resuelve, dejamos que siga el flujo.
-                 if res: return await self._finalize_interaction(msg_clean, res, specific_intent or intent_group)
+                 if res: return await self._finalize_interaction(msg_clean, res, specific_intent or intent_group, session_id, context)
 
             # B. CONTEXTUAL CONTINUITY (Seguimientos cortos como "y ahora?" o "por qué?")
             if self._is_short_followup(msg_clean, source_surface=source_surface) and delib_context.recent_topic:
                  res = await self._handle_short_prompt(msg_clean, delib_context, lang, system_state)
-                 return await self._finalize_interaction(msg_clean, res, "follow_up")
+                 return await self._finalize_interaction(msg_clean, res, "follow_up", session_id, context)
 
             # C. DEEP COGNITIVE PATH (El Cerebro Estructurado de OmniWeb)
             # Prioridad 0: MISSION INTAKE & ADJUSTMENT (Phase 17-20)
             if msg_clean.startswith("mission:") or intent_group == "MISSION_INTENT":
                  if specific_intent == "mission_adjust":
                       res = await self._handle_mission_adjustment(msg_clean)
-                      return await self._finalize_interaction(msg_clean, res, "mission_adjustment")
+                      return await self._finalize_interaction(msg_clean, res, "mission_adjustment", session_id, context)
                  res = await self._handle_swarm_orchestration(msg_clean, delib_context, lang)
-                 return await self._finalize_interaction(msg_clean, res, "swarm_orchestration")
+                 return await self._finalize_interaction(msg_clean, res, "swarm_orchestration", session_id, context)
 
             # Prioridad 1: Puente L2 (Groq) si es habilitado y complejo.
             from .cognition.cognitive_bridge import cognitive_bridge
@@ -148,7 +197,7 @@ class BrainRouter:
                       bridge_payload = await cognitive_bridge.analyze_context(f"'{msg_clean}' | Ctx: {delib_context.json()}")
                       if bridge_payload and bridge_payload.confidence_score > 0.7:
                            res = await self._handle_l2_cognitive_response(bridge_payload, msg_clean, delib_context, lang)
-                           return await self._finalize_interaction(msg_clean, res, bridge_payload.decision_mode)
+                           return await self._finalize_interaction(msg_clean, res, bridge_payload.decision_mode, session_id, context)
                  except Exception as bridge_err:
                       logger.warning(f"[BRIDGE_FAIL] {bridge_err}. Falling back to Local Brain.")
 
@@ -166,7 +215,7 @@ class BrainRouter:
                      source_surface=source_surface
                  )
 
-                 return await self._finalize_interaction(msg_clean, res, "technical_analysis")
+                 return await self._finalize_interaction(msg_clean, res, "technical_analysis", session_id, context)
 
             # D. CONVERSATIONAL PATH (Fallback Natural para charla orgánica)
             if intent_group == "FACTUAL_UNCERTAINTY":
@@ -174,7 +223,7 @@ class BrainRouter:
                  return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("not_knowable", lang))
                  
             res = await self._handle_natural_chat(msg_clean, delib_context, lang)
-            return await self._finalize_interaction(msg_clean, res, intent_group)
+            return await self._finalize_interaction(msg_clean, res, intent_group, session_id, context)
 
         except Exception as route_err:
             logger.error(f"[ROUTER_FAULT] Error in Director flow: {route_err}")
@@ -182,10 +231,63 @@ class BrainRouter:
             return AICommandResponse(intent="chat", status="success", message=executive_synthesis.synthesize_honest_feedback("critical_error", lang))
 
 
-    async def _finalize_interaction(self, msg: str, res: AICommandResponse, intent: str) -> AICommandResponse:
+    async def _finalize_interaction(self, msg: str, res: AICommandResponse, intent: str, session_id: str = "default_user", context: Optional[Dict[str, Any]] = None) -> AICommandResponse:
         """Centralized post-processing and semantic memory logging."""
         if res and res.message:
+            # OMNI_PATCH (Phases G-H): Unison Post-Processing (Critic & Ledger)
+            try:
+                from backend.core.creator_patch.orchestration_router import orchestration_router
+                critique = orchestration_router.finalize_interaction(
+                    res.model_dump(), 
+                    {
+                        "mission_id": context.get("mission_id", "global_creator") if context else "global_creator",
+                        "command": context.get("creator_command") if context else None
+                    }
+                )
+                if res.payload is None: res.payload = {}
+                res.payload["unison_critique"] = critique
+                logger.info(f"[CREATOR_UNISON] Interaction finalized and recorded. Useful={critique.get('useful')}")
+            except Exception as unison_err:
+                logger.warning(f"[CREATOR_UNISON_POST_FAIL] {unison_err}")
+
             semantic_memory.add_interaction(msg, res.message, intent)
+            
+            # Phase 84: Conversational State Sync (Sync response back to tracker)
+            from .intent_understanding.conversation_tracker import conversation_tracker
+            # Topic extraction logic
+            topic = None
+            if res.payload and isinstance(res.payload, dict):
+                 topic = res.payload.get("topic") or res.payload.get("mission_goal")
+            
+            conversation_tracker.update_context(
+                session_id=session_id, 
+                message=res.message, 
+                intent=intent, 
+                topic=topic,
+                role="omni",
+                payload=res.payload
+            )
+
+            # Phase 85: STRATEGIC NARRATIVE BRIDGE (Inject proactive advice)
+            # Only for non-greeting, meaningful turns to avoid spam.
+            if intent not in ["GREETING", "acknowledgment", "identity", "how_are_you", "smalltalk"]:
+                 from .cognition.strategic_narrative_bridge import strategic_narrative_bridge
+                 fragment = await strategic_narrative_bridge.get_advisory_fragment(session_id)
+                 if fragment:
+                      res.message += f"\n\n--- [ADVISORY] ---\n{fragment}"
+                      logger.info(f"[NARRATIVE_BRIDGE] Injected strategic segment for {session_id}")
+
+            # Phase 86: DIALOGUE ACTION BRIDGE (Proposed staged missions)
+            # If the turn ended in a technical advisory, stage it as a formal proposal.
+            target_intents = ["HEALING_INTENT", "STRATEGY_SWAP", "REMEDIATION_INTENT", "PROVIDER_UPDATE"]
+            if intent in target_intents:
+                 from .cognition.dialogue_action_bridge import dialogue_action_bridge
+                 proposal = dialogue_action_bridge.propose_from_intent(session_id, intent, {"refined_msg": msg})
+                 if proposal:
+                      if not res.payload: res.payload = {}
+                      res.payload["mission_proposal"] = proposal.model_dump()
+                      res.message += f"\n\n--- [MISSION PROPOSAL: {proposal.proposal_id}] ---\nHe preparado una propuesta gobernada para ejecutar esta acción. Di 'Dale' o 'Ok' para iniciar."
+                      logger.info(f"[DIALOGUE_BRIDGE] Staged mission proposal {proposal.proposal_id} for {session_id}")
         
         # Attach HUD snapshot for always-on status (CAPA 1 HUD)
         from .observability.governance_dashboard import governance_dashboard
@@ -256,6 +358,23 @@ class BrainRouter:
 
     async def _handle_natural_chat(self, msg: str, ctx: Any, lang: str) -> AICommandResponse:
         """Handles organic/human conversation with a lighter tone."""
+        
+        # --- OMNI_PATCH: CHIP-IDIOMAS INTELLIGENT INTERCEPT ---
+        try:
+            from backend.core.module_registry import module_registry
+            chip_data = module_registry.get_module_data("idiomas")
+            # In Omni module registry, 'active' is inside 'metadata' or we can check the status.
+            is_active = chip_data and chip_data.get("metadata", {}).get("active", False)
+            if is_active:
+                import importlib
+                idiomas_module = importlib.import_module("chips.chip-idiomas.core.services.language_engine")
+                enhanced_msg = await idiomas_module.language_engine.enhance_natural_chat(msg, ctx, lang)
+                if enhanced_msg:
+                    return AICommandResponse(intent="chat", status="success", message=enhanced_msg)
+        except Exception as e:
+            logger.warning(f"[CHIP-IDIOMAS_FAIL] Fallback to GeneralChatProcessor: {e}")
+        # --- END OMNI_PATCH ---
+
         chat_proc = self.command_router.registry.get_processor("chat")
         if chat_proc:
              # Natural shaping: tell the processor to be a chatbot, not an operator.

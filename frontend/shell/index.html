@@ -34,6 +34,9 @@
     <link rel="stylesheet" href="/shell/debt_cockpit.css?v=v6_mobile_fix">
     <link rel="stylesheet" href="/shell/forensic_cockpit.css?v=v6_mobile_fix">
     <link rel="stylesheet" href="/shell/heatmap_view.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/wisdom_atlas.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/wisdom_reasoner.css?v=v6_mobile_fix">
+    <link rel="stylesheet" href="/shell/onboarding.css?v=v1_infra">
     <link rel="manifest" href="/shell/manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,7 +55,8 @@
         <div class="global-announcement-bar" id="global-announcement" style="display: none;">
             <div class="announcement-content">
                 <span class="announcement-icon">!</span>
-                <span id="announcement-text">Mantenimiento del sistema programado.</span>
+                <span id="announcement-text" data-i18n="shell.announcement.maintenance">Mantenimiento del sistema
+                    programado.</span>
             </div>
         </div>
 
@@ -63,8 +67,7 @@
                     <span class="status-dot online"></span>
                     <span>OmniWeb</span>
                     <span class="version-tag" id="sys-status-version">v0.0.0</span>
-                    <span id="creator-badge"
-                        style="display: none; margin-left: 6px; background: #32ff96; color: #000; padding: 0 5px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">CREATOR</span>
+                    <span id="creator-badge" class="mode-badge" style="display: none;">CREATOR</span>
                 </div>
                 <!-- Phase 31: Creator QR Scan Shortcut -->
                 <button class="qr-scan-btn" id="global-qr-scan" style="display:none; margin-left: 10px;">
@@ -75,7 +78,7 @@
                         <rect x="14" y="7" width="3" height="3" />
                         <rect x="7" y="14" width="3" height="1" />
                     </svg>
-                    <span>ESCANEAR ACCESO</span>
+                    <span data-i18n="shell.qr.access">ESCANEAR ACCESO</span>
                 </button>
                 <div class="status-pill">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -86,15 +89,15 @@
             </div>
             <div class="status-group">
                 <div class="status-pill">
-                    <span id="sys-chips-count">0</span> Chips
+                    <span id="sys-chips-count">0</span> <span data-i18n="shell.status.chips">Chips</span>
                 </div>
                 <div class="status-pill">
                     <span class="status-dot online" id="ai-indicator"></span>
-                    <span>AI: Active</span>
+                    <span data-i18n="shell.status.ai_ok">AI: Active</span>
                 </div>
                 <div class="status-pill">
                     <span class="status-dot online" id="db-indicator"></span>
-                    <span>DB: OK</span>
+                    <span data-i18n="shell.status.db_ok">DB: OK</span>
                 </div>
             </div>
             <!-- COGNITIVE OVERLAY HUD (Unidad 84: Always-On Status) -->
@@ -108,8 +111,18 @@
                     <div class="ai-orb-glow"></div>
                     <div class="orb-status-ring"></div>
                 </div>
-                <h1 class="greeting-text" id="greeting">Omni Shell</h1>
-                <p class="status-subtitle">System: Online | Context: Global</p>
+                <h1 class="greeting-text" id="greeting" data-i18n="shell.greeting.title">Omni Shell</h1>
+                <p class="status-subtitle" data-i18n="shell.greeting.subtitle">System: Online | Context: Global</p>
+
+                <!-- Block 01: Product Persona for Public Mode -->
+                <div class="public-persona-header" style="display: none;">
+                    <div class="persona-avatar">🌐</div>
+                    <div class="persona-details">
+                        <h2 style="font-family: 'Outfit'; margin: 0; font-size: 1.4rem;">Bienvenido a vuestro espacio
+                        </h2>
+                        <p style="opacity: 0.6; font-size: 0.8rem; margin: 4px 0;">Soberanía Digital | Omni v1.0</p>
+                    </div>
+                </div>
             </div>
 
             <div class="chat-interaction-area">
@@ -144,6 +157,40 @@
             <iframe id="chip-frame" src="" frameborder="0"></iframe>
         </section>
 
+        <!-- PERSONAL SPACE HOME (PUBLIC) -->
+        <main id="user-home-view">
+            <header class="home-header">
+                <div class="home-welcome">
+                    <h2 id="home-greeting">Bienvenido a vuestro espacio</h2>
+                    <p id="home-space-id" style="opacity: 0.5; font-size: 0.7rem; font-family: monospace;">SPACE_ID: --
+                    </p>
+                </div>
+                <div class="home-stats">
+                    <div class="home-stat-pill">
+                        <span id="home-artifact-count">0</span>
+                        <label>Resultados</label>
+                    </div>
+                </div>
+            </header>
+
+            <section class="artifact-gallery">
+                <div class="gallery-filters">
+                    <button class="filter-btn active">Todos</button>
+                    <button class="filter-btn">Imágenes</button>
+                    <button class="filter-btn">Documentos</button>
+                </div>
+
+                <div id="artifact-grid" class="artifact-grid">
+                    <!-- Cards will be injected here -->
+                    <div class="gallery-empty">
+                        <div class="empty-icon">📂</div>
+                        <p>Aún no tienes resultados generados.</p>
+                        <span>Tus creaciones aparecerán aquí automáticamente.</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
         <!-- MISSION CONTROL (COCKPIT) -->
         <main id="mission-control-view">
             <header class="cockpit-header">
@@ -155,19 +202,19 @@
                     <button class="cockpit-tab" data-tab="fixes">Auto-Healing</button>
                     <button class="cockpit-tab" data-tab="insights">Insights</button>
                     <button class="cockpit-tab" data-tab="security">Security</button>
-                    <button class="cockpit-tab" data-tab="admin">Admin Ops</button>
-                    <button class="cockpit-tab" data-tab="creator">Creator Plane</button>
-                    <button class="cockpit-tab" data-tab="cluster">Cluster</button>
-                    <button class="cockpit-tab" data-tab="mesh">Mesh</button>
+                    <button class="cockpit-tab admin-only" data-tab="admin">Admin Ops</button>
+                    <button class="cockpit-tab creator-only" data-tab="creator">Creator Plane</button>
+                    <button class="cockpit-tab admin-only" data-tab="cluster">Cluster</button>
+                    <button class="cockpit-tab admin-only" data-tab="mesh">Mesh</button>
                     <button class="cockpit-tab" data-tab="autonomous">Autonomous</button>
                     <button class="cockpit-tab" data-tab="runtime">Boot Runtime</button>
-                    <button class="cockpit-tab" data-tab="storage">Storage Grid</button>
+                    <button class="cockpit-tab admin-only" data-tab="storage">Storage Grid</button>
                     <button class="cockpit-tab" data-tab="knowledge">Knowledge Explorer</button>
                     <button class="cockpit-tab" data-tab="learning">Learning Paths</button>
                     <button class="cockpit-tab" data-tab="certs">Certifications</button>
                     <button class="cockpit-tab" data-tab="opportunities">Opportunities</button>
                     <button class="cockpit-tab" data-tab="collab">Collaborative Projects</button>
-                    <button class="cockpit-tab" data-tab="labs">Creator Labs</button>
+                    <button class="cockpit-tab creator-only" data-tab="labs">Creator Labs</button>
                     <button class="cockpit-tab" data-tab="market">Knowledge Market</button>
                     <button class="cockpit-tab" data-tab="mentor">AI Mentor</button>
                     <button class="cockpit-tab" data-tab="omniverse">Omniverse Gate</button>
@@ -181,10 +228,13 @@
                     <button class="cockpit-tab" data-tab="integration">Integration</button>
                     <button class="cockpit-tab" data-tab="copilot">AI Copilot</button>
                     <button class="cockpit-tab" data-tab="qr_gateway">QR Gateway</button>
-                    <button class="cockpit-tab" data-tab="governance">Governance</button>
+                    <button class="cockpit-tab" data-tab="connectors">Connectors & Spaces</button>
+                    <button class="cockpit-tab admin-only" data-tab="governance">Governance</button>
+                    <button class="cockpit-tab" data-tab="wisdom">Wisdom Atlas</button>
                     <button class="cockpit-tab" data-tab="sync">Device Sync</button>
-                    <button class="cockpit-tab" data-tab="editor">Code Editor</button>
-                    <button class="cockpit-tab" data-tab="code">System Modules</button>
+                    <button class="cockpit-tab creator-only" data-tab="editor">Code Editor</button>
+                    <button class="cockpit-tab creator-only" data-tab="code">System Modules</button>
+                    <button class="cockpit-tab creator-only" data-tab="audit">Audit Summary</button>
                 </div>
             </header>
 
@@ -195,469 +245,500 @@
             </div>
         </main>
 
-        <!-- NEW 4-PANEL CREATOR WORKSPACE -->
-        <main id="creator-workspace-view">
-            <header class="workspace-header">
-                <div class="workspace-title">
-                    <span class="creator-icon">⚛️</span>
-                    <h2>CREATOR WORKSPACE</h2>
+        <!-- ARTIFACT PREVIEW MODAL -->
+        <div id="artifact-preview-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-container preview-container">
+                <header class="modal-header">
+                    <h3 id="preview-filename">Archivo.txt</h3>
+                    <div class="modal-actions">
+                        <button class="btn-close" onclick="creatorEnv.closeArtifactPreview()">✕</button>
+                    </div>
+                </header>
+                <div id="preview-content" class="preview-content-body">
+                    <!-- Content injected here -->
                 </div>
-                <div class="workspace-controls" id="workspace-toggles">
-                    <button class="ws-toggle active" data-panel="editor" title="Toggle Editor">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
-                        <span>EDITOR</span>
+            </div>
+        </div>
+
+        <!-- OMNI WORKSPACE CANVAS (V1.1 Spatial Foundation) -->
+        <div id="omni-workspace-canvas" class="workspace-canvas" style="display: none;">
+            <!-- Panes will be spawned here -->
+        </div>
+    </div>
+    </main>
+
+    <!-- NEW 4-PANEL CREATOR WORKSPACE -->
+    <main id="creator-workspace-view">
+        <header class="workspace-header">
+            <div class="workspace-title">
+                <span class="creator-icon">⚛️</span>
+                <h2>CREATOR WORKSPACE</h2>
+            </div>
+            <div class="workspace-controls" id="workspace-toggles">
+                <button class="ws-toggle active" data-panel="editor" title="Toggle Editor">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                    <span>EDITOR</span>
+                </button>
+                <button class="ws-toggle active" data-panel="copilot" title="Toggle Copilot">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 8V4H8" />
+                        <rect x="4" y="8" width="16" height="12" rx="2" />
+                        <path d="M12 12v4" />
+                        <path d="M16 12v4" />
+                    </svg>
+                    <span>COPILOT</span>
+                </button>
+                <button class="ws-toggle active" data-panel="changes" title="Toggle Changes">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="12" x2="2" y2="12" />
+                        <path
+                            d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                    </svg>
+                    <span>CHANGES</span>
+                </button>
+                <button class="ws-toggle active" data-panel="backend" title="Toggle Backend">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                        </path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    <span>BACKEND</span>
+                </button>
+                <button class="ws-toggle active" data-panel="mission" title="Toggle Mission">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    <span>MISSION</span>
+                </button>
+                <button class="ws-toggle active" id="ws-toggle-portfolio" data-panel="portfolio"
+                    title="Toggle Portfolio">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="3" y1="15" x2="21" y2="15"></line>
+                        <line x1="9" y1="9" x2="9" y2="21"></line>
+                    </svg>
+                    <span>PORTFOLIO</span>
+                </button>
+                <button class="ws-toggle active" id="ws-toggle-intake" data-panel="intake" title="Toggle Intake">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>INTAKE</span>
+                </button>
+                <div class="ws-divider"></div>
+                <button class="ws-nav-btn" id="ws-nav-preview" title="Exit to Preview Shell"
+                    onclick="creatorEnv.closeWorkspaceAndGoToMain()"
+                    style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.3s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+                    onmouseout="this.style.background='transparent'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span style="vertical-align: middle;">PREVIEW</span>
+                </button>
+                <button class="ws-nav-btn" id="ws-nav-pizarron" title="Mission Dashboard"
+                    onclick="creatorEnv.openWorkspace('mission')"
+                    style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.4); color: var(--creator-gold); padding: 5px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-right: 8px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="3" x2="9" y2="21"></line>
+                    </svg>
+                    <span style="vertical-align: middle;">MISSION</span>
+                </button>
+                <button class="ws-close-btn" id="close-workspace" title="Exit Workspace">✕</button>
+            </div>
+        </header>
+
+        <div class="workspace-grid" id="creator-grid">
+            <!-- Panel 1: EDITOR (Top Left) -->
+            <section class="ws-panel active" id="ws-panel-editor" data-panel="editor">
+                <div class="panel-label">EDITOR</div>
+                <div class="ws-panel-content editor-inner">
+                    <div class="editor-toolbar">
+                        <input type="text" id="ws-editor-path" placeholder="path/to/file.py" class="ws-input">
+                        <button class="ws-btn" id="ws-editor-open">OPEN</button>
+                        <button class="ws-btn ws-btn-save" id="ws-editor-propose">PROPOSE</button>
+                    </div>
+                    <textarea id="ws-editor-content" class="ws-textarea" spellcheck="false"></textarea>
+                </div>
+            </section>
+
+            <!-- Panel 3: BACKEND (Top Right) -->
+            <section class="ws-panel active" id="ws-panel-backend" data-panel="backend">
+                <div class="panel-label">BACKEND</div>
+                <div class="ws-panel-content backend-inner"
+                    style="background: rgba(0,0,0,0.3); padding: 15px; font-size: 0.85rem; color: #a0aab5; overflow-y: auto;">
+                    <h4 style="color: var(--creator-gold); margin-bottom: 10px; font-family: 'Outfit';">Runtime
+                        State</h4>
+                    <div id="ws-backend-state">
+                        <p>Loading internal telemetry...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel 2: COPILOT (Bottom Left) -->
+            <section class="ws-panel active" id="ws-panel-copilot" data-panel="copilot">
+                <div class="panel-label">
+                    <span>COPILOT</span>
+                    <button class="ws-btn-mini" id="ws-copilot-mode-toggle" title="Switch to Megaprompt Mode"
+                        style="margin-left: auto; background: rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.3); color: var(--creator-gold); font-size: 0.6rem; padding: 2px 6px;">
+                        MEGAPROMPT
                     </button>
-                    <button class="ws-toggle active" data-panel="copilot" title="Toggle Copilot">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M12 8V4H8" />
-                            <rect x="4" y="8" width="16" height="12" rx="2" />
-                            <path d="M12 12v4" />
-                            <path d="M16 12v4" />
-                        </svg>
-                        <span>COPILOT</span>
-                    </button>
-                    <button class="ws-toggle active" data-panel="changes" title="Toggle Changes">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <line x1="22" y1="12" x2="2" y2="12" />
-                            <path
-                                d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                        </svg>
-                        <span>CHANGES</span>
-                    </button>
-                    <button class="ws-toggle active" data-panel="backend" title="Toggle Backend">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path
-                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                            </path>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                        </svg>
-                        <span>BACKEND</span>
-                    </button>
-                    <button class="ws-toggle active" data-panel="mission" title="Toggle Mission">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                </div>
+                <div class="ws-panel-content copilot-inner">
+                    <div class="copilot-output" id="ws-copilot-log">
+                        <div class="copilot-msg system">Ready for analysis. Context: Active Editor File.</div>
+                    </div>
+                    <div class="copilot-input-area" id="ws-copilot-input-container">
+                        <textarea id="ws-copilot-input" placeholder="Ask Copilot (e.g. 'Analizá este archivo')"
+                            rows="2"></textarea>
+                        <div class="copilot-actions" style="display:flex; gap: 8px; margin-top: 8px;">
+                            <button class="ws-btn-primary" id="ws-copilot-send" style="flex:1;">ASK</button>
+                            <button class="ws-btn-primary" id="ws-copilot-compile"
+                                style="flex:1; display:none; background: linear-gradient(135deg, var(--creator-gold), #b38f00); border:none; color:#000;">COMPILE
+                                MISSION</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel 4: CHANGE PREVIEW (Bottom Right) -->
+            <section class="ws-panel active" id="ws-panel-changes" data-panel="changes">
+                <div class="panel-label">CHANGE PREVIEW</div>
+                <div class="ws-panel-content changes-inner">
+                    <div id="ws-change-header"
+                        style="margin-bottom: 10px; padding: 5px 10px; background: rgba(212, 175, 55, 0.05); border-radius: 4px; border: 1px solid rgba(212, 175, 55, 0.1); font-size: 0.7rem; color: var(--creator-gold); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div id="ws-change-file">FILE: No changes pending</div>
+                            <div id="ws-change-path" style="opacity: 0.6; font-size: 0.65rem; margin-top: 2px;">
+                                PATH: -</div>
+                            <div id="ws-change-status" style="font-size: 0.7rem; margin-top: 6px; font-weight: bold;">
+                                STATUS: <span style="opacity:0.5">STANDBY</span></div>
+                        </div>
+                        <div id="ws-change-actions" style="display: none; gap: 8px;">
+                            <button class="ws-btn" onclick="window.builderUI.decidePreview(false)"
+                                style="border-color: #ff5555; color: #ff5555; padding: 2px 8px; font-size: 0.6rem;">DESCARTAR</button>
+                            <button class="ws-btn ws-btn-save" onclick="window.builderUI.decidePreview(true)"
+                                style="padding: 2px 8px; font-size: 0.6rem;">APLICAR</button>
+                        </div>
+                    </div>
+                    <div class="monitor-logs" id="ws-monitor-logs"
+                        style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
+                        <div id="ws-diff-preview-content">
+                            <p style="opacity: 0.3; text-align: center; margin-top: 20px;">Propose a change to see
+                                the visual diff here.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel 5: MISSION DASHBOARD (New, Toggleable) -->
+            <section class="ws-panel" id="ws-panel-mission" data-panel="mission">
+                <div class="panel-label">MISSION DASHBOARD</div>
+                <div class="ws-panel-content mission-inner" id="ws-mission-mount"
+                    style="background: rgba(10, 10, 20, 0.3); overflow-y: auto;">
+                    <div class="loading-indicator">Cargando dashboard cognitivo...</div>
+                </div>
+            </section>
+
+            <!-- Panel 6: MISSION PORTFOLIO (Operational View) -->
+            <section class="ws-panel" id="ws-panel-portfolio" data-panel="portfolio">
+                <div class="panel-label">MISSION PORTFOLIO</div>
+                <div class="ws-panel-content portfolio-inner" id="ws-portfolio-mount"
+                    style="background: rgba(5, 5, 10, 0.4); overflow-y: auto; padding: 0;">
+                    <div class="loading-indicator">Agregando cartera de misiones...</div>
+                </div>
+            </section>
+
+            <!-- Panel 7: MISSION INTAKE (Command Console) -->
+            <section class="ws-panel" id="ws-panel-intake" data-panel="intake">
+                <div class="panel-label">MISSION INTAKE</div>
+                <div class="ws-panel-content intake-inner" id="ws-intake-mount"
+                    style="background: rgba(15, 20, 30, 0.4); overflow-y: auto; padding: 20px;">
+                    <div class="intake-placeholder" style="text-align: center; opacity: 0.3; margin-top: 40px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1" style="margin-bottom: 20px;">
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                         </svg>
-                        <span>MISSION</span>
-                    </button>
-                    <button class="ws-toggle active" id="ws-toggle-portfolio" data-panel="portfolio"
-                        title="Toggle Portfolio">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="3" y1="9" x2="21" y2="9"></line>
-                            <line x1="3" y1="15" x2="21" y2="15"></line>
-                            <line x1="9" y1="9" x2="9" y2="21"></line>
-                        </svg>
-                        <span>PORTFOLIO</span>
-                    </button>
-                    <button class="ws-toggle active" id="ws-toggle-intake" data-panel="intake" title="Toggle Intake">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                        <span>INTAKE</span>
-                    </button>
-                    <div class="ws-divider"></div>
-                    <button class="ws-nav-btn" id="ws-nav-preview" title="Exit to Preview Shell"
-                        onclick="creatorEnv.closeWorkspaceAndGoToMain()"
-                        style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.3s;"
-                        onmouseover="this.style.background='rgba(255,255,255,0.1)'"
-                        onmouseout="this.style.background='transparent'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                        <span style="vertical-align: middle;">PREVIEW</span>
-                    </button>
-                    <button class="ws-nav-btn" id="ws-nav-pizarron" title="Mission Dashboard"
-                        onclick="creatorEnv.openWorkspace('mission')"
-                        style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.4); color: var(--creator-gold); padding: 5px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-right: 8px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="9" y1="3" x2="9" y2="21"></line>
-                        </svg>
-                        <span style="vertical-align: middle;">MISSION</span>
-                    </button>
-                    <button class="ws-close-btn" id="close-workspace" title="Exit Workspace">✕</button>
-                </div>
-            </header>
-
-            <div class="workspace-grid" id="creator-grid">
-                <!-- Panel 1: EDITOR (Top Left) -->
-                <section class="ws-panel active" id="ws-panel-editor" data-panel="editor">
-                    <div class="panel-label">EDITOR</div>
-                    <div class="ws-panel-content editor-inner">
-                        <div class="editor-toolbar">
-                            <input type="text" id="ws-editor-path" placeholder="path/to/file.py" class="ws-input">
-                            <button class="ws-btn" id="ws-editor-open">OPEN</button>
-                            <button class="ws-btn ws-btn-save" id="ws-editor-propose">PROPOSE</button>
-                        </div>
-                        <textarea id="ws-editor-content" class="ws-textarea" spellcheck="false"></textarea>
-                    </div>
-                </section>
-
-                <!-- Panel 3: BACKEND (Top Right) -->
-                <section class="ws-panel active" id="ws-panel-backend" data-panel="backend">
-                    <div class="panel-label">BACKEND</div>
-                    <div class="ws-panel-content backend-inner"
-                        style="background: rgba(0,0,0,0.3); padding: 15px; font-size: 0.85rem; color: #a0aab5; overflow-y: auto;">
-                        <h4 style="color: var(--creator-gold); margin-bottom: 10px; font-family: 'Outfit';">Runtime
-                            State</h4>
-                        <div id="ws-backend-state">
-                            <p>Loading internal telemetry...</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Panel 2: COPILOT (Bottom Left) -->
-                <section class="ws-panel active" id="ws-panel-copilot" data-panel="copilot">
-                    <div class="panel-label">
-                        <span>COPILOT</span>
-                        <button class="ws-btn-mini" id="ws-copilot-mode-toggle" title="Switch to Megaprompt Mode"
-                            style="margin-left: auto; background: rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.3); color: var(--creator-gold); font-size: 0.6rem; padding: 2px 6px;">
-                            MEGAPROMPT
-                        </button>
-                    </div>
-                    <div class="ws-panel-content copilot-inner">
-                        <div class="copilot-output" id="ws-copilot-log">
-                            <div class="copilot-msg system">Ready for analysis. Context: Active Editor File.</div>
-                        </div>
-                        <div class="copilot-input-area" id="ws-copilot-input-container">
-                            <textarea id="ws-copilot-input" placeholder="Ask Copilot (e.g. 'Analizá este archivo')"
-                                rows="2"></textarea>
-                            <div class="copilot-actions" style="display:flex; gap: 8px; margin-top: 8px;">
-                                <button class="ws-btn-primary" id="ws-copilot-send" style="flex:1;">ASK</button>
-                                <button class="ws-btn-primary" id="ws-copilot-compile"
-                                    style="flex:1; display:none; background: linear-gradient(135deg, var(--creator-gold), #b38f00); border:none; color:#000;">COMPILE
-                                    MISSION</button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Panel 4: CHANGE PREVIEW (Bottom Right) -->
-                <section class="ws-panel active" id="ws-panel-changes" data-panel="changes">
-                    <div class="panel-label">CHANGE PREVIEW</div>
-                    <div class="ws-panel-content changes-inner">
-                        <div id="ws-change-header"
-                            style="margin-bottom: 10px; padding: 5px 10px; background: rgba(212, 175, 55, 0.05); border-radius: 4px; border: 1px solid rgba(212, 175, 55, 0.1); font-size: 0.7rem; color: var(--creator-gold); display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div id="ws-change-file">FILE: No changes pending</div>
-                                <div id="ws-change-path" style="opacity: 0.6; font-size: 0.65rem; margin-top: 2px;">
-                                    PATH: -</div>
-                                <div id="ws-change-status"
-                                    style="font-size: 0.7rem; margin-top: 6px; font-weight: bold;">STATUS: <span
-                                        style="opacity:0.5">STANDBY</span></div>
-                            </div>
-                            <div id="ws-change-actions" style="display: none; gap: 8px;">
-                                <button class="ws-btn" onclick="window.builderUI.decidePreview(false)"
-                                    style="border-color: #ff5555; color: #ff5555; padding: 2px 8px; font-size: 0.6rem;">DESCARTAR</button>
-                                <button class="ws-btn ws-btn-save" onclick="window.builderUI.decidePreview(true)"
-                                    style="padding: 2px 8px; font-size: 0.6rem;">APLICAR</button>
-                            </div>
-                        </div>
-                        <div class="monitor-logs" id="ws-monitor-logs"
-                            style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
-                            <div id="ws-diff-preview-content">
-                                <p style="opacity: 0.3; text-align: center; margin-top: 20px;">Propose a change to see
-                                    the visual diff here.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Panel 5: MISSION DASHBOARD (New, Toggleable) -->
-                <section class="ws-panel" id="ws-panel-mission" data-panel="mission">
-                    <div class="panel-label">MISSION DASHBOARD</div>
-                    <div class="ws-panel-content mission-inner" id="ws-mission-mount"
-                        style="background: rgba(10, 10, 20, 0.3); overflow-y: auto;">
-                        <div class="loading-indicator">Cargando dashboard cognitivo...</div>
-                    </div>
-                </section>
-
-                <!-- Panel 6: MISSION PORTFOLIO (Operational View) -->
-                <section class="ws-panel" id="ws-panel-portfolio" data-panel="portfolio">
-                    <div class="panel-label">MISSION PORTFOLIO</div>
-                    <div class="ws-panel-content portfolio-inner" id="ws-portfolio-mount"
-                        style="background: rgba(5, 5, 10, 0.4); overflow-y: auto; padding: 0;">
-                        <div class="loading-indicator">Agregando cartera de misiones...</div>
-                    </div>
-                </section>
-
-                <!-- Panel 7: MISSION INTAKE (Command Console) -->
-                <section class="ws-panel" id="ws-panel-intake" data-panel="intake">
-                    <div class="panel-label">MISSION INTAKE</div>
-                    <div class="ws-panel-content intake-inner" id="ws-intake-mount"
-                        style="background: rgba(15, 20, 30, 0.4); overflow-y: auto; padding: 20px;">
-                        <div class="intake-placeholder" style="text-align: center; opacity: 0.3; margin-top: 40px;">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="1" style="margin-bottom: 20px;">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                            </svg>
-                            <p>Esperando propuesta de misión...</p>
-                        </div>
-                    </div>
-                    <!-- Panel 8: COGNITIVE ROADMAP (Strategic View) -->
-                    <section class="ws-panel" id="ws-panel-roadmap" data-panel="roadmap">
-                        <div class="panel-label">COGNITIVE ROADMAP</div>
-                        <div class="ws-panel-content roadmap-inner" id="ws-roadmap-mount"
-                            style="background: rgba(10, 10, 20, 0.5); overflow-y: auto; padding: 0;">
-                            <div class="loading-indicator">Agregando hoja de ruta estratégica...</div>
-                        </div>
-                    </section>
-            </div>
-        </main>
-
-        <!-- CONTEXT PANEL (OVERLAY) -->
-        <aside id="context-panel">
-            <div class="panel-handle"></div>
-            <header class="panel-header">
-                <button class="close-panel" id="close-context">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                </button>
-                <h2>System Inspection</h2>
-            </header>
-            <div class="panel-content">
-                <div class="context-section">
-                    <h3>Loaded Chips</h3>
-                    <div class="chip-status-list" id="chip-status-container">
-                        <!-- Dynamic chip status cards -->
-                        <div class="loading-indicator">Escaneando módulos de IA...</div>
+                        <p>Esperando propuesta de misión...</p>
                     </div>
                 </div>
-                <div class="context-section">
-                    <h3>Capacidades del Sistema</h3>
-                    <div class="capability-item" id="cap-sound">
-                        <span class="label">Sonido</span>
-                        <span class="status info">...</span>
+                <!-- Panel 8: COGNITIVE ROADMAP (Strategic View) -->
+                <section class="ws-panel" id="ws-panel-roadmap" data-panel="roadmap">
+                    <div class="panel-label">COGNITIVE ROADMAP</div>
+                    <div class="ws-panel-content roadmap-inner" id="ws-roadmap-mount"
+                        style="background: rgba(10, 10, 20, 0.5); overflow-y: auto; padding: 0;">
+                        <div class="loading-indicator">Agregando hoja de ruta estratégica...</div>
                     </div>
-                    <div class="capability-item" id="cap-mic">
-                        <span class="label">Micrófono</span>
-                        <span class="status info">...</span>
-                    </div>
-                    <div class="capability-item" id="cap-camera">
-                        <span class="label">Cámara</span>
-                        <span class="status info">...</span>
-                    </div>
-                    <div class="capability-item" id="cap-geo">
-                        <span class="label">Ubicación</span>
-                        <span class="status info">...</span>
-                    </div>
-                </div>
-                <div class="context-section">
-                    <h3>Métricas del Host</h3>
-                    <div class="context-item">
-                        <span class="label">Lógica de IA</span>
-                        <span class="value">Hybrid / Neural</span>
-                    </div>
-                    <div class="context-item">
-                        <span class="label">Bucle de Contexto</span>
-                        <span class="value">Activo</span>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- SHELL NAVIGATION (BOTTOM NAV) -->
-        <nav id="bottom-nav">
-            <button class="nav-item active" data-view="chat">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>Chat</span>
-            </button>
-
-            <button class="nav-item" data-view="workspace">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7" />
-                    <rect x="14" y="3" width="7" height="7" />
-                    <rect x="14" y="14" width="7" height="7" />
-                    <rect x="3" y="14" width="7" height="7" />
-                </svg>
-                <span>Creator</span>
-            </button>
-
-            <button class="nav-item shell-launcher" id="open-launcher">
-                <div class="launcher-icon">
-                    <span></span><span></span><span></span><span></span>
-                </div>
-            </button>
-
-            <button class="nav-item" data-view="context">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
-                    <path d="M12 12L2.7 16.5" />
-                    <path d="M12 12l7.5 7.5" />
-                </svg>
-                <span>Chips</span>
-            </button>
-
-            <button class="nav-item" data-view="mission">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="2" width="20" height="8" rx="2" />
-                    <rect x="2" y="14" width="20" height="8" rx="2" />
-                    <line x1="6" y1="6" x2="6" y2="6" />
-                    <line x1="6" y1="18" x2="6" y2="18" />
-                </svg>
-                <span>Mission</span>
-            </button>
-
-            <button class="nav-item" onclick="masterLogbook.toggle()">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                </svg>
-                <span>Logbook</span>
-            </button>
-        </nav>
-
-        <!-- CANONICAL CREATOR TOOLBAR (Phase 36 Restore) -->
-        <div id="creator-toolbar" class="creator-floating-toolbar">
-            <button id="toolbar-editor" title="Editor" onclick="creatorEnv.openWorkspace('editor')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                <span>Editor</span>
-            </button>
-            <button id="toolbar-copilot" title="Copilot" onclick="creatorEnv.openWorkspace('copilot')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 8V4H8" />
-                    <rect x="4" y="8" width="16" height="12" rx="2" />
-                    <path d="M12 12v4" />
-                    <path d="M16 12v4" />
-                </svg>
-                <span>Copilot</span>
-            </button>
-            <button id="toolbar-preview" title="Preview" onclick="creatorEnv.closeWorkspaceAndGoToMain()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
-                <span>Preview</span>
-            </button>
-            <button id="toolbar-backend" title="Backend" onclick="creatorEnv.openWorkspace('backend')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path
-                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                    </path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-                <span>Backend</span>
-            </button>
-            <button id="toolbar-roadmap" title="Roadmap" onclick="creatorEnv.openWorkspace('roadmap')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 3v18h18" />
-                    <path d="M18 9l-6 6-2-2-4 4" />
-                </svg>
-                <span>Roadmap</span>
-            </button>
-            <button id="toolbar-reload" title="Reload">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6" />
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                <span>Reload</span>
-            </button>
+                </section>
         </div>
+    </main>
 
-        <!-- LAUNCHER OVERLAY -->
-        <div id="launcher-overlay">
-            <div class="launcher-header">
-                <h2>Galactic Launcher</h2>
-                <button id="close-launcher" class="close-overlay-btn">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                </button>
+    <!-- CONTEXT PANEL (OVERLAY) -->
+    <aside id="context-panel">
+        <div class="panel-handle"></div>
+        <header class="panel-header">
+            <button class="close-panel" id="close-context">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+            </button>
+            <h2>System Inspection</h2>
+        </header>
+        <div class="panel-content">
+            <div class="context-section">
+                <h3>Loaded Chips</h3>
+                <div class="chip-status-list" id="chip-status-container">
+                    <!-- Dynamic chip status cards -->
+                    <div class="loading-indicator">Escaneando módulos de IA...</div>
+                </div>
             </div>
-            <div class="launcher-grid">
-                <div class="chip-launcher-item" data-chip="copilot" data-view="mission">
-
-                    <div class="chip-icon" style="background: rgba(0, 212, 255, 0.2); border-color: var(--accent);">
-                        🤖
-                    </div>
-                    <span class="chip-label">AI Copilot</span>
+            <div class="context-section">
+                <h3>Capacidades del Sistema</h3>
+                <div class="capability-item" id="cap-sound">
+                    <span class="label">Sonido</span>
+                    <span class="status info">...</span>
                 </div>
-                <div class="chip-launcher-item disabled" data-chip="lingua"
-                    title="Módulo desactivado (Aislamiento framework conflictivo)">
-                    <div class="chip-icon lingua" style="opacity: 0.5;">L</div>
-                    <span class="chip-label" style="opacity: 0.5;">Lingua (Off)</span>
+                <div class="capability-item" id="cap-mic">
+                    <span class="label">Micrófono</span>
+                    <span class="status info">...</span>
                 </div>
-                <div class="chip-launcher-item" data-chip="finanzas" data-url="/finanzas/">
-                    <div class="chip-icon finanzas">F</div>
-                    <span class="chip-label">Finanzas</span>
+                <div class="capability-item" id="cap-camera">
+                    <span class="label">Cámara</span>
+                    <span class="status info">...</span>
                 </div>
-                <div class="chip-launcher-item disabled">
-                    <div class="chip-icon empty">+</div>
-                    <span class="chip-label">More</span>
+                <div class="capability-item" id="cap-geo">
+                    <span class="label">Ubicación</span>
+                    <span class="status info">...</span>
+                </div>
+            </div>
+            <div class="context-section">
+                <h3>Métricas del Host</h3>
+                <div class="context-item">
+                    <span class="label">Lógica de IA</span>
+                    <span class="value">Hybrid / Neural</span>
+                </div>
+                <div class="context-item">
+                    <span class="label">Bucle de Contexto</span>
+                    <span class="value">Activo</span>
                 </div>
             </div>
         </div>
+    </aside>
 
-        <!-- Phase 32: Multimodal Evidence Panel -->
-        <div id="shell-media-evidence" class="media-evidence-panel">
-            <div class="evidence-header">
-                <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="margin-right:5px;">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <path d="M21 15l-5-5L5 21" />
-                    </svg> EVIDENCE BATCH</h4>
-                <div style="display:flex; gap: 8px;">
-                    <span class="evidence-count" id="shell-media-count">0</span>
-                    <button class="upload-trigger-btn" onclick="creatorEnv.clearMedia()">CLEAR</button>
-                </div>
+    <!-- SHELL NAVIGATION (BOTTOM NAV) -->
+    <nav id="bottom-nav">
+        <button class="nav-item active" data-view="chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span data-i18n="shell.nav.chat">Chat</span>
+        </button>
+
+        <button class="nav-item creator-only" data-view="workspace">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            <span data-i18n="shell.nav.workspace">Creator</span>
+        </button>
+
+        <button class="nav-item user-only" data-view="home" title="Inicio" style="display: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span>Inicio</span>
+        </button>
+
+        <button class="nav-item shell-launcher" id="open-launcher">
+            <div class="launcher-icon">
+                <span></span><span></span><span></span><span></span>
             </div>
-            <div class="evidence-grid" id="shell-media-grid"></div>
+        </button>
+
+        <button class="nav-item internal-only" data-view="context">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+                <path d="M12 12L2.7 16.5" />
+                <path d="M12 12l7.5 7.5" />
+            </svg>
+            <span data-i18n="shell.nav.chips">Chips</span>
+        </button>
+
+        <button class="nav-item admin-only" data-view="mission">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="8" rx="2" />
+                <rect x="2" y="14" width="20" height="8" rx="2" />
+                <line x1="6" y1="6" x2="6" y2="6" />
+                <line x1="6" y1="18" x2="6" y2="18" />
+            </svg>
+            <span data-i18n="shell.nav.mission">Mission</span>
+        </button>
+
+        <button class="nav-item internal-only" onclick="masterLogbook.toggle()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            <span data-i18n="shell.nav.logbook">Logbook</span>
+        </button>
+    </nav>
+
+    <!-- CANONICAL CREATOR TOOLBAR (Phase 36 Restore) -->
+    <div id="creator-toolbar" class="creator-floating-toolbar creator-only">
+        <button id="toolbar-editor" title="Editor" onclick="creatorEnv.openWorkspace('editor')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>Editor</span>
+        </button>
+        <button id="toolbar-copilot" title="Copilot" onclick="creatorEnv.openWorkspace('copilot')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8V4H8" />
+                <rect x="4" y="8" width="16" height="12" rx="2" />
+                <path d="M12 12v4" />
+                <path d="M16 12v4" />
+            </svg>
+            <span>Copilot</span>
+        </button>
+        <button id="toolbar-preview" title="Preview" onclick="creatorEnv.closeWorkspaceAndGoToMain()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Preview</span>
+        </button>
+        <button id="toolbar-backend" title="Backend" onclick="creatorEnv.openWorkspace('backend')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                </path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <span>Backend</span>
+        </button>
+        <button id="toolbar-roadmap" title="Roadmap" onclick="creatorEnv.openWorkspace('roadmap')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18" />
+                <path d="M18 9l-6 6-2-2-4 4" />
+            </svg>
+            <span>Roadmap</span>
+        </button>
+        <button id="toolbar-reload" title="Reload">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            <span>Reload</span>
+        </button>
+    </div>
+
+    <!-- LAUNCHER OVERLAY -->
+    <div id="launcher-overlay">
+        <div class="launcher-header">
+            <h2>Galactic Launcher</h2>
+            <button id="close-launcher" class="close-overlay-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
         </div>
+        <div class="launcher-grid">
+            <div class="chip-launcher-item" data-chip="copilot" data-view="mission">
 
-        <form id="shell-input-form" class="input-bar" onsubmit="return false;">
-            <input type="file" id="global-media-upload" multiple accept="image/*,video/*" style="display:none;"
-                onchange="creatorEnv.handleMediaUpload(this)">
-            <button type="button" id="media-upload-trigger"
-                onclick="document.getElementById('global-media-upload').click()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12" />
-                </svg>
-            </button>
-            <input type="text" placeholder="Preguntame algo..." id="shell-input" autocomplete="off">
-            <button type="button" id="voice-command">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-            </button>
-            <button type="submit" id="send-command">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                </svg>
-            </button>
-        </form>
+                <div class="chip-icon" style="background: rgba(0, 212, 255, 0.2); border-color: var(--accent);">
+                    🤖
+                </div>
+                <span class="chip-label">AI Copilot</span>
+            </div>
+            <div class="chip-launcher-item disabled" data-chip="lingua"
+                title="Módulo desactivado (Aislamiento framework conflictivo)">
+                <div class="chip-icon lingua" style="opacity: 0.5;">L</div>
+                <span class="chip-label" style="opacity: 0.5;">Lingua (Off)</span>
+            </div>
+            <div class="chip-launcher-item" data-chip="finanzas" data-url="/finanzas/">
+                <div class="chip-icon finanzas">F</div>
+                <span class="chip-label">Finanzas</span>
+            </div>
+            <div class="chip-launcher-item active-orchestrator" data-chip="idiomas"
+                title="Activa la fase charlable y orquesta el dominio lingüístico bajo control soberano."
+                style="cursor: default;">
+                <div class="chip-icon"
+                    style="background: rgba(212, 175, 55, 0.15); border-color: var(--creator-gold); color: var(--creator-gold); box-shadow: 0 0 10px rgba(212,175,55,0.2);">
+                    I</div>
+                <span class="chip-label" style="color: var(--creator-gold);">Idiomas (V1)</span>
+            </div>
+            <div class="chip-launcher-item disabled">
+                <div class="chip-icon empty">+</div>
+                <span class="chip-label">More</span>
+            </div>
+        </div>
+    </div>
 
-        <!-- LEGACY CREATOR OVERLAY PANELS REMOVED FOR WORKSPACE V1 CLEANUP -->
+    <!-- Phase 32: Multimodal Evidence Panel -->
+    <div id="shell-media-evidence" class="media-evidence-panel">
+        <div class="evidence-header">
+            <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="margin-right:5px;">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                </svg> EVIDENCE BATCH</h4>
+            <div style="display:flex; gap: 8px;">
+                <span class="evidence-count" id="shell-media-count">0</span>
+                <button class="upload-trigger-btn" onclick="creatorEnv.clearMedia()">CLEAR</button>
+            </div>
+        </div>
+        <div class="evidence-grid" id="shell-media-grid"></div>
+    </div>
+
+    <form id="shell-input-form" class="input-bar" onsubmit="return false;">
+        <input type="file" id="global-media-upload" multiple accept="image/*,video/*" style="display:none;"
+            onchange="creatorEnv.handleMediaUpload(this)">
+        <button type="button" id="media-upload-trigger"
+            onclick="document.getElementById('global-media-upload').click()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12" />
+            </svg>
+        </button>
+        <input type="text" placeholder="Preguntame algo..." id="shell-input" autocomplete="off"
+            data-i18n-attr="placeholder:shell.input.placeholder">
+        <button type="button" id="voice-command">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+        </button>
+        <button type="submit" id="send-command">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+        </button>
+    </form>
+
+    <!-- LEGACY CREATOR OVERLAY PANELS REMOVED FOR WORKSPACE V1 CLEANUP -->
     </div>
 
     <!-- COGNITIVE AUDIT DRAWER (ADDITIVE) -->
@@ -732,6 +813,9 @@
         </div>
     </div>
 
+    <script src="/shell/surface_mode_controller.js"></script>
+    <script src="/shell/public_normalizer.js"></script>
+    <script src="/shell/workspace_manager.js"></script>
     <script src="/shell/voice.js?v=v7_nav_hardening"></script>
     <script src="/shell/builder.js?v=v7_nav_hardening"></script>
     <script src="/shell/galaxy.js?v=v7_nav_hardening"></script>
@@ -741,6 +825,9 @@
     <script src="/shell/scheduler_ui.js?v=v7_nav_hardening"></script>
     <script src="/shell/pizarron_vivo.js?v=v7_nav_hardening"></script>
     <script src="/shell/roadmap_ui.js?v=v7_nav_hardening"></script>
+    <script src="/shell/wisdom_atlas.js?v=v7_nav_hardening"></script>
+    <script src="/shell/wisdom_reasoner.js?v=v7_nav_hardening"></script>
+    <script src="/shell/wisdom_graph.js?v=v7_nav_hardening"></script>
     <script src="/shell/main.js?v=v7_nav_hardening"></script>
 
 </body>

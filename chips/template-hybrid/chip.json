@@ -1,0 +1,16 @@
+{
+    "id": "chip-template",
+    "slug": "template",
+    "name": "Chip Template",
+    "description": "Plantilla base para nuevos chips híbridos naturalizados",
+    "version": "1.0.0",
+    "type": "hybrid",
+    "has_frontend": true,
+    "has_backend": true,
+    "entry_frontend": "frontend/index.html",
+    "dashboard_visible": true,
+    "active": true,
+    "permissions": [
+        "db_access"
+    ]
+}

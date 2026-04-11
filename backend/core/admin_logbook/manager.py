@@ -12,14 +12,32 @@ class AdminManager:
     Manages operational logs, AI suggestions review, and system rollbacks.
     """
 
-    def log_operation(self, admin_id: str, op_type: str, target: str, details: Dict[str, Any]):
-        with db_manager.get_connection() as conn:
+    def log_operation(
+        self, 
+        user_id: str, 
+        user_mode: str, 
+        permission_level: str, 
+        op_type: str, 
+        target: str, 
+        details: Dict[str, Any],
+        outcome: str = "SUCCESS",
+        resource_id: str = None
+    ):
+        with db_manager.get_connection(internal=True) as conn:
             conn.execute("""
-                INSERT INTO admin_operations (admin_id, operation_type, target_resource, details)
-                VALUES (?, ?, ?, ?)
-            """, (admin_id, op_type, target, json.dumps(details)))
+                INSERT INTO admin_operations (
+                    admin_id, user_mode, permission_level, 
+                    operation_type, target_resource, details, 
+                    outcome, resource_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                user_id, user_mode, permission_level, 
+                op_type, target, json.dumps(details), 
+                outcome, resource_id
+            ))
             conn.commit()
-            logger.info(f"Admin Operation Logged: {op_type} by {admin_id} on {target}")
+            logger.info(f"Admin Operation Logged: [{user_mode}] {op_type} by {user_id} on {target} -> {outcome}")
 
     def list_operations(self, limit: int = 50) -> List[Dict[str, Any]]:
         with db_manager.get_connection() as conn:
@@ -35,15 +53,18 @@ class AdminManager:
                   suggestion.severity, suggestion.status))
             conn.commit()
 
-    def review_suggestion(self, suggestion_id: str, admin_id: str, status: SuggestionStatus, notes: str = ""):
-        with db_manager.get_connection() as conn:
+    def review_suggestion(self, suggestion_id: str, admin_id: str, admin_mode: str, status: SuggestionStatus, notes: str = ""):
+        with db_manager.get_connection(internal=True) as conn:
             conn.execute("""
                 UPDATE ai_suggestions 
                 SET status = ?, reviewer_id = ?, review_notes = ?, reviewed_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             """, (status, admin_id, notes, suggestion_id))
             conn.commit()
-            self.log_operation(admin_id, f"SUGGESTION_{status}", suggestion_id, {"notes": notes})
+            self.log_operation(
+                admin_id, admin_mode, "SYSTEM_MAINTENANCE", 
+                f"SUGGESTION_{status}", suggestion_id, {"notes": notes}
+            )
 
     def get_pending_suggestions(self) -> List[Dict[str, Any]]:
         with db_manager.get_connection() as conn:
@@ -71,7 +92,10 @@ class AdminManager:
             """, (creator_id, label, backup_path))
             conn.commit()
             
-        self.log_operation(creator_id, "CREATE_CHECKPOINT", label, {"backup_path": backup_path})
+        self.log_operation(
+            creator_id, "CREATOR", "GOVERNANCE_EXECUTE", 
+            "CREATE_CHECKPOINT", label, {"backup_path": backup_path}
+        )
         logger.info(f"System Checkpoint Created: {label} by {creator_id}")
         return backup_path
 
@@ -88,7 +112,10 @@ class AdminManager:
             backup_path = row["db_backup_path"]
             db_manager.restore_db(backup_path)
             
-            self.log_operation(creator_id, "ROLLBACK", f"checkpoint_{checkpoint_id}", {"label": row["label"]})
+            self.log_operation(
+                creator_id, "CREATOR", "GOVERNANCE_EXECUTE", 
+                "ROLLBACK", f"checkpoint_{checkpoint_id}", {"label": row["label"]}
+            )
             logger.warning(f"SYSTEM ROLLBACK EXECUTED by {creator_id} to checkpoint {checkpoint_id}")
 
 admin_manager = AdminManager()

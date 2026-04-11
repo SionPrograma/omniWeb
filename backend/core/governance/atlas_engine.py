@@ -56,7 +56,6 @@ class AtlasAggregationEngine:
             rows = conn.execute("SELECT * FROM governance_learning_items").fetchall()
             for row in rows:
                 r = dict(row)
-                tags = [r["learning_type"]] if r["learning_type"] else []
                 node = AtlasNode(
                     node_id=f"WNODE-{(r['learning_item_id'] or 'unknown')[:8]}",
                     node_type="LEARNING",
@@ -77,16 +76,13 @@ class AtlasAggregationEngine:
     def _aggregate_autopsies(self):
         """Converts forensic autopsies into Atlas Nodes."""
         with db_manager.get_connection() as conn:
-            # Note: Checking for table existence might be needed if not initialized
             try:
                 rows = conn.execute("SELECT * FROM governance_branch_autopsies").fetchall()
             except sqlite3.OperationalError: 
-                return # Table might not exist yet
+                return 
 
             for row in rows:
                 r = dict(row)
-                
-                # Check for sync results that might change status
                 status = "CONFIRMED" if r.get("final_branch_outcome") == "MERGED" else "EXPERIMENTAL"
                 sync_check = conn.execute("SELECT replay_outcome_state FROM governance_replay_syncs WHERE autopsy_id = ? LIMIT 1", (r["autopsy_id"],)).fetchone()
                 if sync_check and sync_check["replay_outcome_state"] == "CONTRADICTED_BY_REALITY":
@@ -102,7 +98,7 @@ class AtlasAggregationEngine:
                     title=f"Autopsia: {(r.get('branch_goal_summary') or '')[:50]}...",
                     summary=r.get("structural_findings") or "Sin hallazgos estructurales detallados.",
                     confidence=r.get("confidence") if r.get("confidence") is not None else 0.5,
-                    reusability_score=0.7, # Autopsies are high-value context
+                    reusability_score=0.7, 
                     status_band=status,
                     evidence_refs={"outcome": r.get("final_branch_outcome"), "hotspots": r.get("hotspot_history")},
                     created_at=r.get("created_at") if r.get("created_at") else datetime.now().isoformat()
@@ -113,7 +109,6 @@ class AtlasAggregationEngine:
         """Converts key decisions (Patterns) from Ledger into Atlas Nodes."""
         with db_manager.get_connection() as conn:
             try:
-                # We only want structural or high-impact decisions
                 rows = conn.execute("""
                     SELECT * FROM governance_decision_ledger 
                     WHERE decision_type IN ('RISK_OVERRIDE', 'STRATEGIC_PIVOT', 'BRANCH_CONSOLIDATION')
@@ -132,8 +127,8 @@ class AtlasAggregationEngine:
                     affected_domains=[r["target_id"]] if r.get("target_ref_type") == "DOMAIN" else [],
                     title=f"Decisión: {r.get('decision_type', 'UNKNOWN')} - {r.get('action_taken', 'TAKEN')}",
                     summary=r.get("rationale") or "Sin resumen de decisión.",
-                    confidence=1.0, # It's a fact that this decision was taken
-                    reusability_score=0.3, # Specific decisions are less reusable but informative
+                    confidence=1.0,
+                    reusability_score=0.3, 
                     status_band="CONFIRMED",
                     evidence_refs={"actor": r["actor"], "severity": r["severity_context"]},
                     created_at=r["created_at"]
@@ -155,15 +150,14 @@ class AtlasAggregationEngine:
                     source_ref_type="governance_replay_syncs",
                     source_ref_id=r["sync_id"],
                     project_id=self.default_project,
-                    affected_domains=[], # Often cross-domain
+                    affected_domains=[], 
                     title=f"Validación: {r.get('replay_outcome_state', 'SYNCED')}",
                     summary=r.get("rationale") or "Sin resumen de validación.",
                     confidence=0.9,
-                    reusability_score=0.9, # Validations are peak wisdom
+                    reusability_score=0.9,
                     status_band=r.get("replay_outcome_state") or "SYNCED",
                     evidence_refs={"predicted": r.get("predicted_effect"), "actual": r.get("actual_outcome_summary")},
-
-                    created_at=datetime.now().isoformat() # Using sync time
+                    created_at=datetime.now().isoformat()
                 )
                 self._upsert_node(node)
 
@@ -257,5 +251,38 @@ class AtlasAggregationEngine:
                         updated_at=r["updated_at"]
                     ))
         return results
+
+    def get_node_sync_history(self, node_id: str) -> Dict[str, Any]:
+        """
+        OMNIWEB — BLOQUE: ATLAS EVIDENCE UI.
+        Retrieves all post-mission sync entries linked to a specific node_id
+        and provides a summary of outcomes.
+        """
+        history = []
+        summary = {
+            "WISDOM_CONFIRMED": 0,
+            "WISDOM_PARTIAL": 0,
+            "WISDOM_CONTRADICTED": 0,
+            "EXECUTION_BIASED": 0,
+            "INSUFFICIENT_SIGNAL": 0,
+            "total_syncs": 0,
+            "last_reviewed_at": None
+        }
+        with set_chip_context("core"):
+            with db_manager.get_connection() as conn:
+                # Searching node_id inside JSON list via LIKE
+                rows = conn.execute("SELECT * FROM governance_post_mission_syncs WHERE source_atlas_node_ids LIKE ? ORDER BY created_at DESC", (f'%"{node_id}"%',)).fetchall()
+                for r in rows:
+                    rd = dict(r)
+                    history.append(rd)
+                    outcome = rd.get("actual_outcome_type")
+                    if outcome in summary:
+                        summary[outcome] += 1
+                        summary["total_syncs"] += 1
+                    
+                    if rd.get("is_applied") and (not summary["last_reviewed_at"] or rd["created_at"] > summary["last_reviewed_at"]):
+                        summary["last_reviewed_at"] = rd["created_at"]
+                        
+        return {"history": history, "summary": summary}
 
 atlas_engine = AtlasAggregationEngine()

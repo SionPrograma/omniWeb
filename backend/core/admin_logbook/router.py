@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 from .manager import admin_manager
 from .models import SuggestionStatus
-from backend.core.permissions import enforce_permission, get_current_user_id
+from backend.core.auth import OmniUser, get_current_user, require_permission
+from backend.core.governance.mode_registry import ModePermission
 
 router = APIRouter()
 
 @router.get("/logs")
-async def get_admin_logs():
-    enforce_permission("admin_ops_access")
+async def get_admin_logs(admin_user: OmniUser = Depends(require_permission(ModePermission.SYSTEM_MAINTENANCE))):
     logs = admin_manager.list_operations()
     
     from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
@@ -24,8 +24,7 @@ async def get_admin_logs():
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/suggestions/pending")
-async def get_pending_suggestions():
-    enforce_permission("admin_ops_access")
+async def get_pending_suggestions(admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_VIEW))):
     suggestions = admin_manager.get_pending_suggestions()
     
     from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
@@ -41,8 +40,7 @@ async def get_pending_suggestions():
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.get("/checkpoints")
-async def list_checkpoints():
-    enforce_permission("creator_tools_access")
+async def list_checkpoints(admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_VIEW))):
     checkpoints = admin_manager.list_checkpoints()
     
     from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
@@ -58,9 +56,8 @@ async def list_checkpoints():
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/suggestions/{suggestion_id}/review")
-async def review_suggestion(suggestion_id: str, status: SuggestionStatus, notes: str = "", user_id: str = Depends(get_current_user_id)):
-    enforce_permission("admin_ops_access")
-    admin_manager.review_suggestion(suggestion_id, user_id, status, notes)
+async def review_suggestion(suggestion_id: str, status: SuggestionStatus, notes: str = "", admin_user: OmniUser = Depends(require_permission(ModePermission.SYSTEM_MAINTENANCE))):
+    admin_manager.review_suggestion(suggestion_id, admin_user.id, admin_user.mode, status, notes)
     
     from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
     from backend.core.ai_host.processors.base import AICommandResponse
@@ -71,13 +68,12 @@ async def review_suggestion(suggestion_id: str, status: SuggestionStatus, notes:
         message=f"Sugerencia {suggestion_id} revisada ({status.value}).",
         payload={"suggestion_id": suggestion_id, "status": status.value}
     )
-    unified = await orchestrator.orchestrate(f"review suggestion {suggestion_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": user_id}, raw_response=raw_res)
+    unified = await orchestrator.orchestrate(f"review suggestion {suggestion_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": admin_user.id, "user_mode": admin_user.mode}, raw_response=raw_res)
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/checkpoint/create")
-async def create_system_checkpoint(label: str, user_id: str = Depends(get_current_user_id)):
-    enforce_permission("creator_tools_access")
-    path = admin_manager.create_checkpoint(user_id, label)
+async def create_system_checkpoint(label: str, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
+    path = admin_manager.create_checkpoint(admin_user.id, label)
     
     from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
     from backend.core.ai_host.processors.base import AICommandResponse
@@ -88,14 +84,13 @@ async def create_system_checkpoint(label: str, user_id: str = Depends(get_curren
         message=f"Punto de restauración '{label}' creado exitosamente.",
         payload={"backup_path": path, "label": label}
     )
-    unified = await orchestrator.orchestrate(f"create checkpoint {label}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": user_id}, raw_response=raw_res)
+    unified = await orchestrator.orchestrate(f"create checkpoint {label}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": admin_user.id, "user_mode": admin_user.mode}, raw_response=raw_res)
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/rollback/{checkpoint_id}")
-async def rollback_system(checkpoint_id: int, user_id: str = Depends(get_current_user_id)):
-    enforce_permission("creator_tools_access")
+async def rollback_system(checkpoint_id: int, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     try:
-        admin_manager.rollback_to_checkpoint(checkpoint_id, user_id)
+        admin_manager.rollback_to_checkpoint(checkpoint_id, admin_user.id)
         
         from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
         from backend.core.ai_host.processors.base import AICommandResponse
@@ -106,7 +101,7 @@ async def rollback_system(checkpoint_id: int, user_id: str = Depends(get_current
             message=f"El sistema ha sido restaurado exitosamente al punto de control {checkpoint_id}.",
             payload={"checkpoint_id": checkpoint_id}
         )
-        unified = await orchestrator.orchestrate(f"rollback to {checkpoint_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": user_id}, raw_response=raw_res)
+        unified = await orchestrator.orchestrate(f"rollback to {checkpoint_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": admin_user.id, "user_mode": admin_user.mode}, raw_response=raw_res)
         return {"status": "success", "payload": unified.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

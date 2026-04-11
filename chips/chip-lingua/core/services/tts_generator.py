@@ -1,220 +1,145 @@
+import subprocess
+import json
+import sys
+import os
+import re
+import logging
+import time
+import asyncio
 from pathlib import Path
 from ..models.lingua_config import settings
-import gc
-import re
-import wave
-import uuid
-import os
+try:
+    from backend.core.ai_host.forge import forge_ledger, OutcomeStatus, CapabilityClass
+    FORGE_AVAILABLE = True
+except ImportError:
+    FORGE_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 class TTSGenerator:
+    """
+    TTS Bridge V1.5 - Decoupled Synthesis Service.
+    Orchestrates the out-of-process TTS Worker for isolation and stability.
+    Uses native logic for text normalization and subprocess for heavy synthesis.
+    """
     def __init__(self):
-        # Force CPU if requested for stability, otherwise use GPU if available
-        self.device = "cpu" # Default
-        self.tts = None
-
-    def get_tts(self):
-        if self.tts is None:
-            import torch
-            from TTS.api import TTS
-            
-            if settings.CPU_FRIENDLY_MODE:
-                self.device = "cpu"
-            else:
-                self.device = "cuda" if torch.cuda.is_available() else "cpu"
-                
-            self.tts = TTS(settings.COQUI_TTS_MODEL).to(self.device)
-        return self.tts
+        self.worker_script = Path(__file__).parent.parent / "tts_worker.py"
 
     def _normalize_text(self, text: str) -> str:
         """
         Transforms markdown and technical patterns into natural human speech.
         """
-        if not text:
-            return ""
-
-        # 1. Remove Markdown syntax
-        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # Bold **text**
-        text = re.sub(r'__([^_]+)__', r'\1', text)      # Bold __text__
-        text = re.sub(r'`([^`]+)`', r'\1', text)        # Inline code `text`
-        text = re.sub(r'#+\s+', '', text)               # Headers #
-        text = re.sub(r'[-*]\s+', ' ', text)            # Bullets at start
-
-        # 2. Normalize technical paths (backend/core/...)
-        def path_replacer(match):
-            path = match.group(0)
-            # Remove extension
-            path = re.sub(r'\.(py|js|ts|css|html|md|json)$', '', path)
-            # Replace separators with space or " de " contextually
-            parts = re.split(r'[\\/]', path)
-            if len(parts) > 1:
-                # If it looks like a deep path, summarize
-                # "backend/core/ai_host" -> "módulo ai host del backend"
-                if len(parts) > 3:
-                    return f"el módulo {parts[-1].replace('_', ' ')} de {parts[0]}"
-                return " de ".join(reversed([p.replace('_', ' ') for p in parts]))
-            return path.replace('_', ' ')
-
-        # Detect paths with / or \
-        text = re.sub(r'\b[\w\-\.\\]+[\\/][\w\-\.\\/]+\b', path_replacer, text)
-        
-        # 3. Clean up remaining underscores and miscellaneous symbols
+        if not text: return ""
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text) 
+        text = re.sub(r'__([^_]+)__', r'\1', text)     
+        text = re.sub(r'`([^`]+)`', r'\1', text)       
+        text = re.sub(r'#+\s+', '', text)              
+        text = re.sub(r'[-*]\s+', ' ', text)           
         text = text.replace('_', ' ')
-        text = text.replace('*', '')  # Just in case
-        text = re.sub(r'\s+', ' ', text) # Collapse spaces
-
+        text = text.replace('*', '')  
+        text = re.sub(r'\s+', ' ', text) 
         return text.strip()
 
+    def _resolve_provider(self) -> str:
+        if not FORGE_AVAILABLE: return "gtts_google"
+        try:
+             res = forge_ledger.get_active_provider_sync("synthesis")
+             return res if res else "gtts_google"
+        except:
+             return "gtts_google"
+
     def generate(self, text: str, output_path: Path, job_id: str, speaker_wav: Path = None, language: str = "en"):
-        # If disabled in config, skip
+        """
+        Synthesizes audio by delegating to the isolated TTS worker.
+        """
         if not settings.TTS_ENABLED:
-            print("TTS Generation is disabled in config.")
+            logger.info("TTS Generation is disabled in config.")
             return None
             
-        # Normalize for natural speech
-        original_text = text
-        text = self._normalize_text(text)
+        norm_text = self._normalize_text(text)
+        if not norm_text:
+            return None
+
+        # Resolve active provider via Forge (Block 82)
+        active_provider = self._resolve_provider()
+
+        # Build command for isolated worker
+        cmd = [
+            sys.executable,
+            str(self.worker_script),
+            norm_text,
+            language,
+            str(output_path),
+            "--provider", active_provider
+        ]
         
-        tts = self.get_tts()
-        
-        # Determine speaker
-        speaker_kwarg = {}
-        if speaker_wav and speaker_wav.exists():
-            # Ensure path is string for TTS library
-            speaker_kwarg['speaker_wav'] = str(speaker_wav.absolute())
-        elif tts.speakers:
-            speaker_kwarg['speaker'] = tts.speakers[0]
-            
-        # Split text into manageable chunks to avoid OOM
-        # XTTS v2 struggles with > 250 characters usually
-        chunks = self._chunk_text(text, settings.TTS_MAX_CHUNK_LENGTH)
-        
-        print(f"[TTS] Generating {len(chunks)} chunks for {len(text)} characters...")
-        
-        chunk_files = []
         try:
-            for i, chunk in enumerate(chunks):
-                chunk = chunk.strip()
-                if not chunk or len(chunk) < 2: # Skip empty or too short chunks
-                    continue
-                
-                # Prefix with job_id for consolidated cleanup
-                temp_chunk_path = settings.TEMP_DIR / f"{job_id}_chunk_{i}.wav"
-                
-                # Generate audio for the segment
-                try:
-                    tts.tts_to_file(
-                        text=chunk,
-                        language=language,
-                        file_path=str(temp_chunk_path),
-                        **speaker_kwarg
-                    )
-                    if temp_chunk_path.exists():
-                        chunk_files.append(temp_chunk_path)
-                    else:
-                        print(f"[TTS] Warning: Chunk {i} failed to generate file.")
-                except Exception as chunk_e:
-                    print(f"[TTS] Error generating chunk {i}: {chunk_e}")
-                    # Continue with other chunks if possible
-                
-            # Merge chunks
-            if chunk_files:
-                self._merge_wavs(chunk_files, output_path)
-            else:
-                print("[TTS] No audio chunks were successfully generated.")
+            logger.info(f"TTS Bridge V1.5: Launching worker for '{norm_text[:20]}...'")
+            start_time = time.time()
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60) # 60s timeout
+            latency_ms = int((time.time() - start_time) * 1000)
+            
+            if result.returncode != 0:
+                error_msg = result.stderr or "Unknown worker error"
+                logger.error(f"TTS Worker Failed: {error_msg}")
+                self._fire_and_forget_forge({"metadata": {"mode": "FAIL", "error": error_msg}}, latency_ms)
+                return None
+            
+            # Read metadata from worker
+            try:
+                data = json.loads(result.stdout)
+                mode = data.get("metadata", {}).get("mode", "UNKNOWN")
+                logger.info(f"TTS Success. Mode: {mode}")
+                self._fire_and_forget_forge(data, latency_ms)
+                return output_path if output_path.exists() else None
+            except json.JSONDecodeError:
+                logger.error("Invalid TTS worker output format")
+                self._fire_and_forget_forge({"metadata": {"mode": "FAIL", "error": "JSON error"}}, latency_ms)
                 return None
                 
-        finally:
-            # Clean up temp chunks
-            for cf in chunk_files:
-                if cf.exists():
-                    try:
-                        os.remove(cf)
-                    except Exception as e:
-                        print(f"Failed to remove temp chunk {cf}: {e}")
-                        
-            # Aggressive memory cleanup option
-            if settings.CPU_FRIENDLY_MODE:
-                self._cleanup_memory()
-                
-        return output_path
-
-    def _chunk_text(self, text: str, max_length: int) -> list:
-        """
-        Splits text by sentence boundaries (e.g. . ! ?) keeping chunks under max_length 
-        if possible, to balance memory usage for XTTS.
-        """
-        # Improved regex to handle various sentence endings better
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        chunks = []
-        current_chunk = ""
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-                
-            # If a single sentence is already too long, we might need to split by commas or spaces
-            if len(sentence) > max_length:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                    current_chunk = ""
-                
-                # Sub-split long sentence
-                sub_parts = re.split(r'(?<=,)\s+|\s+', sentence)
-                sub_chunk = ""
-                for part in sub_parts:
-                    if len(sub_chunk) + len(part) + 1 <= max_length:
-                        sub_chunk += part + " "
-                    else:
-                        if sub_chunk:
-                            chunks.append(sub_chunk.strip())
-                        sub_chunk = part + " "
-                if sub_chunk:
-                    current_chunk = sub_chunk
-            elif len(current_chunk) + len(sentence) + 1 <= max_length:
-                current_chunk += sentence + " "
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                current_chunk = sentence + " "
-                
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-            
-        return chunks
-
-    def _merge_wavs(self, wav_paths: list, output_path: Path):
-        """Concatenate multiple wav files into one final output in a streaming way."""
-        if not wav_paths:
-            return
-
-        try:
-            # Read params from the first file
-            params = None
-            with wave.open(str(wav_paths[0]), 'rb') as first_wav:
-                params = first_wav.getparams()
-
-            if params:
-                with wave.open(str(output_path), 'wb') as output:
-                    output.setparams(params)
-                    for wav_file in wav_paths:
-                        with wave.open(str(wav_file), 'rb') as w:
-                            while True:
-                                # Read in 1MB chunks to avoid memory spikes
-                                frames = w.readframes(1024 * 1024)
-                                if not frames:
-                                    break
-                                output.writeframes(frames)
+        except subprocess.TimeoutExpired:
+            logger.error("TTS Worker Timeout (60s limit reached)")
+            self._fire_and_forget_forge({"metadata": {"mode": "TIMEOUT"}}, 60000)
+            return None
         except Exception as e:
-            print(f"Error merging wavs in streaming mode: {e}")
-            raise
+            logger.error(f"TTS Bridge Exception: {str(e)}")
+            self._fire_and_forget_forge({"metadata": {"mode": "FAIL", "error": str(e)}}, 0)
+            return None
+
+    def _fire_and_forget_forge(self, result: dict, latency: int):
+        """Helper to fire async telemetry from sync context."""
+        if not FORGE_AVAILABLE: return
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._report_forge(result, latency))
+        except:
+            pass
+
+    async def _report_forge(self, result: dict, latency: int):
+        """Standardized reporting for synthesis."""
+        mode = result.get("metadata", {}).get("mode", "UNKNOWN")
+        provider = result.get("metadata", {}).get("provider_used") or "gtts_google"
+        status = OutcomeStatus.FAIL
+        quality = 0.0
+        
+        if mode == "REAL_REMOTE":
+            status = OutcomeStatus.SUCCESS
+            quality = 1.0
+        elif mode == "FALLBACK":
+            status = OutcomeStatus.PARTIAL
+            quality = 0.5
+            
+        await forge_ledger.log_telemetry({
+            "provider_id": provider,
+            "capability_class": CapabilityClass.SYNTHESIS.value,
+            "task_context": f"mode:{mode}",
+            "outcome_status": status.value,
+            "quality_score": quality,
+            "latency_ms": latency,
+            "notes": result.get("metadata", {}).get("error")
+        })
 
     def _cleanup_memory(self):
-        import torch
-        # Force garbage collection to free large model tensors
-        if self.tts is not None:
-            del self.tts
-            self.tts = None
-            gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        # Memory cleanup not needed as worker is out-of-process.
+        pass

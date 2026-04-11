@@ -10,8 +10,16 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
     # Active modules list (Lingua & Idiomas-IA desactivados por aislamiento de dependencias ML)
-    ACTIVE_MODULES: list[str] = ["reparto", "finanzas", "programacion", "musica"]
+    # Base Path Configuration (Phase 75: Proxy Hardening)
+    ROOT_PATH: str = os.getenv("OMNIWEB_ROOT_PATH", "")
+    ACTIVE_MODULES: list[str] = ["reparto", "finanzas", "programacion", "musica", "lingua"]
     
+    # Environment: dev, staging, production
+    ENVIRONMENT: str = os.getenv("OMNIWEB_ENVIRONMENT", "dev")
+
+    # Proxy Configuration (Hardening for Staging)
+    PROXY_TRUSTED_HOSTS: str = os.getenv("PROXY_TRUSTED_HOSTS", "*")
+
     # System Mode: creator (full access) or user (simplified)
     OMNIWEB_MODE: str = os.getenv("OMNIWEB_MODE", "creator")
 
@@ -45,7 +53,14 @@ class Settings(BaseSettings):
     @property
     def IS_ADMIN_TOKEN_SAFE(self) -> bool:
         """Checks if the current ADMIN_TOKEN is the default insecure one."""
+        if self.ENVIRONMENT == "dev": return True
         return self.ADMIN_TOKEN != "omniweb-dev-secret-token"
+
+    @property
+    def IS_CREATOR_PIN_SAFE(self) -> bool:
+        """Checks if the Creator PIN is the default insecure one."""
+        if self.ENVIRONMENT == "dev": return True
+        return self.CREATOR_PIN != "1234"
 
 
     class Config:

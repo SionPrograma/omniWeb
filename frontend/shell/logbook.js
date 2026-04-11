@@ -120,7 +120,9 @@ class MasterLogbook {
             const snapRes = await fetch('/api/v1/system/logbook/snapshot', {
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
-            const snap = await snapRes.json();
+            const snapData = await snapRes.json();
+            // Support both direct and unified payload format
+            const snap = snapData.payload || snapData;
             this.updateSystemUI(snap);
 
             let url = '/api/v1/system/logbook/';
@@ -132,11 +134,21 @@ class MasterLogbook {
             const response = await fetch(url, {
                 headers: { 'Authorization': 'Bearer omniweb-dev-secret-token' }
             });
-            const data = await response.json();
-            this.renderEntries(data);
+            const rawData = await response.json();
+            // Handle unified payload structure: { status: 'success', payload: { entries: [...] } }
+            const entries = rawData.payload?.payload?.entries || rawData.payload?.entries || rawData.entries || rawData;
+
+            this.renderEntries(Array.isArray(entries) ? entries : []);
         } catch (error) {
             console.error('Failed to load logbook entries:', error);
-            this.entriesList.innerHTML = '<div style="padding: 20px; color: #ff5050; text-align: center;">Error: Enlace de sistema interrumpido.</div>';
+            this.entriesList.innerHTML = `
+                <div style="padding: 40px 20px; color: #ff5050; text-align: center;">
+                    <p style="margin-bottom: 20px;">Error: Enlace de sistema interrumpido.</p>
+                    <button onclick="masterLogbook.loadEntries()" style="background: rgba(255,80,80,0.1); border: 1px solid #ff5050; color: #ff5050; padding: 8px 16px; border-radius: 8px; cursor: pointer;">
+                        REINTENTAR CONEXIÓN
+                    </button>
+                </div>
+            `;
         }
     }
 
@@ -177,7 +189,7 @@ class MasterLogbook {
                 </div>
 
                 <div class="log-entry-footer">
-                    <span>${new Date(entry.timestamp).toLocaleDateString()}</span>
+                    <span>${window.omniTime.format(entry.timestamp)}</span>
                     ${entry.chip_reference ? `<span class="chip-tag">${entry.chip_reference}</span>` : ''}
                     
                     <div style="display: flex; gap: 8px;">

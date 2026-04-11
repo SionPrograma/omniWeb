@@ -1,0 +1,35 @@
+{
+    "shell": {
+        "nav": {
+            "chat": "Chat",
+            "workspace": "Creador",
+            "chips": "Chips",
+            "mission": "Misiones",
+            "logbook": "Bitácora"
+        },
+        "status": {
+            "ai_ok": "AI: Activa",
+            "db_ok": "DB: OK",
+            "chips": "Chips",
+            "drift": "Desviación Estratégica"
+        },
+        "greeting": {
+            "title": "Omni Core",
+            "subtitle": "Sistema: Online | Contexto: Global"
+        },
+        "announcement": {
+            "maintenance": "Mantenimiento del sistema programado."
+        },
+        "qr": {
+            "access": "ESCANEAR ACCESO"
+        },
+        "input": {
+            "placeholder": "Pregúntame algo..."
+        }
+    },
+    "errors": {
+        "critical": "Falla crítica del sistema. Se requiere anulación de gobernanza.",
+        "not_found": "Recurso no encontrado en la rama técnica.",
+        "auth": "Se requiere PIN de seguridad para continuar."
+    }
+}

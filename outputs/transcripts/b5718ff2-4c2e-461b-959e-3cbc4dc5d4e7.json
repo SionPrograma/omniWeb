@@ -1,0 +1,19 @@
+{
+  "text": "[VOX_MOCK] test_vox_v12.wav - Transcription Mocked (V1.2)",
+  "segments": [
+    {
+      "start": 0,
+      "end": 2,
+      "text": "[VOX_MOCK] test_vox_v12.wav - Transcription Mocked (V1.2)",
+      "translated_text": "[VOX_MOCK] test_vox_v12.wav - Transcripci\u00f3n simulada (V1.2)"
+    }
+  ],
+  "metadata": {
+    "worker": "Vox-Worker-V1.2",
+    "model": "tiny",
+    "status": "success",
+    "timestamp": 1775499787.476907,
+    "mode": "MOCK_FALLBACK",
+    "warning": "Whisper stack not provisioned."
+  }
+}

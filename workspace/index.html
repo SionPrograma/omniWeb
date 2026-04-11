@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMNIVERSE | Spatial Workspace Prototype</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="universe-canvas"></div>
+    <div class="hud-overlay">
+
+        <!-- Header / Status -->
+        <header class="sys-header holographic-panel flex-row">
+            <div class="sys-logo">
+                <span class="blinking-dot"></span>
+                <strong>OMNIVERSE</strong> | SYSTEM ANALYSIS WORKSPACE
+            </div>
+            <div class="sys-metrics">
+                <span>INTEL: NOMINAL</span>
+                <span>GOVERNANCE: ACTIVE</span>
+                <span class="time-display">T+0.000</span>
+            </div>
+        </header>
+
+        <!-- Central Workspace (Scrollable) -->
+        <div class="central-workspace">
+
+            <!-- Section 1: Main Omniverse Map -->
+            <section class="workspace-section first-section">
+                <div class="spatial-arena">
+                    <!-- Connection Lines SVG -->
+                    <svg class="arena-links" id="arena-links" viewBox="0 0 1000 1000">
+                        <!-- Diagonal Links per PDF - Radius 310 -->
+                        <line x1="500" y1="500" x2="281" y2="281" class="map-link link-omniweb" /> <!-- Top-Left -->
+                        <line x1="500" y1="500" x2="719" y2="281" class="map-link link-creator" /> <!-- Top-Right -->
+                        <line x1="500" y1="500" x2="281" y2="719" class="map-link link-omniword" /> <!-- Bottom-Left -->
+                        <line x1="500" y1="500" x2="719" y2="719" class="map-link link-commons" /> <!-- Bottom-Right -->
+                    </svg>
+
+                    <div class="core-node" id="node-omniverse" onclick="focusNode('omniverse')">
+                        <div class="node-ring inner-ring"></div>
+                        <div class="node-ring outer-ring"></div>
+                        <div class="node-content">
+                            <h1>OMNIVERSE</h1>
+                            <p>Superficie Viva</p>
+                        </div>
+                    </div>
+
+                    <div class="orbiting-nodes">
+                        <!-- Balanced Diagonal Distribution per PDF architecture -->
+                        <div class="orbit-node node-omniweb" style="--angle: 225deg;" onclick="focusNode('omniweb')">
+                            <div class="node-content">
+                                <h3>OmniWeb</h3>
+                                <p>IA Host Soberana</p>
+                            </div>
+                        </div>
+                        <div class="orbit-node node-creator" style="--angle: 315deg;" onclick="focusNode('creator')">
+                            <div class="node-content">
+                                <h3>Creator Mode</h3>
+                                <p>Cabina del Creador</p>
+                            </div>
+                        </div>
+                        <div class="orbit-node node-omniword" style="--angle: 135deg;" onclick="focusNode('omniword')">
+                            <div class="node-content">
+                                <h3>OmniWord</h3>
+                                <p>Bitácora / Panel</p>
+                            </div>
+                        </div>
+                        <div class="orbit-node node-commons" style="--angle: 45deg;" onclick="focusNode('commons')">
+                            <div class="node-content">
+                                <h3>Chip Commons</h3>
+                                <p>Biblioteca Viva</p>
+                            </div>
+                        </div>
+
+                        <!-- Secondary Architectural Nodes -->
+                        <div class="support-node s-node-purple" style="--angle: 180deg; --dist: 180px;">
+                            <span>Agentic Mesh</span>
+                        </div>
+                        <div class="support-node s-node-purple" style="--angle: 260deg; --dist: 180px;">
+                            <span>Knowledge Bank</span>
+                        </div>
+                        <div class="support-node s-node-gold" style="--angle: 80deg; --dist: 180px;">
+                            <span>Protocol Layer</span>
+                        </div>
+                    </div>
+
+                    <!-- Supporting Explanatory Node -->
+                    <div class="principle-box arena-principle interactive-step"
+                        onclick="showModal(systemData.principles.title, systemData.principles.content)">
+                        <div class="principle-tag">IDEA CENTRAL</div>
+                        <div class="principle-content">
+                            <strong>OmniWeb</strong> gobierna.
+                            <strong>OmniWord</strong> organiza.
+                            <strong>Omniverse</strong> aloja.
+                        </div>
+                    </div>
+
+                    <!-- Growth Metric -->
+                    <div class="growth-box arena-growth interactive-step"
+                        onclick="showModal('Ciclo de Vida de los Chips', 'Los chips pueden crecer por fases:<br>visible → activo → aumentado → compartible.')">
+                        <div class="principle-tag">MÉTRICA DE CRECIMIENTO</div>
+                        <div class="growth-content">
+                            visible → activo → aumentado → compartible.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workflow Graph (Now moves with main board) -->
+                <div class="workflow-graph holographic-panel holographic-blur">
+                    <div class="graph-title">FLUJO DE TAREAS (SUBDIVISIÓN)</div>
+                    <div class="graph-steps">
+                        <div class="step interactive-step" onclick="showModal('1. Usuario', 'Pide una misión')">1.
+                            Usuario</div>
+                        <div class="connector">→</div>
+                        <div class="step interactive-step" onclick="showModal('2. OmniWeb', 'Lee intención')">2. OmniWeb
+                        </div>
+                        <div class="connector">→</div>
+                        <div class="step interactive-step" onclick="showModal('3. Orquestador', 'Descompone')">3.
+                            Orquestador</div>
+                        <div class="connector">→</div>
+                        <div class="step interactive-step" onclick="showModal('4. Capacidad', 'Asigna chips')">4. Chips
+                        </div>
+                        <div class="connector">→</div>
+                        <div class="step interactive-step" onclick="showModal('5. Verificación', 'Comprueba')">5. Check
+                        </div>
+                        <div class="connector">→</div>
+                        <div class="step interactive-step" onclick="showModal('6. Respuesta', 'Devuelve acción')">6.
+                            Solución</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Vista Sistema -->
+            <section id="vista-sistema" class="workspace-section">
+                <div class="section-header">
+                    <h2>VISTA SISTEMA</h2>
+                    <div class="sub-header">CABINA ESPACIAL DEL SISTEMA</div>
+                </div>
+
+                <div class="system-cabin">
+                    <div class="cabin-node">
+                        <div class="status-indicator"><span class="dot"></span> STATUS: NOMINAL</div>
+                        <h3>CORE ENGINE</h3>
+                        <p>Gestión de estado global y sincronización de hilos cognitivos.</p>
+                        <div class="tools-grid">
+                            <div class="tool-item">Metrics</div>
+                            <div class="tool-item">Health</div>
+                            <div class="tool-item">Logs</div>
+                        </div>
+                    </div>
+                    <div class="cabin-node" style="border-color: var(--secondary-emerald);">
+                        <div class="status-indicator"><span class="dot" style="background: var(--primary-cyan);"></span>
+                            UPTIME: 99.9%</div>
+                        <h3>ORCHESTRATOR</h3>
+                        <p>Distribución de carga entre chips activos y agentes de apoyo.</p>
+                        <div class="tools-grid">
+                            <div class="tool-item">Queue</div>
+                            <div class="tool-item">Strategy</div>
+                            <div class="tool-item">Nodes</div>
+                        </div>
+                    </div>
+                    <div class="cabin-node" style="border-color: var(--alert-orange);">
+                        <div class="status-indicator"><span class="dot" style="background: var(--alert-orange);"></span>
+                            THREAT: LOW</div>
+                        <h3>POLICY LAYER</h3>
+                        <p>Control de soberanía, permisos y validación de seguridad.</p>
+                        <div class="tools-grid">
+                            <div class="tool-item">Firewall</div>
+                            <div class="tool-item">Audit</div>
+                            <div class="tool-item">Auth</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="explainer-band">
+                    ANÁLISIS INSTANTÁNEO COMPLETADO: TODOS LOS SISTEMAS OPERATIVOS
+                </div>
+            </section>
+
+            <!-- Section 3: System Tree Diagnostics -->
+            <section id="system-tree" class="workspace-section">
+                <div class="section-header">
+                    <h2>TREE DIAGNOSTICS</h2>
+                    <div class="sub-header">ESTRUCTURA TRONCO / RAMAS / HOJAS</div>
+                </div>
+
+                <div class="tree-container">
+                    <div class="tree-trunk">
+                        <div class="leaf-node active" style="width: 200px; border-width: 2px;">
+                            <h4>OMNIVERSE ROOT</h4>
+                            <p>Núcleo Central</p>
+                        </div>
+
+                        <div class="tree-branch">
+                            <div class="leaf-node active">
+                                <h4>RAMA A: UI</h4>
+                                <p>Render / HUD</p>
+                            </div>
+                            <div class="leaf-node active">
+                                <h4>RAMA B: LOGIC</h4>
+                                <p>Agents / Runtimes</p>
+                            </div>
+                            <div class="leaf-node warning">
+                                <h4>RAMA C: DATA</h4>
+                                <p>Storage / Sync</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="diag-view">
+                        <div class="diag-card">
+                            <h5>Lectura del estado</h5>
+                            <p>Sincronización perfecta entre capas 1-4. La capa 5 muestra latencia menor en el bridge
+                                MCP.</p>
+                        </div>
+                        <div class="diag-card" style="border-color: var(--secondary-emerald);">
+                            <h5>Qué ve el humano</h5>
+                            <p>Visualización 1:1. El grafo de arquitectura refleja el estado real del hardware
+                                subyacente.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Repair Flow -->
+            <section id="repair-flow" class="workspace-section">
+                <div class="section-header">
+                    <h2>REPAIR FLOW</h2>
+                    <div class="sub-header">GOBERNANZA CON APROBACIÓN HUMANA</div>
+                </div>
+
+                <div class="flow-steps">
+                    <div class="flow-step done">
+                        <div class="step-num">1</div>
+                        <div class="step-label">Analizar</div>
+                    </div>
+                    <div class="flow-step done">
+                        <div class="step-num">2</div>
+                        <div class="step-label">Explicar</div>
+                    </div>
+                    <div class="flow-step active">
+                        <div class="step-num">3</div>
+                        <div class="step-label">Proponer</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="step-num">4</div>
+                        <div class="step-label">Elegir</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="step-num">5</div>
+                        <div class="step-label">Aplicar</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="step-num">6</div>
+                        <div class="step-label">Verificar</div>
+                    </div>
+                </div>
+
+                <div class="repair-actions">
+                    <div class="approval-panel">
+                        <div class="panel-title">CONTROL DEL CREADOR</div>
+                        <p>El sistema propone re-indexar el Chip de Idiomas para corregir la respuesta de Stage B.</p>
+                        <div class="btn-group">
+                            <button class="btn-action">APROBAR PROPUESTA</button>
+                            <button class="btn-action secondary">RECHAZAR</button>
+                        </div>
+                    </div>
+                    <div class="result-preview" style="border-left: 2px solid var(--secondary-emerald);">
+                        <div class="panel-title">RESULTADO ESPERADO</div>
+                        <ul class="result-list">
+                            <li>Latencia reducida a < 100ms</li>
+                            <li>Soberanía lingüística restaurada</li>
+                            <li>Coherencia de tono al 100%</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Left Panel: Layers Diagnostics -->
+        <aside class="panel left-panel holographic-panel holographic-blur slide-in-left">
+            <h2 class="panel-header">System Layers</h2>
+            <ul class="layer-list" id="layers-list">
+                <!-- Injected via JS -->
+            </ul>
+        </aside>
+
+        <!-- Right Panel: Data & Roadmap -->
+        <aside class="panel right-panel holographic-panel holographic-blur slide-in-right">
+            <h2 class="panel-header">Data / Roles</h2>
+
+            <div class="sub-section">
+                <h3>Agentes / Roles</h3>
+                <div class="tag-cloud" id="roles-list">
+                    <!-- Injetar via JS -->
+                </div>
+            </div>
+
+            <div class="sub-section mt-4">
+                <h3>Dominio de Lenguaje</h3>
+                <div class="language-stack">
+                    <div class="stack-layer core interactive-step"
+                        onclick="showModal('OmniWeb Policy', '&lt;ul&gt;&lt;li&gt;Decide qué se permite&lt;/li&gt;&lt;li&gt;Mantiene tono Omni&lt;/li&gt;&lt;li&gt;Valida seguridad&lt;/li&gt;&lt;li&gt;Hace fallback&lt;/li&gt;&lt;li&gt;Guarda trazabilidad&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;&lt;small&gt;Lectura: OmniWeb queda arriba de ambos como autoridad soberana.&lt;/small&gt;')">
+                        OmniWeb Policy</div>
+                    <div class="stack-layer intra interactive-step"
+                        onclick="showModal('Chip Idiomas (Interno)', '&lt;ul&gt;&lt;li&gt;Activa la fase charlable&lt;/li&gt;&lt;li&gt;Mejora expresión&lt;/li&gt;&lt;li&gt;Corrige/reformula&lt;/li&gt;&lt;li&gt;Resume/explica&lt;/li&gt;&lt;li&gt;Puede elegir motor lingüístico&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;&lt;small&gt;Lectura: Mejora cómo Omni entiende y habla adentro del sistema.&lt;/small&gt;')">
+                        Chip Idiomas (Interno)</div>
+                    <div class="stack-layer extra interactive-step"
+                        onclick="showModal('Chip Lingua (Externo)', '&lt;ul&gt;&lt;li&gt;Habla con terceros&lt;/li&gt;&lt;li&gt;Traduce operativamente&lt;/li&gt;&lt;li&gt;Conecta voz/canales&lt;/li&gt;&lt;li&gt;Puentes externos&lt;/li&gt;&lt;li&gt;Mensajería y salida&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;&lt;small&gt;Lectura: Expande ese poder hacia afuera (comunicación operativa).&lt;/small&gt;')">
+                        Chip Lingua (Externo)</div>
+                </div>
+            </div>
+
+            <div class="sub-section mt-4">
+                <h3>Roadmap</h3>
+                <ul class="roadmap-list" id="roadmap-list">
+                    <!-- Injetar via JS -->
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Diagnostics Footer -->
+        <footer class="sys-footer holographic-panel hideable">
+            <div class="console-output" id="console-output">
+                > Sistema Inicializado...<br>
+                > Cargando mapa visual del proyecto...<br>
+                > OMNIVERSE: Superficie viva lista.
+            </div>
+            <button class="sys-btn" onclick="toggleConsole()">[ TOGGLE LOG ]</button>
+        </footer>
+
+        <!-- Detail Modal / Window -->
+        <div id="detail-modal" class="detail-modal holographic-panel holographic-blur override-hidden">
+            <div class="modal-header">
+                <span id="modal-title">NODE INFO</span>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                Definición del nodo aquí
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Generates Starfield & Grid -->
+    <script src="app.js"></script>
+</body>
+
+</html>

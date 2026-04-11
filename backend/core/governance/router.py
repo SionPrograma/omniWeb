@@ -1,10 +1,16 @@
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Security, HTTPException, Depends
-from backend.core.auth import get_admin_user, OmniUser
+from backend.core.auth import get_admin_user, get_current_user, OmniUser, require_permission
+from backend.core.governance.mode_registry import ModePermission, ModeRegistry
 from backend.core.permissions import set_chip_context
 from backend.core.governance.manager import governance_manager
 from backend.core.governance.leadership_engine import leadership_engine
 from backend.core.user_memory_timeline.manager import timeline_manager
 from backend.core.database import db_manager
+from backend.core.governance.catalyst_policy_reviewer import catalyst_policy_reviewer
+from backend.core.governance.catalyst_apply_service import catalyst_apply_service
+from backend.core.governance.drift_advisor import drift_advisor
+from backend.core.security.audit_logger import audit_logger
 
 router = APIRouter()
 
@@ -44,7 +50,7 @@ async def run_leadership_analysis(admin_user: OmniUser = Depends(get_admin_user)
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/insights/{insight_id}/approve")
-async def approve_insight(insight_id: str, admin_user: OmniUser = Depends(get_admin_user)):
+async def approve_insight(insight_id: str, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     """Approves a governance insight (e.g., promote to Admin Candidate)."""
     with set_chip_context("core"):
         with db_manager.get_connection() as conn:
@@ -52,7 +58,10 @@ async def approve_insight(insight_id: str, admin_user: OmniUser = Depends(get_ad
             if not row:
                 raise HTTPException(status_code=404, detail="Insight not found.")
             conn.execute("UPDATE leadership_insights SET status = 'approved' WHERE id = ?", (insight_id,))
-            # If it's a promotion insight, update user role
+            audit_logger.log_action(
+                admin_user.id, admin_user.mode, "GOVERNANCE_EXECUTE",
+                "APPROVE_INSIGHT", insight_id, {"notes": "Promotion insight approved"}, "SUCCESS"
+            )
             if row["insight_type"] == "leadership_detection":
                 conn.execute("UPDATE users SET role = 'admin_candidate' WHERE id = ?", (row["user_id"],))
             conn.commit()
@@ -70,7 +79,7 @@ async def approve_insight(insight_id: str, admin_user: OmniUser = Depends(get_ad
     return {"status": "success", "payload": unified.model_dump()}
 
 @router.post("/insights/{insight_id}/reject")
-async def reject_insight(insight_id: str, admin_user: OmniUser = Depends(get_admin_user)):
+async def reject_insight(insight_id: str, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     """Rejects a governance insight."""
     with set_chip_context("core"):
         with db_manager.get_connection() as conn:
@@ -918,7 +927,13 @@ async def get_wisdom_atlas_node_detail(node_id: str, admin_user: OmniUser = Depe
     node = next((n for n in nodes if n.node_id == node_id), None)
     if not node:
         raise HTTPException(status_code=404, detail="Atlas Node not found.")
-    return {"status": "success", "payload": node.model_dump()}
+    
+    # Enrichment
+    payload = node.model_dump()
+    sync_obj = atlas_engine.get_node_sync_history(node_id)
+    payload["sync_history"] = sync_obj["history"]
+    payload["evidence_summary"] = sync_obj["summary"]
+    return {"status": "success", "payload": payload}
 
 # --- OMNIWEB — BLOQUE: WISDOM GRAPH EXPLORER (VISTA DE GRAFO DEL ATLAS DE SABIDURÍA) ---
 
@@ -1106,7 +1121,7 @@ async def scan_for_wisdom_syncs(admin_user: OmniUser = Depends(get_admin_user)):
     return {"status": "success", "payload": syncs}
 
 @router.post("/wisdom/sync/{sync_id}/decision")
-async def register_sync_decision(sync_id: str, payload: dict, admin_user: OmniUser = Depends(get_admin_user)):
+async def register_sync_decision(sync_id: str, payload: dict, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     """PHASE 119: Creator decision (APPROVED, REJECTED) on a wisdom sync proposal."""
     decision = payload.get("decision")
     from backend.core.governance.post_mission_sync import post_mission_sync_engine
@@ -1138,7 +1153,7 @@ async def scan_for_harvests(admin_user: OmniUser = Depends(get_admin_user)):
     return {"status": "success", "payload": harvests}
 
 @router.post("/wisdom/harvest/{harvest_id}/decision")
-async def register_harvest_decision(harvest_id: str, payload: dict, admin_user: OmniUser = Depends(get_admin_user)):
+async def register_harvest_decision(harvest_id: str, payload: dict, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     """PHASE 120: Creator decision (APPROVED, REJECTED) on a wisdom harvest proposal."""
     decision = payload.get("decision")
     from backend.core.governance.wisdom_harvester import wisdom_harvester
@@ -1154,3 +1169,126 @@ async def register_harvest_decision(harvest_id: str, payload: dict, admin_user: 
     if success:
         return {"status": "success", "message": f"Promoción {decision} registrada."}
     return {"status": "error", "message": "No se pudo registrar la decisión."}
+
+# --- OMNIWEB — BLOQUE: OMNI_CATALYST_SKILL_BRIDGE_V0.1 ---
+
+@router.get("/catalyst/settings")
+async def get_catalyst_settings(admin_user: OmniUser = Depends(get_admin_user)):
+    """PHASE 121: Returns current catalyst feature flags."""
+    with db_manager.get_connection() as conn:
+        res = conn.execute("SELECT param_key, current_value FROM governance_engine_parameters WHERE engine_name = 'ORCHESTRATION' AND param_key LIKE 'CATALYST_%'").fetchall()
+        return {"status": "success", "payload": {r["param_key"]: r["current_value"] == 'true' for r in res}}
+
+@router.post("/catalyst/toggle")
+async def toggle_catalyst_setting(payload: dict, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
+    """PHASE 121: Updates catalyst enable/freeze status."""
+    key = payload.get("key")
+    value = "true" if payload.get("value") else "false"
+    if key not in ["CATALYST_ENABLED", "CATALYST_FREEZE"]:
+        return {"status": "error", "message": "Clave de parámetro inválida."}
+        
+    with db_manager.get_connection() as conn:
+        conn.execute("UPDATE governance_engine_parameters SET current_value = ? WHERE param_key = ?", (value, key))
+        conn.commit()
+    return {"status": "success", "message": f"{key} actualizado a {value}"}
+
+@router.get("/catalyst/traces")
+async def get_catalyst_traces(admin_user: OmniUser = Depends(get_admin_user)):
+    """PHASE 121: Returns last catalyst events for audit."""
+    with db_manager.get_connection() as conn:
+        res = conn.execute("""
+            SELECT * FROM governance_decision_ledger 
+            WHERE decision_type LIKE 'CATALYST_%' 
+            ORDER BY created_at DESC LIMIT 20
+        """).fetchall()
+        return {"status": "success", "payload": [dict(r) for r in res]}
+
+@router.get("/catalyst/trace/{trace_id}")
+async def get_catalyst_trace_detail(trace_id: str, admin_user: OmniUser = Depends(get_admin_user)):
+    """PHASE 121: Returns all events linked to a specific catalyst trace ID."""
+    with db_manager.get_connection() as conn:
+        res = conn.execute("""
+            SELECT * FROM governance_decision_ledger 
+            WHERE target_id = ? AND target_ref_type = 'CATALYST_TRACE'
+            ORDER BY created_at ASC
+        """, (trace_id,)).fetchall()
+        
+        if not res:
+            raise HTTPException(status_code=404, detail="Catalyst trace not found.")
+            
+        # V1.1: Surface Masking
+        traces = [dict(r) for r in res]
+        masked = ModeRegistry.mask_data(traces, admin_user.mode, "catalyst_traces")
+        if masked is None:
+             raise HTTPException(status_code=403, detail="Surface hidden in current mode.")
+             
+        return {"status": "success", "payload": masked}
+
+@router.get("/catalyst/policy/proposals")
+async def get_catalyst_policy_proposals(admin_user: OmniUser = Depends(get_admin_user)):
+    """OMNI_CATALYST_V0.5: Returns guided refinement proposals from rejected pattern analysis."""
+    proposals = catalyst_policy_reviewer.get_refinement_proposals()
+    return {"status": "success", "payload": proposals}
+
+@router.get("/catalyst/policy/proposals/{proposal_id}/diff")
+async def get_catalyst_policy_diff(proposal_id: str, admin_user: OmniUser = Depends(get_admin_user)):
+    """OMNI_CATALYST_V0.6: Returns a textual diff before apply."""
+    diff = catalyst_policy_reviewer.get_proposal_diff(proposal_id)
+    if "error" in diff:
+        raise HTTPException(status_code=400, detail=diff["error"])
+    return {"status": "success", "payload": diff}
+
+@router.post("/catalyst/policy/proposals/{proposal_id}/apply")
+async def apply_catalyst_policy_proposal(
+    proposal_id: str, 
+    payload: dict, 
+    creator_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))
+):
+    """OMNI_CATALYST_V0.6: Confirms and applies a policy proposal (CREATOR ONLY)."""
+    creator_metadata = payload.get("creator_metadata", {"actor": creator_user.username})
+    result = catalyst_apply_service.apply_refinement(proposal_id, creator_metadata)
+    
+    # AUDIT LOG (V1.4)
+    audit_logger.log_action(
+        creator_user.id, creator_user.mode, "GOVERNANCE_EXECUTE",
+        "APPLY_CATALYST_POLICY", proposal_id, {"result": result["status"]}, 
+        "SUCCESS" if result["status"] == "success" else "FAILURE"
+    )
+    
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+@router.post("/catalyst/policy/rollback/{rollback_id}")
+async def rollback_catalyst_policy(
+    rollback_id: str, 
+    creator_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))
+):
+    """OMNI_CATALYST_V0.6: Reverts to a previous policy version (CREATOR ONLY)."""
+    result = catalyst_apply_service.rollback_to(rollback_id)
+    
+    # AUDIT LOG (V1.4)
+    audit_logger.log_action(
+        creator_user.id, creator_user.mode, "GOVERNANCE_EXECUTE",
+        "ROLLBACK_CATALYST_POLICY", rollback_id, {"result": result.get("status")},
+        "SUCCESS" if result.get("status") == "success" else "FAILURE"
+    )
+    
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+@router.get("/drift/pulse")
+async def get_drift_pulses(admin_user: OmniUser = Depends(get_admin_user)):
+    """OMNI_CATALYST_V0.7: Returns active strategic drift pulse alerts."""
+    # Refresh before returning to ensure latest signals
+    drift_advisor.refresh_pulse_alerts()
+    pulses = drift_advisor.get_active_pulses()
+    return {"status": "success", "payload": pulses}
+
+@router.post("/drift/pulse/{alert_id}/resolve")
+async def resolve_drift_pulse(alert_id: str, payload: dict, admin_user: OmniUser = Depends(require_permission(ModePermission.PULSE_MANAGE))):
+    """OMNI_CATALYST_V0.7: Marks a drift pulse as reviewed/resolved."""
+    decision = payload.get("decision", "DISMISSED") # DISMISSED, APPLIED, IGNORED
+    drift_advisor.resolve_pulse(alert_id, decision)
+    return {"status": "success", "message": f"Alert {alert_id} resolved as {decision}."}

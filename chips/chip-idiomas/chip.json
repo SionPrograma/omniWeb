@@ -1,0 +1,15 @@
+{
+    "id": "chip-idiomas",
+    "slug": "idiomas",
+    "name": "Idiomas (Stage A V1)",
+    "description": "Activa la fase charlable del sistema y orquesta el dominio lingüístico bajo control soberano de Omni.",
+    "version": "1.0.0",
+    "type": "hybrid",
+    "has_frontend": false,
+    "has_backend": true,
+    "active": true,
+    "permissions": [
+        "text_processing"
+    ],
+    "dashboard_visible": true
+}

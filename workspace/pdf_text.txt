@@ -1,0 +1,146 @@
+OmniWeb / OmniWord / Omniverse
+Mapa visual total del proyecto: agentes, chips, capas cognitivas, orquestación y flujo de trabajo
+OMNIVERSE
+superficie viva
+OmniWeb
+IA Host soberana.
+Interpreta, decide,
+gobierna y coordina.
+OmniWord
+Bitácora/panel. Muestra
+chips, estados, actividad y
+trabajo.
+Creator Mode
+Cabina profunda del
+creador: edición, permisos,
+control y aprobación.
+Chip Commons
+Biblioteca viva de chips
+reutilizables creados por el
+ecosistema.
+“Omniverse” = el espacio
+vacío-vivo donde los usuarios
+activan, combinan y expanden
+chips bajo gobierno de Omni.
+Cada chip puede crecer por fases:
+visible → activo → aumentado
+cognitivamente → compartible.
+Idea central
+OmniWeb gobierna. OmniWord organiza. Omniverse aloja. Los chips
+ejecutan capacidades. Las capas cognitivas amplían el sistema sin quitar
+soberanía.
+
+---PAGE---
+Capas del sistema
+Vista entendible para programador senior y para alguien que recién entra
+1. Superficie pública
+OmniWord + Omniverse público. Paneles, chips visibles, chat, mapas de actividad, botones y estados.
+2. IA Host soberana
+OmniWeb. Entiende intención, selecciona estrategia, vigila seguridad, decide qué puede ejecutarse.
+3. Orquestación cognitiva
+Capability / Cognitive Orchestration Layer. Divide tareas, asigna subagentes, conecta herramientas y unifica resultados.
+4. Runtime de chips
+Módulos internos, chips del creador, chips públicos y chips de comunidad, todos con contrato, permisos y estados.
+5. Bridges / Tools
+MCP, APIs, motores open source, RAG, TTS/STT, traductores, runtimes locales, automatizaciones y bases externas.
+6. Memoria / evidencia
+Bitácora, trazas, métricas, sesiones, observabilidad, evaluación, logs, fallos y conocimiento acumulado.
+7. Gobernanza
+Policy Layer, permisos, humano en el loop, cuarentena, rollback, visibilidad y control de cambios.
+Para alguien no técnico: imagínalo como un
+mundo con salas, herramientas, memoria y
+reglas. Omni decide qué se usa y cuándo.
+Para un programador: es un host soberano
+con runtime modular, policy engine,
+orchestrator, adapters y observabilidad
+full-stack.
+
+---PAGE---
+Cómo se subdividen las tareas
+Modelo de agentes/subagentes dentro de Omni sin perder gobierno central
+Usuario
+pide una misión
+OmniWeb
+lee intención y
+contexto
+Orquestador
+descompone en
+subtareas
+Capacidades
+asigna
+chips/agentes/herramientas
+Verificación
+comprueba salida,
+riesgos y calidad
+Respuesta
+devuelve acción, texto
+o plan
+Subagentes / roles posibles dentro del ecosistema
+Analista
+entiende el problema
+Planner
+arma pasos
+Builder
+genera solución
+Reviewer
+revisa calidad
+Debugger
+aísla fallos
+Translator
+opera lenguaje
+Observer
+mide trazas
+Guardian
+aplica reglas
+Regla de oro
+No multiplicar agentes por moda. Primero
+resolver con patrones simples y composables.
+Solo escalar a multiagente cuando una sola
+unidad ya no alcance.
+Aplicado a Omni
+OmniWeb es el orquestador soberano. Los
+agentes y chips son extensiones
+especializadas, no nuevas autoridades.
+
+---PAGE---
+Ejemplo concreto: dominio de lenguaje
+Cómo encajan chip-idiomas, chip-lingua y la capa charlable
+Chip Idiomas
+Activa la fase charlable
+Mejora expresión
+Corrige/reformula
+Resume/explica
+Puede elegir motor lingüístico
+OmniWeb Policy
+Decide qué se permite
+Mantiene tono Omni
+Valida seguridad
+Hace fallback
+Guarda trazabilidad
+Chip Lingua
+Habla con terceros
+Traduce operativamente
+Conecta voz/canales
+Puentes externos
+Mensajería y salida
+Lectura simple: Idiomas mejora cómo Omni entiende y habla adentro del sistema. Lingua expande ese poder hacia afuera: terceros, canales,
+traducción y comunicación operativa. OmniWeb queda arriba de ambos como autoridad soberana.
+
+---PAGE---
+Roadmap recomendado
+Secuencia para llevar el enfoque de agentes al proyecto sin romper Omni
+Bloque 1
+Cerrar personalidad, estabilidad y policy del lenguaje
+Bloque 2
+Visualizar chips y estados en Omniverse / HUB
+Bloque 3
+Integrar Stage B opcional con timeout, rollback y fallback
+Bloque 4
+Separar Idiomas (interno) de Lingua (externo/terceros)
+Bloque 5
+Formalizar estándar de chips para comunidad
+Bloque 6
+Abrir Chip Commons / biblioteca viva gobernada
+Resumen final
+Tu proyecto no busca solo “hacer agentes”. Busca construir el orquestador soberano de agentes, chips, herramientas y memorias. Por eso OmniWeb debe
+ser el gobierno; Omniverse, la superficie; OmniWord, la bitácora; y los chips, las capacidades compartibles.

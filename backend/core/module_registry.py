@@ -21,6 +21,8 @@ class ChipMetadata(BaseModel):
     type: str = "unknown" # hybrid, frontend-only, placeholder
     has_frontend: bool = True
     has_backend: bool = False
+    active_backend: bool = False
+    status: str = "ok" # ok, missing_router, damaged_backend, frontend_only
     entry_frontend: Optional[str] = "frontend/index.html"
     dashboard_visible: bool = True
     permissions: List[str] = []
@@ -55,16 +57,35 @@ class ModuleRegistry:
         # 1.2 Check if chip actually requires a backend
         if not metadata.has_backend:
             # Silently register state for frontend-only chips
+            metadata_dict["active_backend"] = False
+            metadata_dict["status"] = "frontend_only"
             self._register_module_state(module_name, None, metadata_dict)
             return True
 
-        router_obj = self._discover_backend_router(module_name, router_import_path)
-        
+        # 1.3 Pre-emptive Registration (Phase 1: Booting Resolve)
+        # We register a partial state so that security layers can resolve the chip identity
+        # while the import (which might trigger security checks) is still in progress.
+        metadata_dict["status"] = "booting"
+        self._register_module_state(module_name, prefix, metadata_dict)
+
+        try:
+            router_obj = self._discover_backend_router(module_name, router_import_path)
+        except Exception as e:
+             logger.error(f"REGISTRY: Chip '{module_name}' backend CRITICAL FAILURE: {e}")
+             # We reload metadata to ensure we don't have partial state
+             metadata_dict = self._load_metadata(module_name)
+             metadata_dict["active_backend"] = False
+             metadata_dict["status"] = "damaged_backend"
+             self._register_module_state(module_name, prefix, metadata_dict)
+             return False
+
         # If no router is found (and no critical error occurred)
         if router_obj is None:
             # We only error if metadata claimed a backend but none was found
             if metadata.has_backend:
                  logger.warning(f"Chip {module_name} claims to have a backend but no router was found at {router_import_path}.")
+            metadata_dict["active_backend"] = False
+            metadata_dict["status"] = "missing_router"
             self._register_module_state(module_name, None, metadata_dict)
             return True
 
@@ -77,6 +98,8 @@ class ModuleRegistry:
         success = self._mount_backend_router(app, router_obj, module_name, final_prefix)
         
         if success:
+            metadata_dict["active_backend"] = True
+            metadata_dict["status"] = "ok"
             self._register_module_state(module_name, final_prefix, metadata_dict)
             
         return success
@@ -99,14 +122,24 @@ class ModuleRegistry:
                 obj = getattr(module, "router")
                 if isinstance(obj, APIRouter):
                     return obj
-        except (ModuleNotFoundError, AttributeError):
-            pass # Try strategy B
         except Exception as e:
-            # Internal dependency or syntax error
-            if "No module named" in str(e) and router_import_path not in str(e):
-                logger.error(f"Internal dependency error in module {module_name}: {e}")
-                raise e
-            logger.debug(f"Strategy A failed for {module_name} at {router_import_path}")
+            # Phase 0: Surgical Backend Isolation
+            error_str = str(e)
+            
+            # Case 1: Router is truly missing (intentional Frontend-only)
+            if "No module named" in error_str and router_import_path in error_str:
+                logger.info(f"REGISTRY: Chip '{module_name}' has no backend router. Treating as Frontend-only.")
+                return None
+            
+            # Case 2: Router exists but has internal dependency issues
+            if "No module named" in error_str and router_import_path not in error_str:
+                logger.error(f"REGISTRY: Internal dependency error in chip '{module_name}': {e}")
+                # We return None to prevent boot crash, but we will mark as damaged in caller
+                raise e # We re-raise to be caught by register_module for status tagging
+            
+            # Case 3: Security Denials or logic errors during import (Import-time DB access)
+            logger.warning(f"REGISTRY: Backend discovery for '{module_name}' failed during import: {e}")
+            raise e # Caught by register_module
 
         # Strategy B: Treat last part as variable name in parent module
         # This handles: chips.chip-reparto.core.router.router or modules.my_module.app
@@ -163,14 +196,20 @@ class ModuleRegistry:
         Responsibility: STATE MANAGEMENT.
         Updates the internal dictionary with discovered module info.
         """
+        # If no status was set during discovery, use default logic
+        current_status = metadata.get("status")
+        if not current_status or current_status == "ok":
+            current_status = "active" if final_prefix else ("unloaded_backend" if metadata.get("has_backend") else "frontend-only")
+
         self.modules[module_name] = {
-            "name": metadata.get("name", module_name),
+            "name": metadata.get("name") if isinstance(metadata, dict) else metadata.name,
             "slug": module_name,
             "prefix": final_prefix,
-            "status": "active" if final_prefix else ("unloaded_backend" if metadata.get("has_backend") else "frontend-only"),
-            "health": "unverified",
+            "status": current_status,
+            "health": metadata.get("health", "unverified") if isinstance(metadata, dict) else "unverified",
+            "active_backend": metadata.get("active_backend", False) if isinstance(metadata, dict) else getattr(metadata, "active_backend", False),
             "last_execution": None,
-            "metadata": metadata
+            "metadata": metadata if isinstance(metadata, dict) else metadata.dict()
         }
 
 

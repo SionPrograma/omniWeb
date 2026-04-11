@@ -7,7 +7,16 @@ class RepartoRepository:
     Handles SQLite persistence for chip-reparto.
     """
     def __init__(self):
-        self.init_db()
+        self._db_initialized = False
+
+    def _ensure_db(self):
+        """Ensures the database is initialized before any operation (Lazy Init)."""
+        if not self._db_initialized:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("REPARTO: Lazy-initializing repository database...")
+            self.init_db()
+            self._db_initialized = True
 
     def init_db(self):
         """Initializes the stops table with seed data if empty."""
@@ -24,7 +33,7 @@ class RepartoRepository:
                 )
             """)
             
-            # Lazy migration: Add lat/lng columns if they don't exist (if table was created without them)
+            # Lazy migration: Add lat/lng columns if they don't exist
             cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(stops)")
             columns = [info[1] for info in cursor.fetchall()]
@@ -33,10 +42,9 @@ class RepartoRepository:
             if 'lng' not in columns:
                 conn.execute("ALTER TABLE stops ADD COLUMN lng REAL")
 
-            # Seed data check
+            # Seed data check (Non-duplicating)
             cursor.execute("SELECT COUNT(*) FROM stops")
             if cursor.fetchone()[0] == 0:
-                # Seed data with some initial coordinates for demo (Málaga)
                 seed_data = [
                     (1, "Empresa Transportes A", "Calle Alameda Principal, Malaga, Spain", "RPT-001", "PENDIENTE", 36.7196, -4.4225),
                     (2, "Almacen Norte", "Calle Victoria, Malaga, Spain", "RPT-002", "PENDIENTE", 36.7242, -4.4162),
@@ -50,6 +58,7 @@ class RepartoRepository:
             conn.commit()
 
     def get_all(self) -> List[Stop]:
+        self._ensure_db()
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM stops")
@@ -57,6 +66,7 @@ class RepartoRepository:
             return [Stop(**dict(row)) for row in rows]
 
     def update_status(self, stop_id: int, status: str) -> Optional[Stop]:
+        self._ensure_db()
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE stops SET status = ? WHERE id = ?", (status, stop_id))
@@ -70,6 +80,7 @@ class RepartoRepository:
 
     def update_coordinates(self, stop_id: int, lat: float, lng: float):
         """Persiste las coordenadas obtenidas por geocodificación."""
+        self._ensure_db()
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE stops SET lat = ?, lng = ? WHERE id = ?", (lat, lng, stop_id))

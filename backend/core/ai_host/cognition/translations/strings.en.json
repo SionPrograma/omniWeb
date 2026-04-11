@@ -1,0 +1,35 @@
+{
+    "shell": {
+        "nav": {
+            "chat": "Chat",
+            "workspace": "Creator",
+            "chips": "Chips",
+            "mission": "Missions",
+            "logbook": "Logbook"
+        },
+        "status": {
+            "ai_ok": "AI: Active",
+            "db_ok": "DB: OK",
+            "chips": "Chips",
+            "drift": "Strategic Drift"
+        },
+        "greeting": {
+            "title": "Omni Core",
+            "subtitle": "System: Online | Context: Global"
+        },
+        "announcement": {
+            "maintenance": "Scheduled system maintenance."
+        },
+        "qr": {
+            "access": "SCAN ACCESS"
+        },
+        "input": {
+            "placeholder": "Ask me anything..."
+        }
+    },
+    "errors": {
+        "critical": "Critical system failure. Governance override required.",
+        "not_found": "Resource not found on technical branch.",
+        "auth": "Security PIN required to continue."
+    }
+}

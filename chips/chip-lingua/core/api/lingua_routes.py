@@ -1,15 +1,49 @@
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form, HTTPException
 from ..models.requests import TranslationRequest, TextTranslateRequest
-from ..models.responses import JobResponse, JobDetailResponse, TextTranslateResponse
+from ..models.responses import JobResponse, JobDetailResponse, TextTranslateResponse, GovernanceAuditResponse, JobArchiveExport
 from ..services.job_manager import job_manager
 from ..services.lingua_pipeline import processing_service
 from ..models.lingua_config import settings
+from ..services.transcriber import Transcriber
 import os
+import glob
 from pathlib import Path
 
 router = APIRouter(prefix="/process", tags=["process"])
 
 ALLOWED_LANGUAGES = ["es", "en", "fr", "de", "it", "pt"]
+
+@router.post("/system/warmup")
+async def trigger_warmup(background_tasks: BackgroundTasks):
+    """Triggers ML stack warmup for improved first-request response."""
+    # We call it as a background task to not block the warm-up caller
+    transcriber = Transcriber()
+    background_tasks.add_task(transcriber.warmup_async)
+    return {"message": "Warmup triggered in background."}
+
+@router.get("/governance/audit", response_model=GovernanceAuditResponse)
+async def get_audit(limit: int = 50):
+    """Retrieves the purge history for governance oversight."""
+    purges = job_manager.store.list_purge_audit(limit=limit)
+    return GovernanceAuditResponse(purges=purges)
+
+@router.get("/{job_id}/archive", response_model=JobArchiveExport)
+async def archive_job(job_id: str):
+    """Exports job truth metadata and verifiable media availability."""
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    
+    # Identify retained media files on disk
+    retained = []
+    pattern = str(settings.OUTPUT_DIR / "**" / f"{job_id}*")
+    for f in glob.glob(pattern, recursive=True):
+        retained.append(os.path.basename(f))
+        
+    return JobArchiveExport(
+        metadata=JobDetailResponse(**job),
+        retained_outputs=retained
+    )
 
 @router.post("/", response_model=JobResponse)
 async def start_process(

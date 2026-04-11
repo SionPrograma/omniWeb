@@ -18,6 +18,7 @@
         this._pendingWorkspacePanel = null; // Fix for navigation loop
         this._navigationGuard = false;
         this.workspaceHasBeenOpenedBefore = false;
+        this.modeController = null; // Block 01: Surface Mode Controller
     }
 
     init() {
@@ -30,6 +31,10 @@
         this.bindAIVisual();
         this.setupQRScanner();
         this.setupAuditDrawer();
+
+        // Block 01: Initialize Mode Surface Controller
+        this.modeController = new SurfaceModeController(this);
+
         try {
             this.setupWorkspace();
         } catch (err) {
@@ -46,7 +51,8 @@
                 console.warn("[CREATOR_BOOT] Slow telemetry detected. Rendering fallback UI...");
                 cockpitLoading.innerHTML = "Telemetría lenta o bloqueada. Intentando re-vincular...";
                 cockpitLoading.style.opacity = "0.5";
-                // Even without state, the user should see the buttons
+
+                // Only render fallback cockpit if NOT in user-mode
                 if (!document.body.classList.contains('user-mode')) {
                     this.renderCockpit();
                 }
@@ -57,14 +63,21 @@
             const hasAdminToken = localStorage.getItem('omni_token') || localStorage.getItem('omni_session');
             const urlParams = new URLSearchParams(window.location.search);
             const viewRequest = urlParams.get('view');
+            const isUserMode = document.body.classList.contains('user-mode');
 
-            // Only auto-switch to mission if we are authenticated AND no specific view was requested via URL
-            if (!viewRequest && (document.body.classList.contains('creator-authenticated') || hasAdminToken || !document.body.classList.contains('user-mode'))) {
-                console.log("[CREATOR_BOOT] Restoring default Creator session (Mission)...");
-                this.switchView('mission');
-                if (window.masterLogbook) window.masterLogbook.toggle(true);
+            // Block 01: Mode-Aware Auto Routing
+            if (!viewRequest) {
+                if (isUserMode) {
+                    console.log("[USER_BOOT] Defaulting to Public Surface (Chat)");
+                    this.switchView('chat');
+                } else if (document.body.classList.contains('creator-authenticated') || hasAdminToken) {
+                    console.log("[CREATOR_BOOT] Restoring default Creator session (Mission)...");
+                    this.switchView('mission');
+                    if (window.masterLogbook) window.masterLogbook.toggle(true);
+                }
             } else if (viewRequest) {
                 console.log("[CREATOR_BOOT] Respecting Deep Link view:", viewRequest);
+                this.switchView(viewRequest);
             }
         }, 1500);
     }
@@ -121,23 +134,37 @@
     updateUI(state) {
         if (!state) return;
 
-        // Mode & Auth Handling (Phase 14 + Creator Session)
-        const isCreator = state.creator_authenticated || state.system_mode === 'creator' || state.system_mode === 'live';
+        // OMNI_MODE_SURFACE_POLISH_V1.3: Adaptive UI by Active Mode
+        const mode = state.mode || 'PUBLIC';
 
-        if (state.system_mode === 'user') {
+        // Block 03: Workspace Persistence Restore
+        if (state.space && state.space.space_id && window.workspaceManager && !this.workspaceRestored) {
+            window.workspaceManager.restoreWorkspace();
+            this.workspaceRestored = true;
+        }
+
+        // Body Class Hygiene
+        document.body.classList.remove('mode-creator', 'mode-admin', 'mode-tester', 'mode-public', 'user-mode', 'creator-authenticated');
+        document.body.classList.add(`mode-${mode.toLowerCase()}`);
+
+        const isCreator = (mode === 'CREATOR');
+        const isAdmin = (mode === 'ADMIN' || isCreator);
+        const isTester = (mode === 'TESTER' || isAdmin);
+
+        if (mode === 'PUBLIC') {
             document.body.classList.add('user-mode');
-            document.body.classList.remove('creator-authenticated');
         } else if (isCreator) {
-            document.body.classList.remove('user-mode');
             document.body.classList.add('creator-authenticated');
         }
 
         const qrBtn = document.getElementById('global-qr-scan');
-        if (qrBtn) qrBtn.style.display = isCreator ? 'flex' : 'none';
+        if (qrBtn) qrBtn.style.display = isAdmin ? 'flex' : 'none';
 
         const creatorBadge = document.getElementById('creator-badge');
         if (creatorBadge) {
-            creatorBadge.style.display = isCreator ? 'inline-block' : 'none';
+            creatorBadge.style.display = (mode === 'PUBLIC' ? 'none' : 'inline-block');
+            creatorBadge.className = `mode-badge mode-${mode.toLowerCase()}`;
+            creatorBadge.innerText = mode;
         }
 
         // Announcement & Maintenance (Phase 23)
@@ -186,6 +213,30 @@
             if (state.is_healing) orb.classList.add('auto_fix_running');
         }
 
+        // Chip Status List (Restored for Hub Visibility & Sovereign Integration)
+        const chipContainer = document.getElementById('chip-status-container');
+        if (chipContainer && state.chips) {
+            if (state.chips.length === 0) {
+                chipContainer.innerHTML = '<div class="loading-indicator">No hay módulos cargados.</div>';
+            } else {
+                chipContainer.innerHTML = state.chips.map(chip => {
+                    const healthClass = chip.health === 'healthy' ? 'online' : (chip.health === 'warning' ? 'warning' : 'offline');
+                    const statusDotColor = healthClass === 'online' ? '#00ffcc' : (healthClass === 'warning' ? '#ffcc00' : '#ff4444');
+                    return `
+                     <div class="chip-status-card" onclick="if(window.creatorEnv && window.creatorEnv.inspectChip) window.creatorEnv.inspectChip('${chip.slug}')">
+                         <div class="chip-status-info">
+                             <h4>${chip.name}</h4>
+                             <p title="${chip.description || ''}">${chip.status} | <span style="opacity: 0.6">Role: ${chip.type}</span></p>
+                         </div>
+                         <div class="chip-health-indicator">
+                             <span class="status-dot ${healthClass}" style="background-color: ${statusDotColor}; box-shadow: 0 0 5px ${statusDotColor}"></span>
+                             <span class="health-label" style="color: ${statusDotColor}">${chip.health}</span>
+                         </div>
+                     </div>
+                 `}).join('');
+            }
+        }
+
         // Dashboard Dispatch (Additive)
         if (this.currentTab === 'health') {
             this.renderCockpit();
@@ -199,6 +250,11 @@
         // Update Editor with Swarm info
         if (window.creatorEditor) {
             window.creatorEditor.updateFromState(state);
+        }
+
+        // Block 01: Enforce Surface Boundaries
+        if (this.modeController) {
+            this.modeController.applySurfaceRestrictions(mode);
         }
     }
 
@@ -253,6 +309,176 @@
         el.classList.add(cssClass);
     }
 
+    // --- AUDIT SURFACE (Block 06) ---
+    async fetchAuditSummary() {
+        try {
+            const res = await fetch('/api/v1/creator/control/audit/summary', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            if (!res.ok) throw new Error("Audit fetch failed");
+            const data = await res.json();
+            return data.payload?.audit_summary ? { history: data.payload.audit_summary } : { history: [] };
+        } catch (err) {
+            console.error("Audit summary fetch failed:", err);
+            return { history: [] };
+        }
+    }
+
+    async fetchStructuralDebt() {
+        try {
+            const res = await fetch('/api/v1/creator/control/audit/debt', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            if (!res.ok) throw new Error("Debt fetch failed");
+            const data = await res.json();
+            return data.payload?.debt_clusters || [];
+        } catch (err) {
+            console.error("Debt monitor fetch failed:", err);
+            return [];
+        }
+    }
+
+    async renderAuditSurface(panel) {
+        panel.innerHTML = `<div class="loading-indicator">Auditando historial de verdad...</div>`;
+
+        // Parallel fetch for summary and debt
+        const [auditData, debtClusters] = await Promise.all([
+            this.fetchAuditSummary(),
+            this.fetchStructuralDebt()
+        ]);
+
+        if (!auditData.history || auditData.history.length === 0) {
+            panel.innerHTML = `
+                <div class="audit-empty" style="padding:40px; text-align:center;">
+                    <h3 style="color:var(--accent);">HISTORIAL NOMINAL</h3>
+                    <p style="opacity:0.5;">No hay misiones recientes registradas en el ledger de auditoría.</p>
+                </div>`;
+            return;
+        }
+
+        // 1. Render Debt Monitor Section
+        let debtHtml = '';
+        if (debtClusters && debtClusters.length > 0) {
+            debtHtml = `
+                <div class="debt-monitor-panel">
+                    <div class="debt-header">
+                        <h3 style="font-family:'Outfit'; font-size:0.8rem; letter-spacing:1px;">MONITOR DE DEUDA ESTRUCTURAL</h3>
+                        <span class="audit-pill drift">${debtClusters.length} CLUSTERS DETECTADOS</span>
+                    </div>
+                    <div class="debt-grid">
+                        ${debtClusters.map(cluster => `
+                            <div class="debt-card">
+                                <div class="severity-badge ${cluster.severity}">${cluster.severity}</div>
+                                <div class="debt-sector">${cluster.sector}</div>
+                                <div class="debt-metrics">
+                                    <div class="debt-stat">⚠️ ${cluster.conflict_count} conflictos</div>
+                                    <div class="debt-stat">📊 ${cluster.evidence_count} evidencias</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        let html = `
+            ${debtHtml}
+            <div class="audit-header" style="padding: 10px 20px; display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="font-family:'Outfit'; font-weight:300; letter-spacing:1px; color:var(--accent); margin:0;">EVIDENCE COCKPIT</h2>
+                <span class="audit-pill aligned">${auditData.history.length} MISIONES</span>
+            </div>
+            <div class="audit-feed">`;
+
+        data.history.forEach(entry => {
+            const statusClass = `status-${(entry.outcome || 'aligned').toLowerCase()}`;
+            const pillClass = (entry.outcome || 'aligned').toLowerCase();
+            const verification = entry.verification || {};
+
+            // Logic to determine verification UI
+            const isAligned = verification.is_aligned;
+            const verTag = isAligned ? 'ALINEADO' : 'CONFLICTO';
+            const verTagClass = isAligned ? 'tag-success' : 'tag-error';
+            const verIcon = isAligned ? '✅' : '⚠️';
+
+            // Evidence parsing
+            let evidenceHtml = `<div class="audit-empty-evidence" style="font-size:0.7rem; opacity:0.4;">Sin evidencia vinculada.</div>`;
+            if (entry.artifacts && entry.artifacts.length > 0) {
+                evidenceHtml = `
+                    <div class="evidence-title">Evidencia Vinculada</div>
+                    <div class="evidence-list">
+                        ${entry.artifacts.map(art => `
+                            <span class="evidence-tag" onclick="creatorEnv.openArtifactPreview('${art}')">
+                                📄 ${art.split('/').pop()}
+                            </span>
+                        `).join('')}
+                    </div>`;
+            }
+
+            html += `
+                <div class="audit-card ${statusClass}">
+                    <div class="audit-header">
+                        <span class="audit-mission-name">${entry.mission_name}</span>
+                        <span class="audit-pill ${pillClass}">${entry.outcome.toUpperCase()}</span>
+                    </div>
+                    <div class="audit-intent">${entry.goal || 'Sin objetivo definido'}</div>
+                    
+                    <div class="audit-evidence-box">
+                        ${evidenceHtml}
+                    </div>
+
+                    <div class="audit-verification">
+                        <div class="verification-icon">${verIcon}</div>
+                        <div class="verification-text">
+                            <span class="verification-tag-small ${verTagClass}">${verTag}</span>
+                            ${verification.rationale || 'Sincronización de gobernanza nominal.'}
+                        </div>
+                    </div>
+                </div>`;
+        });
+
+        html += `</div>`;
+        panel.innerHTML = html;
+    }
+
+    // --- ARTIFACT PREVIEW HOOK ---
+    async openArtifactPreview(path) {
+        if (!path) return;
+
+        // Use existing modal infrastructure
+        const modal = document.getElementById('artifact-preview-modal');
+        const content = document.getElementById('preview-content');
+        const filename = document.getElementById('preview-filename');
+
+        if (!modal || !content) return;
+
+        filename.innerText = path.split('/').pop();
+        content.innerHTML = `<div class="loading-indicator">Recuperando evidencia...</div>`;
+        modal.style.display = 'flex';
+
+        try {
+            const res = await fetch(`/api/v1/creator/fs/read?path=${encodeURIComponent(path)}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omni_token') || 'omniweb-dev-secret-token'}` }
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                content.innerHTML = `<pre style="font-family:monospace; font-size:0.8rem; padding:10px; color:#ccc; overflow:auto; max-height:60vh;">${this.escapeHtml(data.content)}</pre>`;
+            } else {
+                content.innerHTML = `<div class="error-msg">${data.error || 'No se pudo leer la evidencia.'}</div>`;
+            }
+        } catch (err) {
+            content.innerHTML = `<div class="error-msg">Error de conexión con el FS.</div>`;
+        }
+    }
+
+    escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     // 2. MISSION CONTROL (COCKPIT)
     setupMissionControl() {
         // Tab switching
@@ -276,6 +502,15 @@
             console.warn("[OMNI_NAV] Blocked recursive navigation to:", viewName);
             return;
         }
+
+        // Block 01: Public Mode Safety Router
+        const isPublic = document.body.classList.contains('user-mode');
+        if (isPublic && (viewName === 'mission' || viewName === 'workspace')) {
+            console.error(`[OMNI_GOVERNANCE] Access Denied: User attempted to enter ${viewName} while in PUBLIC mode.`);
+            this.switchView('chat');
+            return;
+        }
+
         this._navigationGuard = true;
 
         try {
@@ -328,25 +563,37 @@
             if (toolbar) toolbar.style.display = showCreatorTools ? 'flex' : 'none';
             if (badge) badge.style.display = showCreatorTools ? 'block' : 'none';
 
-            if (viewName === 'workspace') {
-                const view = document.getElementById('creator-workspace-view');
-                const navBtn = document.querySelector('[data-view="workspace"]');
-                if (view) view.classList.add('active');
-                if (navBtn) navBtn.classList.add('active');
-                document.body.classList.add('workspace-active');
-                this.openWorkspace(this._pendingWorkspacePanel || 'editor', true); // skipSwitch = true to break loop
-                this._pendingWorkspacePanel = null;
+            const aiView = document.getElementById('ai-host-view');
+            const missionView = document.getElementById('mission-control-view');
+            const workspaceView = document.getElementById('creator-workspace-view');
+            const userHomeView = document.getElementById('user-home-view');
+            const navItems = document.querySelectorAll('.nav-item');
+
+            if (aiView) aiView.classList.remove('active');
+            if (missionView) missionView.classList.remove('active');
+            if (workspaceView) workspaceView.classList.remove('active');
+            if (userHomeView) userHomeView.classList.remove('active');
+
+            navItems.forEach(n => n.classList.remove('active'));
+
+            if (viewName === 'chat') {
+                if (aiView) aiView.classList.add('active');
+                document.querySelector('[data-view="chat"]').classList.add('active');
             } else if (viewName === 'mission') {
-                const view = document.getElementById('mission-control-view');
-                if (view) view.classList.add('active');
-                const navBtn = document.querySelector('[data-view="mission"]');
-                if (navBtn) navBtn.classList.add('active');
-                this.renderCockpit(); // Ensure cockpit is fresh
-            } else if (viewName === 'chat') {
-                const view = document.getElementById('ai-host-view');
-                if (view) view.classList.add('active');
-                const navBtn = document.querySelector('[data-view="chat"]');
-                if (navBtn) navBtn.classList.add('active');
+                if (missionView) missionView.classList.add('active');
+                document.querySelector('[data-view="mission"]').classList.add('active');
+                this.renderCockpit();
+            } else if (viewName === 'workspace') {
+                if (workspaceView) workspaceView.classList.add('active');
+                document.querySelector('[data-view="workspace"]').classList.add('active');
+                if (!this.workspaceHasBeenOpenedBefore) {
+                    this.initWorkspaceLayout();
+                    this.workspaceHasBeenOpenedBefore = true;
+                }
+            } else if (viewName === 'home') {
+                if (userHomeView) userHomeView.classList.add('active');
+                document.querySelector('[data-view="home"]').classList.add('active');
+                this.fetchUserArtifacts();
             }
         } finally {
             this._navigationGuard = false;
@@ -738,6 +985,9 @@
         const log = document.getElementById('ws-copilot-log');
         if (!log) return;
 
+        const mode = (this.systemState && this.systemState.mode) || 'PUBLIC';
+        const isCreator = (mode === 'CREATOR');
+
         const msg = document.createElement('div');
         msg.className = `copilot-msg ${type}`;
 
@@ -792,7 +1042,7 @@
                     <div class="gov-signal-rationale">${s.rationale}</div>
                     <div class="gov-signal-actions">
                         <button class="gov-action-btn" onclick="window.creator.handleGovChatAction('evidence', '${s.signal_id}', '${s.target_domain}')">VER EVIDENCIA</button>
-                        ${s.suggested_adjustment ? `
+                        ${(s.suggested_adjustment && isCreator) ? `
                             <button class="gov-action-btn primary" onclick="window.creator.handleGovChatAction('apply', '${s.signal_id}', ${JSON.stringify(s.adjustment_payload || "").replace(/"/g, '&quot;')})">APLICAR: ${s.suggested_adjustment}</button>
                         ` : ''}
                         <button class="gov-action-btn" onclick="this.parentElement.parentElement.remove()">IGNORAR</button>
@@ -889,12 +1139,17 @@
         if (!panel) return;
 
         if (!this.systemState) {
-            panel.innerHTML = `< div style = "text-align:center; padding:40px; color:#666;" >
+            panel.innerHTML = `<div style="text-align:center; padding:40px; color:#666;">
                 <p>TELEMETRÍA PENDIENTE</p>
                 <small>Conectando con el núcleo cognitivo...</small>
-            </div > `;
+            </div>`;
             return;
         }
+
+        const mode = this.systemState.mode || 'PUBLIC';
+        const isCreator = mode === 'CREATOR';
+        const isAdmin = mode === 'ADMIN' || isCreator;
+        const isTester = mode === 'TESTER' || isAdmin;
 
         if (this.currentTab === 'health') {
             const audit = this.systemState.auditor_summary || {};
@@ -1153,7 +1408,7 @@
                         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                             <input type="text" id="checkpoint-label" placeholder="Checkpoint Label (e.g. 'Before big refactor')" 
                                 style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 8px; padding: 8px;">
-                            <button class="btn-apply" style="width: auto; margin: 0;" onclick="creatorEnv.createCheckpoint()">Save State</button>
+                            ${isCreator ? `<button class="btn-apply" style="width: auto; margin: 0;" onclick="creatorEnv.createCheckpoint()">Save State</button>` : ''}
                         </div>
                         <div id="checkpoints-list" style="font-size: 0.75rem;">
                             <p style="opacity: 0.5;">Enter a label to create a new system-wide checkpoint.</p>
@@ -1178,7 +1433,7 @@
                             <option value="maintenance_active">Maintenance Active</option>
                             <option value="lockdown">Emergency Lockdown</option>
                         </select>
-                        <button class="btn-apply" onclick="creatorEnv.setSystemMode()">Apply Mode</button>
+                        ${isCreator ? `<button class="btn-apply" onclick="creatorEnv.setSystemMode()">Apply Mode</button>` : ''}
                     </div>
 
                     <div class="cockpit-card">
@@ -1222,10 +1477,12 @@
                             <input type="text" id="node-id-op" placeholder="Node ID" class="cockpit-input">
                         </div>
                         <div class="btn-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                            ${isCreator ? `
                             <button class="btn-apply" style="margin:0; font-size: 0.7rem; padding: 5px;" onclick="creatorEnv.nodeOp('drain')">Drain</button>
                             <button class="btn-apply" style="margin:0; font-size: 0.7rem; padding: 5px;" onclick="creatorEnv.nodeOp('restart')">Restart</button>
                             <button class="btn-cancel" style="margin:0; font-size: 0.7rem; padding: 5px;" onclick="creatorEnv.nodeOp('disable')">Disable</button>
                             <button class="btn-apply" style="margin:0; font-size: 0.7rem; padding: 5px; background: var(--pass-color);" onclick="creatorEnv.nodeOp('resume')">Resume</button>
+                            ` : `<p style="grid-column: span 2; font-size: 0.7rem; opacity: 0.5; text-align: center;">Requires Creator Authority</p>`}
                         </div>
                     </div>
                 </div>
@@ -1271,9 +1528,11 @@
                                             <span>Chips: ${node.active_chips}</span>
                                         </div>
                                         <div class="node-actions">
+                                            ${isCreator ? `
                                             <button onclick="creatorEnv.nodeControl('${node.node_id}', 'drain')" class="node-btn">Drain</button>
                                             <button onclick="creatorEnv.nodeControl('${node.node_id}', 'restart')" class="node-btn">Restart</button>
                                             <button onclick="creatorEnv.nodeControl('${node.node_id}', 'disable')" class="node-btn">Disable</button>
+                                            ` : `<span style="font-size: 0.6rem; opacity: 0.4;">Read Only</span>`}
                                         </div>
                                     </div>
                                 </div>
@@ -1885,10 +2144,109 @@
                             <p style="opacity: 0.5;">Enter a user ID to view their evolution timeline.</p>
                         </div>
                     </div>
-                </div >
+                </div>
                 `;
+        } else if (this.currentTab === 'connectors') {
+            this.fetchConnectorsSummary();
+            panel.innerHTML = `
+                <div class="cockpit-grid">
+                    <div class="cockpit-card" style="grid-column: span 2;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.5rem;">🛰️</span>
+                                <div>
+                                    <h3 style="margin: 0;">External App Connectors</h3>
+                                    <p style="margin: 0; font-size: 0.7rem; opacity: 0.5;">Governed control for subordinate tools & services</p>
+                                </div>
+                            </div>
+                            <div class="governance-stats" style="display: flex; gap: 20px;">
+                                <div class="metric"><span class="label">TOTAL</span><span class="value" id="conn-total">0</span></div>
+                                <div class="metric"><span class="label">ACTIVE</span><span class="value" id="conn-active" style="color: #00ff88;">0</span></div>
+                                <div class="metric"><span class="label">VAULT</span><span class="value" style="color: var(--creator-gold);">PROTECTED</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cockpit-card" style="grid-column: span 2;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Registered Connectors</h3>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="ws-btn-mini" onclick="creatorEnv.fetchConnectorsSummary()" style="padding: 4px 10px;">REFRESH</button>
+                                <button class="ws-btn-mini" onclick="creatorEnv.toggleRegistrationForm()" id="btn-toggle-reg" style="padding: 4px 10px; background: var(--accent); color: #fff;">+ REGISTER NEW</button>
+                            </div>
+                        </div>
+
+                        <!-- REGISTRATION FORM (HIDDEN BY DEFAULT) -->
+                        <div id="connector-registration-form" style="display: none; margin-bottom: 25px; padding: 20px; background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2); border-radius: 12px; animation: slideDown 0.3s ease;">
+                            <h4 style="margin-top: 0; color: var(--accent);">Initialize Governed Connector</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label style="display: block; font-size: 0.65rem; opacity: 0.6; margin-bottom: 5px;">CONNECTOR ID</label>
+                                    <input type="text" id="reg-conn-id" placeholder="e.g., google_drive_v1" class="cockpit-input" style="width: 100%;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.65rem; opacity: 0.6; margin-bottom: 5px;">PROVIDER TYPE</label>
+                                    <select id="reg-conn-provider" class="cockpit-select" style="width: 100%;">
+                                        <option value="EXTERNAL_API">External API (REST/RPC)</option>
+                                        <option value="LOCAL_EXEC">Local Execution (Python/Node)</option>
+                                        <option value="BRIDGE_AGENT">Subordinate Bridge Agent</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.65rem; opacity: 0.6; margin-bottom: 5px;">CAPABILITY CLASS</label>
+                                    <select id="reg-conn-capability" class="cockpit-select" style="width: 100%;">
+                                        <option value="READ_ONLY">Read Only</option>
+                                        <option value="READ_WRITE">Read & Write</option>
+                                        <option value="EXECUTION_ONLY">Execution Only</option>
+                                        <option value="ADMIN">Full Administrative</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.65rem; opacity: 0.6; margin-bottom: 5px;">TARGET PERSONAL SPACE</label>
+                                    <select id="reg-conn-space" class="cockpit-select" style="width: 100%;">
+                                        <option value="">Loading spaces...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; font-size: 0.65rem; opacity: 0.6; margin-bottom: 5px;">CONFIGURATION (Key=Value, line by line. Use '_key' or '_token' suffix to auto-vault)</label>
+                                <textarea id="reg-conn-config" placeholder="api_endpoint=https://api.example.com&#10;api_key=PASTE_SECRET_HERE" class="cockpit-input" style="width: 100%; height: 80px; font-family: monospace; font-size: 0.75rem;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button class="ws-btn-mini" onclick="creatorEnv.toggleRegistrationForm()" style="background: rgba(255,255,255,0.05);">CANCEL</button>
+                                <button class="btn-apply" onclick="creatorEnv.submitConnectorRegistration()" style="width: auto; margin: 0; padding: 8px 25px;">REGISTER & VAULT</button>
+                            </div>
+                        </div>
+
+                        <div id="connectors-list" class="connector-grid-display" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                            <div class="loading-indicator">Retrieving governed connectors...</div>
+                        </div>
+                    </div>
+
+                    <div class="cockpit-card">
+                        <h3>Sovereign Personal Space</h3>
+                        <div id="space-info-card" class="space-info-card">
+                            <div class="loading-indicator">Resolving space ownership...</div>
+                        </div>
+                    </div>
+
+                    <div class="cockpit-card">
+                        <h3>Recent External History</h3>
+                        <div id="connector-history-list" class="connector-history-list" style="max-height: 300px; overflow-y: auto;">
+                            <div class="loading-indicator">Fetching audit trail...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (this.currentTab === 'wisdom') {
+            panel.innerHTML = `<div id="wisdom-atlas-mount" class="wisdom-atlas-mount" style="height: 100%; min-height: 500px;"></div>`;
+            if (window.wisdomAtlas && typeof window.wisdomAtlas.init === 'function') {
+                window.wisdomAtlas.init('wisdom-atlas-mount');
+            }
         } else if (this.currentTab === 'copilot') {
             this.renderCopilotUI(panel);
+        } else if (this.currentTab === 'audit') {
+            this.renderAuditSurface(panel);
         }
     }
 
@@ -1958,7 +2316,7 @@
                                     <strong style="display: block; font-size: 0.8rem;">${c.label}</strong>
                                     <span style="font-size: 0.6rem; opacity: 0.6;">${new Date(c.created_at).toLocaleString()}</span>
                                 </div>
-                                <button class="btn-cancel" style="width: auto; margin: 0; padding: 4px 10px; font-size: 0.65rem;" onclick="creatorEnv.rollback(${c.id})">Restore</button>
+                                ${isCreator ? `<button class="btn-cancel" style="width: auto; margin: 0; padding: 4px 10px; font-size: 0.65rem;" onclick="creatorEnv.rollback(${c.id})">Restore</button>` : ''}
                             </div>
                          `).join('')}
                          ${data.length === 0 ? '<p style="opacity: 0.3; font-size: 0.7rem;">No checkpoints found.</p>' : ''}
@@ -1969,6 +2327,10 @@
     }
 
     async rollback(checkpointId) {
+        if (!document.body.classList.contains('mode-creator')) {
+            alert("Acceso denegado: Se requiere autoridad de Creator.");
+            return;
+        }
         if (await this.askPermission("ULTIMATE SECURITY OVERRIDE", "Are you sure? This will revert the entire system state. Current session will be lost.")) {
             this.triggerLightBurst();
             const res = await fetch(`/ api / v1 / system / admin / rollback / ${checkpointId} `, { method: 'POST' });
@@ -2026,6 +2388,10 @@
     }
 
     async reviewSuggestion(sid, status) {
+        if (!document.body.classList.contains('mode-creator') && !document.body.classList.contains('mode-admin')) {
+            alert("Acceso denegado: Se requieren permisos de Admin.");
+            return;
+        }
         if (await this.askPermission("Admin Review", `Confirm ${status} for ${sid} ? `)) {
             await fetch(`/ api / v1 / system / admin / suggestions / ${sid} / review ? status = ${status} `, { method: 'POST' });
             this.fetchAdminData();
@@ -2033,6 +2399,10 @@
     }
 
     async createCheckpoint() {
+        if (!document.body.classList.contains('mode-creator')) {
+            alert("Acceso denegado: Se requiere autoridad de Creator.");
+            return;
+        }
         const label = document.getElementById('checkpoint-label').value;
         if (!label) return alert("Please provide a label.");
 
@@ -2207,6 +2577,10 @@
     }
 
     async setSystemMode() {
+        if (!document.body.classList.contains('mode-creator')) {
+            alert("Acceso denegado: Se requiere autoridad de Creator.");
+            return;
+        }
         const mode = document.getElementById('system-mode-selector').value;
         if (await this.askPermission("System Governance", `Change system mode to ${mode.toUpperCase()}? This may restrict user access instantly.`)) {
             const res = await fetch('/api/v1/creator/control/mode', {
@@ -2254,6 +2628,10 @@
     }
 
     async nodeOp(op) {
+        if (!document.body.classList.contains('mode-creator')) {
+            alert("Acceso denegado: Se requiere autoridad de Creator.");
+            return;
+        }
         const nodeId = document.getElementById('node-id-op').value || "primary-node-01";
         if (await this.askPermission("Node Operation", `Trigger ${op} on node ${nodeId}?`)) {
             await fetch('/api/v1/creator/control/node/operation', {
@@ -2266,6 +2644,10 @@
     }
 
     async nodeControl(nodeId, operation) {
+        if (!document.body.classList.contains('mode-creator')) {
+            alert("Acceso denegado: Se requiere autoridad de Creator.");
+            return;
+        }
         if (await this.askPermission("Cluster Control", `Trigger ${operation.toUpperCase()} on node ${nodeId}?`)) {
             const res = await fetch('/api/v1/system/cluster/operation', {
                 method: 'POST',
@@ -2959,10 +3341,10 @@
                                 <textarea id="copilot-prompt-input" placeholder="e.g. 'AuditÃ¡ el sistema actual y mostrame los problemas.'" class="cockpit-input" style="height: 80px;"></textarea>
                                 <div style="display:flex; justify-content: space-between; margin-top: 10px;">
                                     <button class="upload-trigger-btn" onclick="document.getElementById('global-media-upload').click()">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12"/></svg> ADD EVIDENCE
-                                    </button>
-                                    <button class="btn-apply" onclick="creatorEnv.generateCopilotPlan()">Generate Plan</button>
-                                </div>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5l5-5 5 5m-5-5v12"/></svg> ADD EVIDENCE
+                                </button>
+                                ${mode !== 'PUBLIC' ? `<button class="btn-apply" onclick="creatorEnv.generateCopilotPlan()">Generate Plan</button>` : ''}
+                            </div>
                             </div>
                         </div>
 
@@ -2984,7 +3366,7 @@
                                 ${this.copilotPlan ? this.renderPlanSteps() : ''}
                             </div>
                             <div class="plan-actions" style="margin-top: 15px; display: flex; gap: 10px;">
-                                <button class="btn-apply" onclick="creatorEnv.executeApprovedSteps()">Execute Approved</button>
+                                ${document.body.classList.contains('mode-creator') ? `<button class="btn-apply" onclick="creatorEnv.executeApprovedSteps()">Execute Approved</button>` : ''}
                                 <button class="btn-cancel" onclick="creatorEnv.cancelCopilotPlan()">Reset</button>
                             </div>
                         </div>
@@ -3130,6 +3512,10 @@
     }
 
     async executeApprovedSteps() {
+        if (!document.body.classList.contains('mode-creator')) {
+            alert("Acceso denegado: Solo el Creator puede modificar el núcleo cognitivo.");
+            return;
+        }
         if (!this.copilotPlan) return;
 
         this.addCopilotTerminalLine("Starting plan execution sequence...", 'system');
@@ -3646,9 +4032,300 @@
             </div>
         `;
     }
+
+    async fetchConnectorsSummary() {
+        try {
+            const res = await fetch('/api/v1/auth/connectors/summary');
+            if (res.ok) {
+                const data = await res.json();
+                this.updateConnectorsUI(data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch connectors summary", e);
+        }
+    }
+
+    // --- MISSION BLOCK 06: MANUAL CONNECTOR REGISTRATION ---
+
+    toggleRegistrationForm() {
+        const form = document.getElementById('connector-registration-form');
+        const btn = document.getElementById('btn-toggle-reg');
+        if (!form) return;
+
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
+            btn.innerText = '✕ CLOSE FORM';
+            btn.style.background = 'rgba(255,255,255,0.1)';
+            this.fetchSpacesForRegistration();
+        } else {
+            form.style.display = 'none';
+            btn.innerText = '+ REGISTER NEW';
+            btn.style.background = 'var(--accent)';
+        }
+    }
+
+    async fetchSpacesForRegistration() {
+        const select = document.getElementById('reg-conn-space');
+        if (!select) return;
+
+        try {
+            const res = await fetch('/api/v1/auth/spaces');
+            const data = await res.json();
+            if (data.status === 'success') {
+                select.innerHTML = data.spaces.map(s => `
+                    <option value="${s.space_id}">${s.user_id} (${s.space_id.substring(0, 8)})</option>
+                `).join('');
+            }
+        } catch (e) {
+            select.innerHTML = '<option value="">Failed to load spaces</option>';
+        }
+    }
+
+    async submitConnectorRegistration() {
+        const id = document.getElementById('reg-conn-id').value;
+        const provider = document.getElementById('reg-conn-provider').value;
+        const capability = document.getElementById('reg-conn-capability').value;
+        const spaceId = document.getElementById('reg-conn-space').value;
+        const configRaw = document.getElementById('reg-conn-config').value;
+
+        if (!id || !spaceId) return alert("Connector ID and Target Space are mandatory.");
+
+        // Parse Config
+        const config = {};
+        configRaw.split('\n').forEach(line => {
+            const [k, ...vParts] = line.split('=');
+            if (k && vParts.length > 0) {
+                config[k.strip ? k.strip() : k.trim()] = vParts.join('=').trim();
+            }
+        });
+
+        if (await this.askPermission("Connector Registration", `Register governed connector '${id}' for space ${spaceId}?`)) {
+            try {
+                const res = await fetch('/api/v1/auth/connectors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        connector_id: id,
+                        owner_space_id: spaceId,
+                        provider_type: provider,
+                        capability: capability,
+                        config: config
+                    })
+                });
+
+                if (res.ok) {
+                    if (window.showToast) window.showToast("Connector Registered & Vaulted", "success");
+                    this.toggleRegistrationForm();
+                    this.fetchConnectorsSummary();
+                } else {
+                    const err = await res.json();
+                    alert("Registration failed: " + (err.detail || "Unknown error"));
+                }
+            } catch (e) {
+                alert("Critical error during registration.");
+            }
+        }
+    }
+
+    updateConnectorsUI(data) {
+        if (this.currentTab !== 'connectors') return;
+
+        const el = (id) => document.getElementById(id);
+        if (el('conn-total')) el('conn-total').innerText = data.metrics.total_connectors;
+        if (el('conn-active')) el('conn-active').innerText = data.metrics.active_connectors;
+
+        // Space Info
+        const spaceCard = el('space-info-card');
+        if (spaceCard) {
+            spaceCard.innerHTML = `
+                <div class="space-detail" style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="label" style="font-size: 0.6rem; opacity: 0.5; text-transform: uppercase;">Space ID</div>
+                    <div class="value" style="font-family: monospace; color: var(--accent);">${data.space.space_id}</div>
+                </div>
+                <div class="space-detail" style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="label" style="font-size: 0.6rem; opacity: 0.5; text-transform: uppercase;">Owner Anchor</div>
+                    <div class="value">${data.space.owner_id}</div>
+                </div>
+                <div class="space-detail" style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="label" style="font-size: 0.6rem; opacity: 0.5; text-transform: uppercase;">Root Filesystem</div>
+                    <div class="value" style="font-size: 0.65rem; opacity: 0.7; word-break: break-all;">${data.space.root_path}</div>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: rgba(0,212,255,0.05); border-radius: 6px; border: 1px solid rgba(0,212,255,0.1); font-size: 0.65rem; line-height: 1.4;">
+                    <strong>Sovereignty Note:</strong> All artifacts generated by connectors are deterministically stored within this isolated directory.
+                </div>
+            `;
+        }
+
+        // Connectors List
+        const list = el('connectors-list');
+        if (list) {
+            if (data.connectors.length === 0) {
+                list.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; opacity: 0.3; background: rgba(0,0,0,0.2); border-radius: 8px;">No external connectors registered for this space.</div>';
+            } else {
+                list.innerHTML = data.connectors.map(c => {
+                    const statusClass = c.status.toLowerCase();
+                    return `
+                        <div class="connector-card-ui ${statusClass}" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 15px; transition: all 0.3s ease;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div style="font-weight: 700; font-family: 'Outfit'; color: #fff;">${c.name}</div>
+                                <span class="status-badge" style="font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; background: ${statusClass === 'active' ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)'}; color: ${statusClass === 'active' ? '#00ff88' : '#ff4444'}; border: 1px solid ${statusClass === 'active' ? 'rgba(0,255,136,0.2)' : 'rgba(255,68,68,0.2)'};">${c.status}</span>
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.6; margin-bottom: 15px; height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${c.description || 'Governed connector for external tool access.'}</div>
+                            
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px;">
+                                ${c.capabilities.map(cap => `<span style="font-size: 0.55rem; padding: 1px 5px; background: rgba(212,175,55,0.1); color: var(--creator-gold); border: 1px solid rgba(212,175,55,0.2); border-radius: 3px;">${cap}</span>`).join('')}
+                            </div>
+
+                            <div style="display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                                ${c.status === 'ACTIVE' ? `
+                                    <button class="ws-btn-mini" onclick="creatorEnv.updateConnectorStatus('${c.connector_id}', 'SUSPENDED')" style="background: rgba(255,170,0,0.1); border-color: rgba(255,170,0,0.3); color: #ffaa00;">SUSPEND</button>
+                                ` : ''}
+                                ${c.status === 'SUSPENDED' ? `
+                                    <button class="ws-btn-mini" onclick="creatorEnv.updateConnectorStatus('${c.connector_id}', 'ACTIVE')" style="background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.3); color: #00d4ff;">ACTIVATE</button>
+                                ` : ''}
+                                ${c.status !== 'REVOKED' ? `
+                                    <button class="ws-btn-mini" onclick="creatorEnv.updateConnectorStatus('${c.connector_id}', 'REVOKED')" style="background: rgba(255,68,68,0.1); border-color: rgba(255,68,68,0.3); color: #ff4444;">REVOKE</button>
+                                ` : '<span style="font-size: 0.6rem; opacity: 0.4;">PERMANENTLY REVOKED</span>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // History
+        const historyList = el('connector-history-list');
+        if (historyList) {
+            if (data.history.length === 0) {
+                historyList.innerHTML = '<div style="padding: 20px; text-align: center; opacity: 0.3;">No execution history recorded.</div>';
+            } else {
+                historyList.innerHTML = data.history.map(h => `
+                    <div class="history-item-ui" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="font-weight: 700; font-size: 0.7rem; color: var(--accent);">${h.connector_id.toUpperCase()}</span>
+                            <span style="font-size: 0.6rem; opacity: 0.4;">${new Date(h.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.8rem; color: #fff;">${h.action}</span>
+                            <span style="font-size: 0.6rem; font-weight: bold; padding: 2px 6px; border-radius: 3px; background: ${h.status === 'SUCCESS' ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)'}; color: ${h.status === 'SUCCESS' ? '#00ff88' : '#ff4444'};">${h.status}</span>
+                        </div>
+                        ${h.error ? `<div style="font-size: 0.65rem; color: #ff4444; margin-top: 5px; opacity: 0.8;">[ERROR] ${h.error}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+    }
+
+    async updateConnectorStatus(id, status) {
+        if (!confirm(`Confirm change of connector ${id} to ${status}?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/auth/connectors/${id}/status?status=${status}`, {
+                method: 'PATCH'
+            });
+            if (res.ok) {
+                this.fetchConnectorsSummary();
+                if (window.showToast) window.showToast(`Connector status set to ${status}`, 'success');
+            } else {
+                const err = await res.json();
+                alert("Failed to update status: " + (err.message || 'Unknown error'));
+            }
+        } catch (e) {
+            console.error("Status update failed", e);
+        }
+    }
+
+    async fetchUserArtifacts() {
+        try {
+            const res = await fetch('/api/v1/auth/artifacts');
+            const data = await res.json();
+            if (data.status === 'success') {
+                this.renderArtifactGrid(data.artifacts);
+
+                // Update header stats
+                const countBadge = document.getElementById('home-artifact-count');
+                if (countBadge) countBadge.innerText = data.artifacts.length;
+
+                // Find Space ID from state if available
+                if (this.systemState && this.systemState.space) {
+                    const spaceIdEl = document.getElementById('home-space-id');
+                    if (spaceIdEl) spaceIdEl.innerText = `SPACE_ID: ${this.systemState.space.space_id}`;
+                }
+            }
+        } catch (e) {
+            console.error("[HOME] Failed to fetch artifacts", e);
+        }
+    }
+
+    renderArtifactGrid(artifacts) {
+        const grid = document.getElementById('artifact-grid');
+        if (!grid) return;
+
+        if (!artifacts || artifacts.length === 0) {
+            grid.innerHTML = `
+                <div class="gallery-empty">
+                    <div class="empty-icon">📂</div>
+                    <p>Aún no tienes resultados generados.</p>
+                    <span>Tus creaciones aparecerán aquí automáticamente.</span>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by date (recent first)
+        const sorted = [...artifacts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        grid.innerHTML = sorted.map(a => {
+            const dateStr = new Date(a.created_at).toLocaleDateString();
+            const timeStr = new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Basic Icon Mapping
+            let icon = '📄';
+            if (a.artifact_type === 'IMAGE') icon = '🖼️';
+            if (a.artifact_type === 'MEDIA') icon = '🎥';
+            if (a.artifact_type === 'CODE') icon = '⌨️';
+            if (a.artifact_type === 'NOTE') icon = '📝';
+
+            return `
+                <div class="artifact-card" title="${a.filename}" onclick="creatorEnv.openArtifact('${a.artifact_id}')">
+                    <div class="artifact-preview">
+                        <span class="artifact-icon-large">${icon}</span>
+                        <div class="artifact-type-tag">${a.artifact_type}</div>
+                    </div>
+                    <div class="artifact-info">
+                        <div class="artifact-title">${a.filename}</div>
+                        <div class="artifact-meta">
+                            <span>${dateStr}</span>
+                            <span class="meta-dot">•</span>
+                            <span>${timeStr}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // --- ARTIFACT PREVIEW MODULE ---
+
+    async openArtifact(artifactId) {
+        // Redirige al nuevo sistema espacial (Block 02 integration)
+        if (window.workspaceManager) {
+            window.workspaceManager.openArtifact(artifactId);
+        } else {
+            console.error("Workspace Manager no disponible.");
+        }
+    }
+
+    closeArtifactPreview() {
+        const modal = document.getElementById('artifact-preview-modal');
+        if (modal) modal.style.display = 'none';
+        const contentBody = document.getElementById('preview-content');
+        if (contentBody) contentBody.innerHTML = '';
+    }
 }
 
 const creatorEnv = new CreatorEnvironment();
+
 window.missionControl = creatorEnv;
 window.creatorEnv = creatorEnv;
 document.addEventListener('DOMContentLoaded', () => creatorEnv.init());

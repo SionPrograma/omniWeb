@@ -4,6 +4,7 @@ from backend.core.security.dependencies import get_creator_user
 from backend.core.auth import OmniUser
 from backend.core.system_state.models import SystemMode
 from .manager import creator_control_manager
+from .audit_service import creator_audit_service
 
 router = APIRouter()
 
@@ -132,4 +133,43 @@ async def node_operation(
         payload={"node_id": node_id, "operation": operation}
     )
     unified = await orchestrator.orchestrate(f"node operation {operation} on {node_id}", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
+
+@router.get("/audit/summary")
+async def get_audit_summary(limit: int = 15, creator: OmniUser = Depends(get_creator_user)):
+    """
+    OMNI_CREATOR_AUDIT_SURFACE — BLOCK 05: EVIDENCE AGGREGATION.
+    Returns the unified evidence-first summary for the Creator.
+    """
+    summary = creator_audit_service.get_audit_summary(limit=limit)
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="audit_summary",
+        status="success",
+        message=f"Se han consolidado {len(summary)} trazas de evidencia operacional.",
+        payload={"audit_summary": summary}
+    )
+    unified = await orchestrator.orchestrate("get audit summary", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
+    return {"status": "success", "payload": unified.model_dump()}
+@router.get("/audit/debt")
+async def get_audit_debt(limit: int = 10, creator: OmniUser = Depends(get_creator_user)):
+    """
+    OMNI_CREATOR_AUDIT_SURFACE — BLOCK 07: STRUCTURAL DEBT MONITOR.
+    Returns clustered systemic drift and operational debt for the Creator.
+    """
+    debt = creator_audit_service.get_structural_debt(limit=limit)
+    
+    from backend.core.ai_host.orchestration.cognitive_orchestrator import CognitiveOrchestrator
+    from backend.core.ai_host.processors.base import AICommandResponse
+    orchestrator = CognitiveOrchestrator()
+    raw_res = AICommandResponse(
+        intent="audit_debt",
+        status="success",
+        message=f"Se han identificado {len(debt)} clusters de deuda estructural.",
+        payload={"debt_clusters": debt}
+    )
+    unified = await orchestrator.orchestrate("get structural debt", {"mode": "direct_response", "intent_group": "SYSTEM"}, context={"user_id": creator.id}, raw_response=raw_res)
     return {"status": "success", "payload": unified.model_dump()}

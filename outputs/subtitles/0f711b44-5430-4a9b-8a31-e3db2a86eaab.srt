@@ -1,0 +1,4 @@
+1
+00:00:00,000 --> 00:00:02,000
+[VOX_MOCK] test_vox_v12.wav - Transcripción simulada (V1.2)
+

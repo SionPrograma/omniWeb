@@ -1195,6 +1195,8 @@ Este documento resume los mecanismos de control que protegen la arquitectura de 
         return None
 
     def _row_to_mission(self, row) -> MissionState:
+        # Standardize sqlite3.Row to dict to support .get() and clean serialization
+        row = dict(row)
         # Handle created_at and updated_at being either strings or datetime objects (sqlite3 vs mock)
         created_at = row['created_at']
         if isinstance(created_at, str):

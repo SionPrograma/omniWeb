@@ -51,6 +51,30 @@ BETA_PERMS = {
     BETA_TESTER_ACCESS
 }
 
+# --- System/Headless Task Config (Phase 127) ---
+SYSTEM_TASK_PREFIX = "system:"
+TRUSTED_SYSTEM_MODULES = {
+    "core",
+    "monitor",
+    "governance",
+    "integrity",
+    "stability",
+    "orchestration",
+    "background_processor",
+    "semantic_layer",
+    "idea_cloud"
+}
+
+# Permissions allowed for trusted system tasks without a human user
+ALLOWED_SYSTEM_PERMS = {
+    "db_access",
+    STORAGE_READ,
+    STORAGE_WRITE,
+    NETWORK_ACCESS,
+    USER_LOGBOOK_ACCESS, # For automated auditing
+    ADMIN_LOGBOOK_ACCESS
+}
+
 class PermissionDeniedError(Exception):
     """Exception thrown when a chip attempts an unauthorized action."""
     pass
@@ -67,8 +91,15 @@ _current_chip_ctx =  _current_ctx_info
 def set_chip_context(slug: str, user_id: Optional[str] = None):
     """
     Context manager to set the current executing chip slug and user globally.
+    If user_id is not provided, it inherits the one from the parent context.
     """
-    token = _current_ctx_info.set({"chip_slug": slug, "user_id": user_id})
+    current_ctx = _current_ctx_info.get()
+    
+    # Inherit existing user_id if not explicitly provided
+    # This prevents inner context blocks from nuking the authenticated session
+    effective_user_id = user_id if user_id is not None else current_ctx.get("user_id")
+    
+    token = _current_ctx_info.set({"chip_slug": slug, "user_id": effective_user_id})
     try:
         yield
     finally:
@@ -125,9 +156,22 @@ def enforce_permission(required_permission: str):
             logger.warning(f"READ_ONLY BLOCKED: User {user_id} attempted {required_permission}")
             raise PermissionDeniedError("System is in READ_ONLY mode. Write operations are restricted.")
 
-    # 1. Core system bypass
+    # 1. Core/Trusted system bypass
+    # 'core' and trusted system modules (when called with system: prefix) are allowed full internal access.
     if chip_slug == "core":
         return
+
+    # 1b. Headless Security Context (Phase 127)
+    # Allows trusted background tasks to operate without a human user.
+    if chip_slug and (chip_slug.startswith(SYSTEM_TASK_PREFIX) or chip_slug in TRUSTED_SYSTEM_MODULES):
+        clean_slug = chip_slug[len(SYSTEM_TASK_PREFIX):] if chip_slug.startswith(SYSTEM_TASK_PREFIX) else chip_slug
+        if clean_slug in TRUSTED_SYSTEM_MODULES:
+            if required_permission in ALLOWED_SYSTEM_PERMS:
+                return
+            else:
+                logger.warning(f"SYSTEM RESTRICTION: Trusted task '{chip_slug}' attempted unallowed perm '{required_permission}'")
+        else:
+            logger.warning(f"UNTRUSTED SYSTEM TASK: '{chip_slug}' is not in trusted module list.")
 
     # 2. Untrusted check
     if not chip_slug:
@@ -150,30 +194,69 @@ def enforce_permission(required_permission: str):
     else:
         metadata = chip_info.get("metadata", {})
 
-    # 4. Check Permission List
-    has_perm = check_permission(metadata, required_permission)
+    # 5. Resolve Mode-Based Permission (OMNI_MODE_ARCHITECTURE_V1.0)
+    from backend.core.governance.mode_registry import ModeRegistry, OmniMode, ModePermission
     
-    # 5. Role-Based Hierarchy Check (Phase 22 & 29)
-    # Placeholder for Admin IDs - in a real system this would be a DB check
-    # For now, let's treat the Creator as a Super-Admin
-    is_admin = is_creator or (user_id in ["admin_1", "admin_2"])
-    is_admin_candidate = is_admin or (user_id in ["candidate_1"])
-    is_beta_tester = is_admin_candidate or (user_id in ["tester_1"])
+    # Resolve the active mode for the user
+    user_mode = OmniMode.PUBLIC
+    if is_creator:
+        user_mode = OmniMode.CREATOR
+    elif user_id and user_id != "system":
+        # Resolve mode from DB
+        try:
+            with db_manager.get_connection(internal=True) as conn:
+                row = conn.execute("SELECT username, role, mode FROM users WHERE id = ?", (user_id,)).fetchone()
+                if row:
+                    from backend.core.auth import OmniUser
+                    user_mode = OmniUser.resolve_mode(row["username"], row["role"], row["mode"])
+        except:
+            pass
 
-    if required_permission in CREATOR_ONLY_PERMS:
-        if not is_creator:
-            has_perm = False
-            logger.warning(f"Creator-only permission '{required_permission}' denied for user '{user_id}'")
+    # Default to DENIED if not a trusted core module (Shift to Deny-by-Default V1.5)
+    has_perm = False
     
-    elif required_permission in ADMIN_PERMS:
-        if not is_admin:
+    # Core/Trusted Bypass Redux (Consistency Check)
+    if is_creator or chip_slug == "core":
+        has_perm = True
+
+    # Map legacy permission strings to ModePermissions if possible
+    # (Harden known sensitive surfaces)
+    perm_map = {
+        CREATOR_TOOLS_ACCESS: ModePermission.SYSTEM_MAINTENANCE,
+        ADMIN_OPS_ACCESS: ModePermission.SYSTEM_MAINTENANCE,
+        GOVERNANCE_ADVISOR_ACCESS: ModePermission.GOVERNANCE_VIEW,
+    }
+    
+    if required_permission in perm_map:
+        if ModeRegistry.has_permission(user_mode, perm_map[required_permission]):
+            has_perm = True
+        else:
+            logger.warning(f"MODE REJECTION: User {user_id} ({user_mode}) denied {required_permission}")
             has_perm = False
-            logger.warning(f"Admin-level permission '{required_permission}' denied for user '{user_id}'")
-            
-    elif required_permission in BETA_PERMS:
-        if not is_beta_tester:
-            has_perm = False
-            logger.warning(f"Beta-level permission '{required_permission}' denied for user '{user_id}'")
+    
+    # Final overrides and strict blocks
+    if required_permission in CREATOR_ONLY_PERMS and user_mode != OmniMode.CREATOR:
+        has_perm = False
+    
+    if not has_perm:
+        if required_permission in ADMIN_PERMS and user_mode in [OmniMode.CREATOR, OmniMode.ADMIN]:
+             has_perm = True
+        if required_permission in BETA_PERMS and user_mode in [OmniMode.CREATOR, OmniMode.ADMIN, OmniMode.TESTER]:
+             has_perm = True
+    
+    # Strict Lockdown Enforcement
+    from backend.core.system_state.models import SystemMode
+    # system_mode resolved earlier at line 125
+    if system_mode == SystemMode.LOCKDOWN and not is_creator and chip_slug != "core":
+        has_perm = False
+
+    if not has_perm:
+        # Phase 1: Modular Sovereignty Bridge
+        # Check if the currently executing chip has specifically declared this 
+        # capability in its signed metadata (chip.json).
+        if metadata and check_permission(metadata, required_permission):
+            logger.debug(f"MODULAR PERMIT: Chip '{chip_slug}' authorized for '{required_permission}' via metadata.")
+            has_perm = True
 
     if not has_perm:
         _log_denial(chip_slug, user_id, required_permission)
@@ -187,20 +270,31 @@ def check_permission(chip_metadata: Dict[str, Any], required_permission: str) ->
     return required_permission in permissions
 
 def _log_denial(chip_slug: str, user_id: str, permission: str):
-    """Records security denial in database."""
-    logger.error(f"SECURITY DENIAL: Chip '{chip_slug}' (User: {user_id}) requested '{permission}'")
+    """Records security denial in database with surgical error handling."""
+    logger.error(f"SECURITY DENIAL: Chip '{chip_slug}' (User: {user_id or 'system'}) requested '{permission}'")
     
     # Delayed import to avoid circular dependency
     try:
         from backend.core.security.manager import security_fortress
+        effective_user = user_id if user_id and user_id != "system" else "00000000-0000-0000-0000-000000000000"
+        
         security_fortress.log_creator_action(
-            creator_id=user_id if user_id != "system" else "00000000-0000-0000-0000-000000000000",
+            creator_id=effective_user,
             action_type="PERMISSION_DENIED",
             target=chip_slug,
-            payload={"requested": permission, "result": "denied"}
+            payload={"requested": permission, "result": "denied", "fallback_id_used": user_id is None or user_id == "system"}
         )
+        logger.debug(f"SECURITY AUDIT: Persistence successful for {chip_slug} denial.")
     except Exception as e:
-        logger.warning(f"Failed to log security denial to DB: {e}")
+        # Phase 0: Surgical Reporting of Persistence Failures
+        error_msg = str(e)
+        if "FOREIGN KEY constraint failed" in error_msg:
+            logger.warning(f"SECURITY AUDIT FAILED (FK): Could not persist denial for '{chip_slug}'. Likely missing 'system' user in DB. Error: {error_msg}")
+        else:
+            logger.warning(f"SECURITY AUDIT FAILED: Unknown error persisting denial for '{chip_slug}': {error_msg}")
+        
+        # We DO NOT re-raise; the denial (the core logic) is already done.
+        logger.info(f"FALLBACK: Denial logged to STDOUT but NOT persisted to DB.")
 
 def get_chip_permissions(chip_metadata: Dict[str, Any]) -> List[str]:
     return chip_metadata.get("permissions", [])

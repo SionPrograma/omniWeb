@@ -9,10 +9,20 @@ class FinanzasRepository:
     Encapsulates raw SQL and basic CRUD operations.
     """
     def __init__(self):
-        self.init_db()
+        self._db_initialized = False
+
+    def _ensure_db(self):
+        """Ensures the database is initialized before any operation (Lazy Init)."""
+        if not self._db_initialized:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("FINANZAS: Lazy-initializing repository database...")
+            self.init_db()
+            self._db_initialized = True
 
     def init_db(self):
         """Initializes the transactions table if it doesn't exist."""
+        # This call is now safe as it's deferred until a real request hits.
         with db_manager.get_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS transactions (
@@ -26,6 +36,7 @@ class FinanzasRepository:
             conn.commit()
 
     def get_all(self) -> List[Transaction]:
+        self._ensure_db()
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM transactions ORDER BY date DESC")
@@ -33,6 +44,7 @@ class FinanzasRepository:
             return [Transaction(**dict(row)) for row in rows]
 
     def add(self, tx: Transaction) -> Transaction:
+        self._ensure_db()
         date_str = tx.date or datetime.now().isoformat()
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()

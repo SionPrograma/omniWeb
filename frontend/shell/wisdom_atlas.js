@@ -146,38 +146,81 @@ class WisdomAtlas {
         if (!surface) return;
 
         try {
-            const response = await fetch('/api/v1/governance/wisdom/feedback/pending', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}` }
-            });
-            const data = await response.json();
-            if (data.status === 'success' && data.payload.length > 0) {
-                this.renderFeedback(surface, data.payload);
+            // OMNIWEB — BLOQUE: GOVERNANCE POST-MISSION WISDOM SYNC & POLICY REVIEW
+            const [syncRes, propRes] = await Promise.all([
+                fetch('/api/v1/governance/wisdom/sync/pending', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}` }
+                }),
+                fetch('/api/v1/governance/catalyst/policy/proposals', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}` }
+                })
+            ]);
+
+            const syncData = await syncRes.json();
+            const propData = await propRes.json();
+
+            const syncItems = syncData.status === 'success' ? syncData.payload : [];
+            const proposals = propData.status === 'success' ? propData.payload : [];
+
+            if (syncItems.length > 0 || proposals.length > 0) {
+                this.renderFeedback(surface, syncItems, proposals);
             } else {
                 surface.innerHTML = '';
             }
         } catch (err) {
-            console.warn("Atlas feedback load failed", err);
+            console.warn("Atlas feedback/proposals load failed", err);
         }
     }
 
-    renderFeedback(container, items) {
+    renderFeedback(container, items, proposals = []) {
+        let proposalHtml = '';
+        if (proposals.length > 0) {
+            proposalHtml = `
+                <div style="margin-bottom: 25px; border-bottom: 1px solid rgba(139, 92, 246, 0.3); padding-bottom: 15px;">
+                    <div style="font-size: 0.65rem; color: #8b5cf6; font-weight: bold; letter-spacing: 1px; margin-bottom: 12px;">
+                        REFINAMIENTO DE POLÍTICA CATALYST (MODO GUIADO)
+                    </div>
+                    ${proposals.map(p => `
+                        <div class="feedback-item" style="background: rgba(139, 92, 246, 0.05); border-left: 4px solid #8b5cf6; padding: 15px; border-radius: 12px; margin-bottom: 10px; display:flex; gap:15px; align-items:center;">
+                            <div style="font-size: 1.5rem;">⚖️</div>
+                            <div style="flex:1;">
+                                <div style="font-size: 0.85rem; font-weight:bold; color:#fff;">${p.type.replace(/_/g, ' ')}</div>
+                                <div style="font-size: 0.75rem; color:#ccc;">${p.rationale}</div>
+                                <div style="font-size: 0.65rem; color:#8b5cf6; margin-top:5px; font-family:monospace;">
+                                    Patrón: ${p.pattern_origin} | Frecuencia: ${p.occurrence_count} | Confianza: ${p.confidence}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="atlas-btn primary" style="font-size:0.6rem; padding:6px 12px; background:#4c1d95;" onclick="alert('Funcionalidad de aplicación en desarrollo (V0.5). Revise Ledger para auditoría.')">Registrar</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         container.innerHTML = `
             <div class="atlas-feedback-panel animate-slide-in">
-                <div style="font-size: 0.65rem; color: #ffaa00; font-weight: bold; letter-spacing: 1px; margin-bottom: 12px; display:flex; justify-content:space-between;">
-                    <span>Sugerencias de Recalibración Táctica</span>
-                    <span style="opacity:0.5;">${items.length} EVENTOS</span>
+                ${proposalHtml}
+                <div style="font-size: 0.65rem; color: #4ade80; font-weight: bold; letter-spacing: 1px; margin-bottom: 12px; display:flex; justify-content:space-between;">
+                    <span>Sugerencias de Recalibración Táctica (Post-Mission Sync)</span>
+                    <span style="opacity:0.5;">${items.length} PENDIENTES</span>
                 </div>
                 ${items.map(item => `
-                    <div class="feedback-item ${item.feedback_state}" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 10px; display:flex; gap:15px; align-items:center;">
-                        <div style="font-size: 1.5rem;">${item.feedback_state === 'WISDOM_CONFIRMED' ? '✅' : (item.feedback_state === 'WISDOM_CONTRADICTED' ? '❌' : '⚠️')}</div>
+                    <div class="feedback-item ${item.actual_outcome_type}" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 10px; display:flex; gap:15px; align-items:center;">
+                        <div style="font-size: 1.5rem;">${item.actual_outcome_type === 'WISDOM_CONFIRMED' ? '✅' : (item.actual_outcome_type === 'WISDOM_CONTRADICTED' ? '❌' : '⚠️')}</div>
                         <div style="flex:1;">
-                            <div style="font-size: 0.85rem; font-weight:bold; color:#fff;">${item.feedback_state.replace(/_/g, ' ')}</div>
+                            <div style="font-size: 0.85rem; font-weight:bold; color:#fff;">${item.actual_outcome_type.replace(/_/g, ' ')}</div>
                             <div style="font-size: 0.75rem; color:#ccc;">${item.rationale}</div>
-                            <div style="font-size: 0.65rem; color:#ffaa00; margin-top:5px; font-family:monospace;">Delta: ${item.proposed_confidence_delta > 0 ? '+' : ''}${(item.proposed_confidence_delta * 100).toFixed(0)}% confianza</div>
+                            <div style="font-size: 0.65rem; color:#4ade80; margin-top:5px; font-family:monospace;">
+                                Delta: ${item.proposed_confidence_delta > 0 ? '+' : ''}${(item.proposed_confidence_delta * 100).toFixed(0)}% confianza | 
+                                Mission: <span style="opacity:0.6;">${item.source_mission_id.substring(0, 8)}</span>
+                                ${item.catalyst_trace_id ? `<span class="catalyst-tag clickable" style="margin-left:10px;" onclick="window.wisdomAtlas.showTrace('${item.catalyst_trace_id}')">VÍA CATALYST [TRACE]</span>` : ''}
+                            </div>
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="atlas-btn tertiary" style="font-size:0.6rem; padding:6px 12px;" onclick="window.wisdomAtlas.processFeedback('${item.feedback_id}', 'IGNORE')">Ignorar</button>
-                            <button class="atlas-btn primary" style="font-size:0.6rem; padding:6px 12px;" onclick="window.wisdomAtlas.processFeedback('${item.feedback_id}', 'APPLY')">Recalibrar Atlas</button>
+                            <button class="atlas-btn tertiary" style="font-size:0.6rem; padding:6px 12px;" onclick="window.wisdomAtlas.processFeedback('${item.sync_id}', 'REJECTED')">Ignorar</button>
+                            <button class="atlas-btn primary" style="font-size:0.6rem; padding:6px 12px;" onclick="window.wisdomAtlas.processFeedback('${item.sync_id}', 'ACCEPTED')">Recalibrar Atlas</button>
                         </div>
                     </div>
                 `).join('')}
@@ -185,15 +228,16 @@ class WisdomAtlas {
         `;
     }
 
-    async processFeedback(fbId, action) {
-        if (action === 'IGNORE') {
-            document.getElementById('wisdom-feedback-surface').innerHTML = '';
-            return;
-        }
+    async processFeedback(syncId, decision) {
         try {
-            const res = await fetch(`/api/v1/governance/wisdom/feedback/${fbId}/confirm`, {
+            // OMNIWEB — BLOQUE: GOVERNANCE POST-MISSION WISDOM SYNC
+            const res = await fetch(`/api/v1/governance/wisdom/sync/${syncId}/decision`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}` }
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ decision })
             });
             const data = await res.json();
             if (data.status === 'success') {
@@ -201,7 +245,7 @@ class WisdomAtlas {
                 await this.loadFeedback();
             }
         } catch (err) {
-            console.error("Feedback confirmation failed", err);
+            console.error("Sync decision failed", err);
         }
     }
 
@@ -273,69 +317,173 @@ class WisdomAtlas {
     }
 
     async showDetail(nodeId) {
-        const node = this.nodes.find(n => n.node_id === nodeId);
-        if (!node) return;
-
         const overlay = document.getElementById('atlas-overlay');
         overlay.style.display = 'flex';
+        overlay.innerHTML = `<div class="atlas-node-detail"><div class="loading-state">Consultando verdad operativa...</div></div>`;
 
-        overlay.innerHTML = `
-            <div class="atlas-node-detail">
-                <button class="close-detail">&times;</button>
-                <div class="detail-content">
-                    <div class="detail-header">
-                        <span class="node-type-badge">${node.node_type}</span>
-                        <h2>${node.title}</h2>
-                        <div class="detail-pills">
-                            <span class="pill">Confidence: ${Math.round(node.confidence * 100)}%</span>
-                            <span class="pill">Reusability: ${Math.round(node.reusability_score * 100)}%</span>
-                            <span class="pill status-${node.status_band.toLowerCase()}">${node.status_band}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-body">
-                        <h3>Resumen Estructural</h3>
-                        <p>${node.summary}</p>
-                        
-                        <div class="evidence-section">
-                            <h3>Evidencia y Contexto</h3>
-                            <div class="evidence-grid">
-                                ${Object.entries(node.evidence_refs).map(([k, v]) => `
-                                    <div class="evidence-item">
-                                        <label>${k.replace(/_/g, ' ')}</label>
-                                        <span>${typeof v === 'object' ? JSON.stringify(v) : v}</span>
-                                    </div>
-                                `).join('')}
-                                <div class="evidence-item">
-                                    <label>Dominios Afectados</label>
-                                    <span>${node.affected_domains.join(', ') || 'Global'}</span>
-                                </div>
-                                <div class="evidence-item">
-                                    <label>Origen</label>
-                                    <span>${node.source_ref_type} ID: ${node.source_ref_id}</span>
-                                </div>
+        try {
+            // OMNIWEB — BLOQUE: ATLAS EVIDENCE UI
+            // Fetch enriched detail with sync history
+            const response = await fetch(`/api/v1/governance/wisdom/atlas/node/${nodeId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}` }
+            });
+            const data = await response.json();
+
+            if (data.status !== 'success') throw new Error(data.message);
+            const node = data.payload;
+            const syncHistory = node.sync_history || [];
+
+            overlay.innerHTML = `
+                <div class="atlas-node-detail">
+                    <button class="close-detail">&times;</button>
+                    <div class="detail-content">
+                        <div class="detail-header">
+                            <span class="node-type-badge">${node.node_type}</span>
+                            <h2>${node.title}</h2>
+                            <div class="detail-pills">
+                                <span class="pill">Confidence: ${Math.round(node.confidence * 100)}%</span>
+                                <span class="pill">Reusability: ${Math.round(node.reusability_score * 100)}%</span>
+                                <span class="pill status-${node.status_band.toLowerCase()}">${node.status_band}</span>
                             </div>
                         </div>
-                    </div>
+                        
+                        <div class="detail-body">
+                            <div class="detail-tabs">
+                                <button class="tab-btn active" id="tab-info-btn">Información</button>
+                                <button class="tab-btn" id="tab-history-btn">Evidencia (${syncHistory.length})</button>
+                            </div>
 
-                    <div class="actions-footer">
-                        <button class="atlas-btn secondary close-btn">Cerrar</button>
-                        ${node.node_type === 'LEARNING' || node.node_type === 'REUSABLE_TACTIC' ?
-                `<button class="atlas-btn primary simulate-btn" data-id="${node.source_ref_id}">Simular en Proyecto Actual</button>` : ''}
+                            <div id="tab-info-content" class="tab-content">
+                                <h3>Resumen Estructural</h3>
+                                <p style="line-height: 1.5; color: #ddd; margin-bottom: 20px;">${node.summary}</p>
+                                
+                                <!-- OMNIWEB — BLOQUE: ATLAS EVIDENCE UI — SUMMARY BADGE STRIP -->
+                                <div class="evidence-summary-strip">
+                                    <div class="summary-badge conf" title="Misiones que validaron este nodo">
+                                        <label>CONFIRMED</label>
+                                        <span class="count">${node.evidence_summary.WISDOM_CONFIRMED}</span>
+                                    </div>
+                                    <div class="summary-badge partial" title="Misiones con éxito parcial">
+                                        <label>PARTIAL</label>
+                                        <span class="count">${node.evidence_summary.WISDOM_PARTIAL}</span>
+                                    </div>
+                                    <div class="summary-badge contradicted" title="Misiones que fallaron siguiendo esta táctica">
+                                        <label>CONTRADICTED</label>
+                                        <span class="count">${node.evidence_summary.WISDOM_CONTRADICTED}</span>
+                                    </div>
+                                    <div class="summary-badge biased" title="Misiones donde no se respetaron precondiciones">
+                                        <label>EXECUTION BIASED</label>
+                                        <span class="count">${node.evidence_summary.EXECUTION_BIASED}</span>
+                                    </div>
+                                </div>
+
+                                <div class="evidence-section">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                        <h3>Metadatos de Sabiduría</h3>
+                                        ${node.evidence_summary.last_reviewed_at ? `
+                                            <span style="font-size:0.65rem; color:rgba(255,255,255,0.4);">ÚLTIMA REVISIÓN: ${new Date(node.evidence_summary.last_reviewed_at).toLocaleDateString()}</span>
+                                        ` : ''}
+                                    </div>
+                                    <div class="evidence-grid">
+                                        ${Object.entries(node.evidence_refs).map(([k, v]) => `
+                                            <div class="evidence-item">
+                                                <label>${k.replace(/_/g, ' ')}</label>
+                                                <span>${typeof v === 'object' ? JSON.stringify(v) : v}</span>
+                                            </div>
+                                        `).join('')}
+                                        <div class="evidence-item">
+                                            <label>Origen</label>
+                                            <span style="font-size:0.7rem; font-family:monospace; opacity:0.8;">${node.source_ref_type}</span>
+                                        </div>
+                                        <div class="evidence-item">
+                                            <label>Dominios</label>
+                                            <span>${node.affected_domains.join(', ') || 'Global'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="tab-history-content" class="tab-content" style="display:none;">
+                                <h3 style="margin-bottom:15px;">Historial de Verdad (Runtime Evidence)</h3>
+                                ${syncHistory.length === 0 ?
+                    '<div class="empty-evidence">No hay misiones vinculadas a esta unidad de sabiduría aún.</div>' :
+                    `<div class="sync-history-list">
+                                        ${syncHistory.map(s => {
+                        const outcome = s.actual_outcome_type;
+                        const stateClass = outcome === 'WISDOM_CONFIRMED' ? 'sync-success' :
+                            outcome === 'WISDOM_CONTRADICTED' ? 'sync-fail' :
+                                outcome === 'EXECUTION_BIASED' ? 'sync-biased' : 'sync-partial';
+                        return `
+                                                <div class="history-item ${stateClass}">
+                                                    <div class="history-meta">
+                                                        <span class="sync-date">${new Date(s.created_at).toLocaleDateString()}</span>
+                                                        <span class="sync-outcome">${outcome.replace(/_/g, ' ')}</span>
+                                                        ${s.creator_decision === 'PENDING' ? '<span class="pending-badge">DECISION PENDING</span>' : ''}
+                                                    </div>
+                                                    <div class="history-rationale">${s.rationale}</div>
+                                                    <div class="history-footer">
+                                                        <div class="history-trace">
+                                                             Trace: <small style="opacity:0.6">${s.sync_id.substring(0, 8)}</small>
+                                                             ${s.catalyst_trace_id ? `<span class="catalyst-tag clickable" onclick="window.wisdomAtlas.showTrace('${s.catalyst_trace_id}')">VÍA CATALYST [VER TRACE]</span>` : ''}
+                                                        </div>
+                                                        ${s.creator_decision === 'PENDING' ? `
+                                                            <div class="history-actions">
+                                                                <button class="atlas-btn tertiary mini" onclick="window.wisdomAtlas.processFeedback('${s.sync_id}', 'REJECTED'); window.wisdomAtlas.showDetail('${nodeId}')">Rechazar</button>
+                                                                <button class="atlas-btn primary mini" onclick="window.wisdomAtlas.processFeedback('${s.sync_id}', 'ACCEPTED'); window.wisdomAtlas.showDetail('${nodeId}')">Aprobar Sync</button>
+                                                            </div>
+                                                        ` : ''}
+                                                    </div>
+                                                </div>
+                                            `;
+                    }).join('')}
+                                    </div>`
+                }
+                            </div>
+                        </div>
+
+                        <div class="actions-footer">
+                            <button class="atlas-btn secondary close-btn">Cerrar</button>
+                            ${node.node_type === 'LEARNING' ?
+                    `<button class="atlas-btn primary simulate-btn" data-id="${node.source_ref_id}">Proyectar Táctica</button>` : ''}
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        overlay.querySelector('.close-detail').onclick = () => overlay.style.display = 'none';
-        overlay.querySelector('.close-btn').onclick = () => overlay.style.display = 'none';
+            // Tab Logic
+            const infoBtn = overlay.querySelector('#tab-info-btn');
+            const historyBtn = overlay.querySelector('#tab-history-btn');
+            const infoContent = overlay.querySelector('#tab-info-content');
+            const historyContent = overlay.querySelector('#tab-history-content');
 
-        const simBtn = overlay.querySelector('.simulate-btn');
-        if (simBtn) {
-            simBtn.onclick = () => {
-                alert(`Lanzando simulación táctica contextual para el recurso ${node.source_ref_id}...`);
-                overlay.style.display = 'none';
+            infoBtn.onclick = () => {
+                infoBtn.classList.add('active');
+                historyBtn.classList.remove('active');
+                infoContent.style.display = 'block';
+                historyContent.style.display = 'none';
             };
+
+            historyBtn.onclick = () => {
+                historyBtn.classList.add('active');
+                infoBtn.classList.remove('active');
+                infoContent.style.display = 'none';
+                historyContent.style.display = 'block';
+            };
+
+            overlay.querySelector('.close-detail').onclick = () => overlay.style.display = 'none';
+            overlay.querySelector('.close-btn').onclick = () => overlay.style.display = 'none';
+
+            const simBtn = overlay.querySelector('.simulate-btn');
+            if (simBtn) {
+                simBtn.onclick = () => {
+                    alert(`Iniciando simulación de impacto para el recurso ${node.source_ref_id}...`);
+                    overlay.style.display = 'none';
+                };
+            }
+        } catch (err) {
+            console.error("Detail load failed", err);
+            overlay.innerHTML = `<div class="atlas-node-detail"><div class="error-state">Error al cargar evidencia: ${err.message}</div><button class="atlas-btn secondary close-panel-btn">Cerrar</button></div>`;
+            overlay.querySelector('.close-panel-btn').onclick = () => overlay.style.display = 'none';
         }
     }
 
@@ -348,6 +496,81 @@ class WisdomAtlas {
                 <button class="atlas-btn primary" onclick="window.wisdomAtlas.refreshAtlas()">Forzar Agregación</button>
             </div>
         `;
+    }
+    async showTrace(traceId) {
+        // --- OMNI_CATALYST_TRACE_AUDIT_DEEP_LINK ---
+        const overlay = document.createElement('div');
+        overlay.className = 'atlas-overlay trace-inspector-overlay';
+        overlay.innerHTML = `
+            <div class="atlas-node-detail trace-inspector-panel">
+                <button class="close-detail" id="close-trace">×</button>
+                <div class="detail-content">
+                    <div style="font-size:0.6rem; color: #4ade80; font-weight:700; display:flex; justify-content:space-between;">
+                        <span>CATALYST TRACE AUDIT</span>
+                        <span>TRACE_ID: ${traceId}</span>
+                    </div>
+                    <h2 style="margin-top:10px;">Forensics of Acceleration</h2>
+                    <div id="trace-payload" style="margin-top:20px;">
+                        <div class="loading-spinner">Retrieveing stored trace...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        document.getElementById('close-trace').onclick = () => overlay.remove();
+
+        try {
+            const res = await fetch(`/api/v1/governance/catalyst/trace/${traceId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('omniweb_token')}` }
+            });
+            const data = await res.json();
+
+            const container = document.getElementById('trace-payload');
+            if (data.status === 'success') {
+                container.innerHTML = data.payload.map(evt => {
+                    const refs = JSON.parse(evt.evidence_refs);
+                    let structuredHTML = '';
+
+                    // Compact Audit View for Catalyst Events
+                    if (evt.decision_type.includes('INVOKE')) {
+                        structuredHTML = `
+                            <div class="audit-field"><label>MODE:</label> <span>${refs.translation_mode ? 'Spec Translation' : 'Tactical Acceleration'}</span></div>
+                            <div class="audit-field"><label>INPUT SUMMARY:</label> <p>${refs.objective || 'N/A'}</p></div>
+                            <div class="audit-field"><label>BRIDGE:</label> <span>${refs.technical_memory_context ? 'Memory Bridge Connected' : 'Direct Call'}</span></div>
+                        `;
+                    } else if (evt.decision_type.includes('SUCCESS')) {
+                        structuredHTML = `
+                            <div class="audit-field"><label>OUTPUT RATIONALE:</label> <p>${refs.rationale || 'N/A'}</p></div>
+                            <div class="audit-field"><label>CONFIDENCE:</label> <span class="pill">${Math.round(refs.confidence * 100) || 100}%</span></div>
+                            <div class="audit-field"><label>STEPS GENERATED:</label> <span>${(refs.steps || refs.mission_steps || []).length} items</span></div>
+                        `;
+                    } else if (evt.decision_type.includes('REJECT')) {
+                        structuredHTML = `
+                            <div class="audit-field" style="color:#ef4444;"><label>POLICY BLOCK:</label> <p>Blocked by security policy gate.</p></div>
+                            <div class="audit-field"><label>RAW BLOCKED CONTENT:</label> <pre style="font-size:0.65rem;">${JSON.stringify(refs, null, 2)}</pre></div>
+                        `;
+                    } else {
+                        structuredHTML = `<pre style="font-size:0.65rem; opacity:0.7;">${JSON.stringify(refs, null, 2)}</pre>`;
+                    }
+
+                    return `
+                        <div class="trace-event-item" style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-bottom:15px; border-left:3px solid ${evt.decision_type.includes('SUCCESS') ? '#4ade80' : '#4f46e5'};">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                <span style="font-size:0.65rem; font-weight:800; color:${evt.decision_type.includes('SUCCESS') ? '#4ade80' : '#8b5cf6'}; text-transform:uppercase;">${evt.decision_type.replace('CATALYST_', '')}</span>
+                                <span style="font-size:0.6rem; opacity:0.5;">${new Date(evt.created_at).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="audit-details-grid" style="display:flex; flex-direction:column; gap:8px;">
+                                ${structuredHTML}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                container.innerHTML = `<div class="empty-evidence">El payload de la traza no está disponible o ha sido rotado por políticas de retención.</div>`;
+            }
+        } catch (err) {
+            document.getElementById('trace-payload').innerHTML = `<div class="empty-evidence">Error en enlace profundo: No se pudo contactar con el Ledger de Gobernanza.</div>`;
+        }
     }
 }
 

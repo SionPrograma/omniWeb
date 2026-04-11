@@ -1,13 +1,10 @@
 
 import sqlite3
-
-conn = sqlite3.connect('backend/omni.db')
-cursor = conn.cursor()
-
-cursor.execute("PRAGMA table_info(system_missions)")
-cols = cursor.fetchall()
-
-for col in cols:
-    print(col)
-
+db_path = "backend/data/omniweb.db"
+conn = sqlite3.connect(db_path)
+tables = ["roadmap_branches", "mission_handoffs", "system_missions"]
+for t in tables:
+    c = conn.execute(f"PRAGMA table_info({t})")
+    cols = [r[1] for r in c.fetchall()]
+    print(f"{t}: {cols}")
 conn.close()

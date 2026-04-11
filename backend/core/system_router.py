@@ -6,8 +6,10 @@ import os
 from backend.core.config import settings
 from backend.core.module_registry import module_registry
 from backend.core.database import db_manager
-from backend.core.auth import get_admin_user, get_current_user, OmniUser
 from backend.core.permissions import set_chip_context
+from backend.core.governance.mode_registry import ModePermission
+from backend.core.auth import get_admin_user, get_current_user, OmniUser, require_permission
+from backend.core.security.audit_logger import audit_logger
 
 router = APIRouter()
 
@@ -83,10 +85,9 @@ async def get_system_state(current_user: Optional[OmniUser] = Depends(get_curren
     """
     from backend.core.system_state.engine import state_engine
     user_id = current_user.id if current_user else None
-    state = await state_engine.get_state(user_id=user_id)
+    state = await state_engine.get_state(current_user=current_user)
     
     state_data = state.model_dump()
-    state_data["creator_authenticated"] = (current_user and current_user.role == "admin")
     
     # Mode Filter (Phase 14)
     if settings.OMNIWEB_MODE == "user":
@@ -251,7 +252,7 @@ async def create_db_backup(admin_user: dict = Security(get_admin_user)):
             raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/db/restore")
-async def restore_db_from_backup(filename: str, admin_user: dict = Security(get_admin_user)):
+async def restore_db_from_backup(filename: str, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     data_dir = os.path.dirname(db_manager.db_path)
     source_path = os.path.join(data_dir, "backups", filename)
     with set_chip_context("core"):
@@ -263,6 +264,10 @@ async def restore_db_from_backup(filename: str, admin_user: dict = Security(get_
             orchestrator = CognitiveOrchestrator()
             raw_res = AICommandResponse(intent="db_restore", status="success", message=f"Database restored from {filename}")
             unified = await orchestrator.orchestrate("restore db", {"mode": "direct_response", "intent_group": "SYSTEM"}, raw_response=raw_res)
+            audit_logger.log_action(
+                admin_user.id, admin_user.mode, "GOVERNANCE_EXECUTE",
+                "RESTORE_DB", filename, {"source": source_path}, "SUCCESS"
+            )
             return {"status": "success", "payload": unified.model_dump()}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
@@ -309,7 +314,7 @@ async def get_pending_fixes(admin_user: dict = Security(get_admin_user)):
     return list(fix_engine.active_proposals.values())
 
 @router.post("/audit/fix/apply")
-async def apply_fix(proposal_id: str, admin_user: dict = Security(get_admin_user)):
+async def apply_fix(proposal_id: str, admin_user: OmniUser = Depends(require_permission(ModePermission.GOVERNANCE_EXECUTE))):
     """
     Applies a specific auto-fix proposal.
     """
@@ -332,5 +337,11 @@ async def apply_fix(proposal_id: str, admin_user: dict = Security(get_admin_user
         payload={"new_report_status": new_report.overall_status.value}
     )
     unified = await orchestrator.orchestrate("apply fix", {"mode": "direct_response", "intent_group": "REMEDIATION"}, raw_response=raw_res)
+    
+    # AUDIT LOG (V1.4)
+    audit_logger.log_action(
+        admin_user.id, admin_user.mode, "GOVERNANCE_EXECUTE",
+        "APPLY_AUDIT_FIX", proposal_id, {"status": "applied"}, "SUCCESS"
+    )
     
     return {"status": "success", "payload": unified.model_dump()}

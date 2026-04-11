@@ -63,25 +63,35 @@ class ProcessingService:
             # 2. Extract Audio
             job_manager.update_job(job_id, "audio_extraction", 20.0, "Extracting audio...", stage_completed="downloading", status=job_status)
             try:
+                # If already a .wav, we might still want to normalize it, but if it fails, we can try to proceed
+                is_wav = video_path.suffix.lower() == ".wav"
                 original_audio = AudioConverter.extract_audio(video_path, job_id)
                 if not original_audio or not original_audio.exists():
-                    raise Exception("Audio extraction produced no output.")
+                     raise Exception("Audio extraction produced no output.")
                 intermediate_files.append(original_audio)
             except Exception as ae:
-                raise Exception(f"Audio extraction failed: {str(ae)}")
+                if is_wav:
+                    print(f"[Pipeline] Extraction failed, but source is .wav. Using original: {ae}")
+                    original_audio = video_path
+                else:
+                    raise Exception(f"Audio extraction failed: {str(ae)}")
                 
             log_mem("Audio Extracted")
             gc.collect()
 
             # 3. Transcribe
-            job_manager.update_job(job_id, "transcribing", 40.0, f"Transcribing (Whisper {settings.WHISPER_MODEL})...", stage_completed="audio_extraction", status=job_status)
+            job_manager.update_job(job_id, "provisioning", 35.0, "Checking ML stack availability...", stage_completed="audio_extraction", status=job_status)
             try:
                 transcriber = Transcriber()
-                transcript_data = transcriber.transcribe(original_audio)
+                transcript_data = await transcriber.transcribe_async(original_audio)
                 segments = transcript_data.get('segments', [])
+                mode = transcript_data.get('metadata', {}).get('mode', 'N/A')
+                
+                # Report mode in status
+                job_manager.update_job(job_id, "transcribing", 40.0, f"Transcribing (Engine: {mode} / {settings.WHISPER_MODEL})...", status=job_status)
                 
                 if not segments:
-                    print("[Pipeline] Warning: No speech segments detected.")
+                    print(f"[Pipeline] Warning: No segments. Mode: {mode}")
                     # We continue but will have limited output
             except Exception as te:
                 print(f"[Pipeline] Transcription error: {te}")
@@ -211,7 +221,9 @@ class ProcessingService:
                     
                     if final_video_path.exists():
                         shutil.copy2(dub_audio_path, settings.AUDIO_OUTPUT / f"{job_id}.wav")
-                        result_url = f"/outputs/merged/{final_video_name}"
+                        # Proxy-aware URL generation (hardening)
+                        base_url = settings.ROOT_PATH.rstrip('/')
+                        result_url = f"{base_url}/outputs/merged/{final_video_name}"
                         final_status = "completed" if job_status == "processing" else "partial_success"
                         job_manager.update_job(job_id, "complete", 100.0, "Pipeline completed.", result_url=result_url, status=final_status)
                     else:

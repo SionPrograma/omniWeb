@@ -1,137 +1,5 @@
 [
   {
-    "timestamp": "2026-04-02T20:40:26.142384",
-    "prompt": "upload c:\\users\\propietario\\desktop\\plan actual\\07-proyectosgrandes\\01-omniweb\\frontend\\shell\\test_image.png",
-    "response": "Revisando el estado, el informa estado nominal The community is stable. No urgent governance actions detected. All testers are behaving within expected parameters.",
-    "intent": "governance_advisor"
-  },
-  {
-    "timestamp": "2026-04-02T20:52:34.883459",
-    "prompt": "how do i upload visual evidence to trigger the multimodalprocessor?",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T20:53:15.923070",
-    "prompt": "[visual_evidence] c:\\users\\propietario\\desktop\\plan actual\\07-proyectosgrandes\\01-omniweb\\frontend\\shell\\test_image.png",
-    "response": "El informa estado nominal The community is stable. No urgent governance actions detected. All testers are behaving within expected parameters.",
-    "intent": "governance_advisor"
-  },
-  {
-    "timestamp": "2026-04-02T21:04:03.834735",
-    "prompt": "load this image for visual diff validation: c:\\users\\propietario\\desktop\\plan actual\\07-proyectosgrandes\\01-omniweb\\frontend\\shell\\test_image.png",
-    "response": "Procesos estables y activos The community is stable. No urgent governance actions detected. All testers are behaving within expected parameters.",
-    "intent": "governance_advisor"
-  },
-  {
-    "timestamp": "2026-04-02T21:04:59.055847",
-    "prompt": "start mission: visual validation for multimodal processor",
-    "response": "Welcome OmniWeb OmniWeb is more than a platform; it's a living ecosistema designed connect , collaboration, and opportunity. You were selected as a Beta Tester because of your potential lead in this new digital frontier. Our is scale human potential through collective intelligence. Hidden Strength Detected: *Leadership Potential*. You focus on and collective action. Type 'continue' proceed.*.",
-    "intent": "leadership_welcome"
-  },
-  {
-    "timestamp": "2026-04-02T21:10:11.630756",
-    "prompt": "generate first hypothesis for the visual evidence [visual_evidence]",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-02T21:10:11.633748",
-    "prompt": "generate first hypothesis for the visual evidence [visual_evidence]",
-    "response": "Actualmente, verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "creator_analysis"
-  },
-  {
-    "timestamp": "2026-04-03T06:10:07.139206",
-    "prompt": "Hola",
-    "response": "De acuerdo a los datos, hello! Good morning, welcome OmniWeb, your knowledge network.",
-    "intent": "onboarding_greeting"
-  },
-  {
-    "timestamp": "2026-04-03T06:12:10.912539",
-    "prompt": "cómo es tu estado actual?",
-    "response": "Te escucho. Decime por dónde querés que sigamos hoy.",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-04-03T06:12:29.541109",
-    "prompt": "está conectado el chat conversacional?",
-    "response": "Te escucho. Decime por dónde querés que sigamos hoy.",
-    "intent": "NATURAL_CHAT"
-  },
-  {
-    "timestamp": "2026-04-03T08:10:54.395874",
-    "prompt": "initial_greeting",
-    "response": "El informa estado nominal ¡Hola! Buenos días, bienvenido a OmniWeb, tu red de conocimiento.",
-    "intent": "onboarding_greeting"
-  },
-  {
-    "timestamp": "2026-04-03T08:10:54.541976",
-    "prompt": "learning profile",
-    "response": "Revisando el estado, perfil de recuperado.",
-    "intent": "education_profile"
-  },
-  {
-    "timestamp": "2026-04-03T08:11:53.037115",
-    "prompt": "initial_greeting",
-    "response": "El informa estado nominal ¡Hola! Buenos días, bienvenido a OmniWeb, tu red de conocimiento.",
-    "intent": "onboarding_greeting"
-  },
-  {
-    "timestamp": "2026-04-03T08:11:53.584018",
-    "prompt": "learning profile",
-    "response": "Perfil de recuperado.",
-    "intent": "education_profile"
-  },
-  {
-    "timestamp": "2026-04-03T08:12:56.173540",
-    "prompt": "inicia una nuinicia una nueva mision de auditoria cognitivaeva misi",
-    "response": "Te escucho. Decime por dónde querés que sigamos hoy.",
-    "intent": "BUILD_INTENT"
-  },
-  {
-    "timestamp": "2026-04-03T08:12:56.212250",
-    "prompt": "inicia una nuinicia una nueva mision de auditoria cognitivaeva misi",
-    "response": "Te escucho. Decime por dónde querés que sigamos hoy.",
-    "intent": "general_chat"
-  },
-  {
-    "timestamp": "2026-04-03T08:46:16.339946",
-    "prompt": "Hola",
-    "response": "Hello! Good morning, welcome OmniWeb, your knowledge network.",
-    "intent": "onboarding_greeting"
-  },
-  {
-    "timestamp": "2026-04-03T08:54:51.904391",
-    "prompt": "Hola",
-    "response": "Revisando el estado, hello! Good morning, welcome OmniWeb, your knowledge network.",
-    "intent": "onboarding_greeting"
-  },
-  {
-    "timestamp": "2026-04-03T09:08:28.098159",
-    "prompt": "switch mission f07cc9f0-d22c-4a50-837a-c6ac24ac6ec2",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.\n\n⚙️ **MISIÓN ACTIVA:** Misión de nominal (0/1 pasos)",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-03T22:05:32.400315",
-    "prompt": "analiza el sistema",
-    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "technical_analysis"
-  },
-  {
-    "timestamp": "2026-04-03T22:05:32.415960",
-    "prompt": "analiza el sistema",
-    "response": "He estado dándole vueltas a lo de 'switch f07cc9f0-d22c-4a50-837a-c6ac24ac6ec2'. verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
-    "intent": "creator_analysis"
-  },
-  {
-    "timestamp": "2026-04-03T22:06:12.953261",
-    "prompt": "Hola",
-    "response": "Good evening. Initializing your OmniWeb knowledge environment.",
-    "intent": "onboarding_greeting"
-  },
-  {
     "timestamp": "2026-04-03T22:09:30.016024",
     "prompt": "Hola",
     "response": "Revisando el estado, good evening. Initializing your OmniWeb knowledge environment.",
@@ -298,5 +166,137 @@
     "prompt": "SHOW MISSION SCHEDULE",
     "response": null,
     "intent": "leadership_welcome"
+  },
+  {
+    "timestamp": "2026-04-06T11:38:32.040709",
+    "prompt": "que le podemos mejorar al chatbot del output",
+    "response": "No hay ninguna misión activa para ajustar.",
+    "intent": "mission_adjustment"
+  },
+  {
+    "timestamp": "2026-04-06T17:08:04.965056",
+    "prompt": "cómo te ves de nivel?",
+    "response": "Acá estoy. Te sigo el ritmo, ¿qué tenés en mente?",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-04-08T17:08:56.313222",
+    "prompt": "audit the system",
+    "response": "Me perdí un poco con eso último. ¿Podés repetirlo?",
+    "intent": "SYSTEM_AUDIT_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:10:01.179348",
+    "prompt": "audit the system",
+    "response": "No capté el hilo de lo que quisiste decir. ¿Me lo aclarás un poquito?",
+    "intent": "SYSTEM_AUDIT_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:11:35.437808",
+    "prompt": "fix the issue",
+    "response": "Me perdí un poco. ¿Probamos de nuevo?",
+    "intent": "REMEDIATION_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:13:00.960494",
+    "prompt": "fix the issue",
+    "response": "Me perdí un poco con eso último. ¿Podés repetirlo?",
+    "intent": "REMEDIATION_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:13:36.410951",
+    "prompt": "fix the issue",
+    "response": "Me perdí un poco. ¿Probamos de nuevo?",
+    "intent": "REMEDIATION_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:15:12.299844",
+    "prompt": "fix the issue",
+    "response": "Me perdí un poco. ¿Probamos de nuevo?",
+    "intent": "REMEDIATION_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:18:42.892000",
+    "prompt": "fix the issue",
+    "response": "Me perdí un poco con eso último. ¿Podés repetirlo?",
+    "intent": "REMEDIATION_INTENT"
+  },
+  {
+    "timestamp": "2026-04-08T17:20:20.435938",
+    "prompt": "fix the issue",
+    "response": "No capté el hilo de lo que quisiste decir. ¿Me lo aclarás un poquito?",
+    "intent": "REMEDIATION_INTENT"
+  },
+  {
+    "timestamp": "2026-04-10T16:47:17.493973",
+    "prompt": "switch focus c1cf1e9f-7e14-4301-aa5f-3bb7e723aeee",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T16:47:19.503651",
+    "prompt": "switch focus c1cf1e9f-7e14-4301-aa5f-3bb7e723aeee",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T16:47:30.668748",
+    "prompt": "switch focus 59d08fc5-8586-41a0-9a05-1b1f0166422a",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T16:47:39.073631",
+    "prompt": "switch focus 27409b04-168e-4920-b231-6ee9550b24c1",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T16:47:58.230287",
+    "prompt": "switch mission f7c7bb2a-9f41-4e73-bff9-1e26a207bb99",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.\n\n⚙️ **MISIÓN ACTIVA:** Misión de nominal (0/1 pasos)",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T16:48:23.582607",
+    "prompt": "mostrame donde falla el sistema",
+    "response": "Se requiere aclaración del usuario para resolver ambigüedad entre intención y telemetría.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T16:50:27.988506",
+    "prompt": "bueno bastante mejor de lo que pensaba la verdad! estas almacenando las respuestas para mejorar la conversacion?",
+    "response": "Control sectorial actualizado.",
+    "intent": "mission_adjustment"
+  },
+  {
+    "timestamp": "2026-04-10T16:50:39.472096",
+    "prompt": "okey nombra error",
+    "response": "Plan verificado. Esperando aprobación manual para ejecutar acciones peligrosas.",
+    "intent": "technical_analysis"
+  },
+  {
+    "timestamp": "2026-04-10T17:44:22.127577",
+    "prompt": "habla de cualquier cosa",
+    "response": "Pues te cuento que el entorno de desarrollo y los chips siguen en perfecta sincronía. Estamos mejorando la forma de conversar para que suene más fluido y natural.",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-04-10T17:44:27.586629",
+    "prompt": "habla de cualquier cosa",
+    "response": "Pues te cuento que el entorno de desarrollo y los chips siguen en perfecta sincronía. Estamos mejorando la forma de conversar para que suene más fluido y natural.",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-04-10T17:44:29.858530",
+    "prompt": "habla de cualquier cosa",
+    "response": "Pues te cuento que el entorno de desarrollo y los chips siguen en perfecta sincronía. Estamos mejorando la forma de conversar para que suene más fluido y natural.",
+    "intent": "NATURAL_CHAT"
+  },
+  {
+    "timestamp": "2026-04-10T17:44:30.225659",
+    "prompt": "habla de cualquier cosa",
+    "response": "Pues te cuento que el entorno de desarrollo y los chips siguen en perfecta sincronía. Estamos mejorando la forma de conversar para que suene más fluido y natural.",
+    "intent": "NATURAL_CHAT"
   }
 ]

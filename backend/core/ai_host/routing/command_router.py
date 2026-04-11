@@ -270,6 +270,26 @@ class CommandRouter:
                 source_surface = context.get("source_surface", "chat") if context else "chat"
                 if not is_creator_prefixed:
                     fast_category = self._is_local_fast_path(msg_clean, source_surface)
+                    
+                    # --- OMNI_PATCH: CHIP-IDIOMAS L1 INTERCEPT ---
+                    try:
+                        from backend.core.module_registry import module_registry
+                        chip_data = module_registry.get_module_data("idiomas")
+                        is_active = chip_data and chip_data.get("metadata", {}).get("active", False)
+                        if is_active:
+                            import importlib
+                            idiomas_mod = importlib.import_module("chips.chip-idiomas.core.services.language_engine")
+                            enhanced = await idiomas_mod.language_engine.enhance_natural_chat(msg_clean, context, "es")
+                            if enhanced:
+                                logger.info(f"[CHIP-IDIOMAS] Successfully intercepted conversational intent.")
+                                return await self._finalize_response(
+                                    AICommandResponse(intent=fast_category or "chat", status="success", message=enhanced),
+                                    message
+                                )
+                    except Exception as e:
+                        logger.warning(f"[CHIP-IDIOMAS_FAIL] {e}")
+                    # --- END OMNI_PATCH ---
+
                     if fast_category:
                         logger.info(f"[LOCAL_FAST_PATH] Category: {fast_category} | Msg: '{msg_clean[:40]}'")
                         try:
