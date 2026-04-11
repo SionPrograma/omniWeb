@@ -1,0 +1,35 @@
+/* ROADMAP UI STYLES */
+.roadmap-container {
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+.roadmap-item {
+    border-left: 2px solid var(--accent, #00d4ff);
+    padding-left: 15px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.roadmap-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    background: var(--accent, #00d4ff);
+    border-radius: 50%;
+}
+
+.roadmap-title {
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.roadmap-status {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    opacity: 0.6;
+}

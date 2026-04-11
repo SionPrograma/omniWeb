@@ -90,13 +90,15 @@ body {
 /* Unified View Container Visibility (Block 21: Shared UI Hardening) */
 #ai-host-view:not(.active),
 #mission-control-view:not(.active),
-#creator-workspace-view:not(.active) {
+#creator-workspace-view:not(.active),
+#omniverse-view:not(.active) {
     display: none !important;
 }
 
 #ai-host-view.active,
 #mission-control-view.active,
-#creator-workspace-view.active {
+#creator-workspace-view.active,
+#omniverse-view.active {
     display: flex !important;
 }
 
@@ -2354,4 +2356,29 @@ body.mode-public .internal-only {
     height: 15px;
     cursor: nwse-resize;
     background: linear-gradient(135deg, transparent 70%, var(--glass-border) 70%);
+}
+
+/* OMNIVERSE VIEW (Block 05 Cutover) */
+#omniverse-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    z-index: 5;
+    background: var(--bg-deep);
+}
+
+#omniverse-frame {
+    border: none;
+    flex: 1;
+}
+
+#toolbar-classic {
+    transition: all 0.3s var(--spring-easing);
+}
+
+#toolbar-classic:hover {
+    background: rgba(212, 175, 55, 0.15) !important;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }

@@ -19,20 +19,47 @@
         <header class="sys-header holographic-panel flex-row">
             <div class="sys-logo">
                 <span class="blinking-dot"></span>
-                <strong>OMNIVERSE</strong> | SYSTEM ANALYSIS WORKSPACE
+                <strong>OMNIVERSE MAP</strong> | SPATIAL ANALYSIS
             </div>
             <div class="sys-metrics">
-                <span>INTEL: NOMINAL</span>
-                <span>GOVERNANCE: ACTIVE</span>
+                <div class="governance-status" id="gov-status">
+                    <span class="gov-indicator"></span>
+                    <span id="gov-label">GOVERNANCE: ACTIVE</span>
+                </div>
+                <div class="metric-item"><span class="metric-label">MEM</span><span id="metric-mem">...</span></div>
+                <div class="metric-item"><span class="metric-label">LAT</span><span id="metric-lat">...</span></div>
+                <div class="metric-item"><span class="metric-label">VER</span><span id="metric-ver">...</span></div>
                 <span class="time-display">T+0.000</span>
+                <button onclick="window.parent.creatorEnv.switchView('workspace')"
+                    style="background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); color:var(--creator-gold); font-family:'JetBrains Mono'; font-size:0.6rem; padding:4px 8px; border-radius:4px; cursor:pointer; margin-left:10px; transition:all 0.3s;"
+                    onmouseover="this.style.background='rgba(212,175,55,0.2)'"
+                    onmouseout="this.style.background='rgba(212,175,55,0.1)'">
+                    CREATOR_CABIN
+                </button>
             </div>
         </header>
 
         <!-- Central Workspace (Scrollable) -->
         <div class="central-workspace">
 
+            <nav class="spatial-nav-tabs"
+                style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; z-index: 10; position: relative;">
+                <button onclick="window.setSpatialView('vista-sistema')"
+                    style="background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); color:var(--text-main); font-family:'JetBrains Mono'; font-size:0.7rem; padding:6px 12px; border-radius:4px; cursor:pointer;"
+                    id="tab-vista-sistema">CABIN (DEFAULT)</button>
+                <button onclick="window.setSpatialView('map-section')"
+                    style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:var(--text-muted); font-family:'JetBrains Mono'; font-size:0.7rem; padding:6px 12px; border-radius:4px; cursor:pointer;"
+                    id="tab-map-section">SPATIAL MAP</button>
+                <button onclick="window.setSpatialView('system-tree')"
+                    style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:var(--text-muted); font-family:'JetBrains Mono'; font-size:0.7rem; padding:6px 12px; border-radius:4px; cursor:pointer;"
+                    id="tab-system-tree">DIAGNOSTICS</button>
+                <button onclick="window.setSpatialView('repair-flow')"
+                    style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:var(--text-muted); font-family:'JetBrains Mono'; font-size:0.7rem; padding:6px 12px; border-radius:4px; cursor:pointer;"
+                    id="tab-repair-flow">REPAIR FLOW</button>
+            </nav>
+
             <!-- Section 1: Main Omniverse Map -->
-            <section class="workspace-section first-section">
+            <section id="map-section" class="workspace-section first-section" style="display: none;">
                 <div class="spatial-arena">
                     <!-- Connection Lines SVG -->
                     <svg class="arena-links" id="arena-links" viewBox="0 0 1000 1000">
@@ -185,7 +212,7 @@
             </section>
 
             <!-- Section 3: System Tree Diagnostics -->
-            <section id="system-tree" class="workspace-section">
+            <section id="system-tree" class="workspace-section" style="display: none;">
                 <div class="section-header">
                     <h2>TREE DIAGNOSTICS</h2>
                     <div class="sub-header">ESTRUCTURA TRONCO / RAMAS / HOJAS</div>
@@ -230,7 +257,7 @@
             </section>
 
             <!-- Section 4: Repair Flow -->
-            <section id="repair-flow" class="workspace-section">
+            <section id="repair-flow" class="workspace-section" style="display: none;">
                 <div class="section-header">
                     <h2>REPAIR FLOW</h2>
                     <div class="sub-header">GOBERNANZA CON APROBACIÓN HUMANA</div>
@@ -263,13 +290,13 @@
                     </div>
                 </div>
 
-                <div class="repair-actions">
+                <div class="repair-actions" id="repair-actions-container">
                     <div class="approval-panel">
                         <div class="panel-title">CONTROL DEL CREADOR</div>
-                        <p>El sistema propone re-indexar el Chip de Idiomas para corregir la respuesta de Stage B.</p>
+                        <p id="repair-instruction">Esperando propuesta de reparación del sistema...</p>
                         <div class="btn-group">
-                            <button class="btn-action">APROBAR PROPUESTA</button>
-                            <button class="btn-action secondary">RECHAZAR</button>
+                            <button class="btn-action" onclick="creatorAction('approve')">APROBRAR PROPUESTA</button>
+                            <button class="btn-action secondary" onclick="creatorAction('reject')">RECHAZAR</button>
                         </div>
                     </div>
                     <div class="result-preview" style="border-left: 2px solid var(--secondary-emerald);">
@@ -285,45 +312,99 @@
 
         </div>
 
-        <!-- Left Panel: Layers Diagnostics -->
+        <!-- Left Panel: Layers & Audit -->
         <aside class="panel left-panel holographic-panel holographic-blur slide-in-left">
-            <h2 class="panel-header">System Layers</h2>
-            <ul class="layer-list" id="layers-list">
-                <!-- Injected via JS -->
-            </ul>
+            <div class="panel-section" id="section-layers">
+                <h2 class="panel-header">
+                    <span>System Layers</span>
+                    <span class="collapsible-trigger" onclick="toggleSection('section-layers')">▼</span>
+                </h2>
+                <div class="section-content">
+                    <ul class="layer-list" id="layers-list">
+                        <!-- Injected via JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel-section mt-4" id="section-audit">
+                <h2 class="panel-header">
+                    <span>Audit Ledger</span>
+                    <span class="collapsible-trigger" onclick="toggleSection('section-audit')">▼</span>
+                </h2>
+                <div class="section-content">
+                    <div id="audit-ledger" class="audit-ledger-container">
+                        <div class="loading-indicator">Sincronizando bitácora de auditoría...</div>
+                    </div>
+                </div>
+            </div>
         </aside>
 
-        <!-- Right Panel: Data & Roadmap -->
+        <!-- Right Panel: Capabilities & Roadmap -->
         <aside class="panel right-panel holographic-panel holographic-blur slide-in-right">
-            <h2 class="panel-header">Data / Roles</h2>
-
-            <div class="sub-section">
-                <h3>Agentes / Roles</h3>
-                <div class="tag-cloud" id="roles-list">
-                    <!-- Injetar via JS -->
+            <div class="panel-section" id="section-copilot">
+                <h2 class="panel-header">
+                    <span>System Copilot</span>
+                    <span class="collapsible-trigger" onclick="toggleSection('section-copilot')">▼</span>
+                </h2>
+                <div class="section-content">
+                    <div class="copilot-sidecar">
+                        <div id="omniverse-copilot-log" class="copilot-log">
+                            <div class="msg system">VINCULADO: Operativo. ¿Qué deseas analizar?</div>
+                        </div>
+                        <div class="copilot-input-container">
+                            <textarea id="omniverse-copilot-input" placeholder="Comando de análisis..."
+                                rows="1"></textarea>
+                            <button id="omniverse-copilot-send" class="btn-send">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="sub-section mt-4">
-                <h3>Dominio de Lenguaje</h3>
-                <div class="language-stack">
-                    <div class="stack-layer core interactive-step"
-                        onclick="showModal('OmniWeb Policy', '&lt;ul&gt;&lt;li&gt;Decide qué se permite&lt;/li&gt;&lt;li&gt;Mantiene tono Omni&lt;/li&gt;&lt;li&gt;Valida seguridad&lt;/li&gt;&lt;li&gt;Hace fallback&lt;/li&gt;&lt;li&gt;Guarda trazabilidad&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;&lt;small&gt;Lectura: OmniWeb queda arriba de ambos como autoridad soberana.&lt;/small&gt;')">
-                        OmniWeb Policy</div>
-                    <div class="stack-layer intra interactive-step"
-                        onclick="showModal('Chip Idiomas (Interno)', '&lt;ul&gt;&lt;li&gt;Activa la fase charlable&lt;/li&gt;&lt;li&gt;Mejora expresión&lt;/li&gt;&lt;li&gt;Corrige/reformula&lt;/li&gt;&lt;li&gt;Resume/explica&lt;/li&gt;&lt;li&gt;Puede elegir motor lingüístico&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;&lt;small&gt;Lectura: Mejora cómo Omni entiende y habla adentro del sistema.&lt;/small&gt;')">
-                        Chip Idiomas (Interno)</div>
-                    <div class="stack-layer extra interactive-step"
-                        onclick="showModal('Chip Lingua (Externo)', '&lt;ul&gt;&lt;li&gt;Habla con terceros&lt;/li&gt;&lt;li&gt;Traduce operativamente&lt;/li&gt;&lt;li&gt;Conecta voz/canales&lt;/li&gt;&lt;li&gt;Puentes externos&lt;/li&gt;&lt;li&gt;Mensajería y salida&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;&lt;small&gt;Lectura: Expande ese poder hacia afuera (comunicación operativa).&lt;/small&gt;')">
-                        Chip Lingua (Externo)</div>
+            <div class="panel-section mt-4" id="section-capabilities">
+                <h2 class="panel-header">
+                    <span>Capabilities</span>
+                    <span class="collapsible-trigger" onclick="toggleSection('section-capabilities')">▼</span>
+                </h2>
+                <div class="section-content">
+                    <div id="capabilities-grid" class="capabilities-grid">
+                        <!-- Injected via JS -->
+                    </div>
+                    <div class="sub-section mt-4">
+                        <h3>Sub-Agentes Activos</h3>
+                        <div id="roles-list" class="tag-cloud">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                    <div class="sub-section mt-4">
+                        <h3>Dominio de Lenguaje</h3>
+                        <div class="language-stack">
+                            <div class="stack-layer core interactive-step" onclick="showModal('OmniWeb Policy', '...')">
+                                OmniWeb Policy</div>
+                            <div class="stack-layer intra interactive-step"
+                                onclick="showModal('Chip Idiomas (Interno)', '...')">
+                                Chip Idiomas (Interno)</div>
+                            <div class="stack-layer extra interactive-step"
+                                onclick="showModal('Chip Lingua (Externo)', '...')">
+                                Chip Lingua (Externo)</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="sub-section mt-4">
-                <h3>Roadmap</h3>
-                <ul class="roadmap-list" id="roadmap-list">
-                    <!-- Injetar via JS -->
-                </ul>
+            <div class="panel-section mt-4" id="section-roadmap">
+                <h2 class="panel-header">
+                    <span>Roadmap</span>
+                    <span class="collapsible-trigger" onclick="toggleSection('section-roadmap')">▼</span>
+                </h2>
+                <div class="section-content">
+                    <ul class="roadmap-list" id="roadmap-list">
+                        <!-- Injetar via JS -->
+                    </ul>
+                </div>
             </div>
         </aside>
 
@@ -352,6 +433,31 @@
 
     <!-- Generates Starfield & Grid -->
     <script src="app.js"></script>
+    <!-- Spatial Editor Modal (Block 04) -->
+    <div id="spatial-editor-modal" class="modal-overlay" style="display: none;">
+        <div class="holographic-modal editor-modal slide-up">
+            <div class="modal-header">
+                <div class="header-left">
+                    <span class="modal-title">SPATIAL EDITOR PIN</span>
+                    <span id="editor-node-path" class="node-path">chips/chip-idiomas</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-mini" onclick="closeSpatialEditor()">CLOSE_LOGIC</button>
+                    <button class="btn-mini primary" onclick="saveSpatialEditor()">SAVE_CHANGES</button>
+                </div>
+            </div>
+            <div class="modal-content">
+                <div class="editor-wrapper">
+                    <div class="editor-gutter" id="editor-gutter"></div>
+                    <textarea id="spatial-editor-textarea" spellcheck="false" oninput="updateGutter()"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span id="editor-status">READY: Awaiting instruction.</span>
+                <span class="governance-tag">GOVERNED_ACCESS</span>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -143,6 +143,86 @@ body.workspace-active #shell-container {
     grid-template-rows: 1fr 1fr;
 }
 
+/* Strategic Focal Modes */
+.focal-mode-controls {
+    display: flex;
+    gap: 4px;
+    margin-right: 15px;
+    padding-right: 15px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.focal-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.55rem;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+}
+
+.focal-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.focal-btn.active {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.4);
+    color: var(--accent, #00d4ff);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
+}
+
+.focal-btn.active[data-mode="dev"] {
+    background: rgba(50, 255, 150, 0.1);
+    border-color: rgba(50, 255, 150, 0.4);
+    color: #32ff96;
+}
+
+.focal-btn.active[data-mode="ops"] {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.4);
+    color: var(--creator-gold);
+}
+
+/* Premium Loading Indicator */
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 0.7rem;
+    color: var(--creator-gold);
+    opacity: 1;
+    height: 100%;
+    min-height: 120px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.loading-indicator::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(212, 175, 55, 0.1);
+    border-top-color: var(--creator-gold);
+    border-radius: 50%;
+    animation: ws-spinner 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes ws-spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .workspace-grid.panels-5,
 .workspace-grid.panels-6,
 .workspace-grid.panels-7,

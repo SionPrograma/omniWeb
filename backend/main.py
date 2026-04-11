@@ -752,6 +752,7 @@ for chip_metadata in all_chips:
 
 app.mount("/shell", StaticFiles(directory="frontend/shell", html=True), name="shell_static")
 app.mount("/dashboard-static", StaticFiles(directory="frontend/dashboard"), name="dashboard_static")
+app.mount("/workspace", StaticFiles(directory="workspace", html=True), name="workspace_static")
 app.mount("/core", StaticFiles(directory="core"), name="core_static")
 
 # Lingua & Global Outputs (Hardened for Staging)

@@ -71,8 +71,8 @@
                     console.log("[USER_BOOT] Defaulting to Public Surface (Chat)");
                     this.switchView('chat');
                 } else if (document.body.classList.contains('creator-authenticated') || hasAdminToken) {
-                    console.log("[CREATOR_BOOT] Restoring default Creator session (Mission)...");
-                    this.switchView('mission');
+                    console.log("[CREATOR_BOOT] Promoting Omniverse as primary landing surface...");
+                    this.switchView('workspace');
                     if (window.masterLogbook) window.masterLogbook.toggle(true);
                 }
             } else if (viewRequest) {
@@ -566,12 +566,14 @@
             const aiView = document.getElementById('ai-host-view');
             const missionView = document.getElementById('mission-control-view');
             const workspaceView = document.getElementById('creator-workspace-view');
+            const omniverseView = document.getElementById('omniverse-view');
             const userHomeView = document.getElementById('user-home-view');
             const navItems = document.querySelectorAll('.nav-item');
 
             if (aiView) aiView.classList.remove('active');
             if (missionView) missionView.classList.remove('active');
             if (workspaceView) workspaceView.classList.remove('active');
+            if (omniverseView) omniverseView.classList.remove('active');
             if (userHomeView) userHomeView.classList.remove('active');
 
             navItems.forEach(n => n.classList.remove('active'));
@@ -584,12 +586,30 @@
                 document.querySelector('[data-view="mission"]').classList.add('active');
                 this.renderCockpit();
             } else if (viewName === 'workspace') {
+                // ROLE SWAP: 'workspace' is now fallback access to the 8-panel legacy grid
                 if (workspaceView) workspaceView.classList.add('active');
-                document.querySelector('[data-view="workspace"]').classList.add('active');
+                const navBtn = document.querySelector('.nav-item[data-view="spatial-map"]');
+                if (navBtn) navBtn.classList.add('active');
+
                 if (!this.workspaceHasBeenOpenedBefore) {
-                    this.initWorkspaceLayout();
+                    this.openWorkspace('editor');
                     this.workspaceHasBeenOpenedBefore = true;
                 }
+                this.addWorkspaceLog("Entrando en Cabina del Creador", "system");
+            } else if (viewName === 'spatial-map') {
+                // ROLE SWAP: Omniverse Spatial Room is now the PRIMARY Creator surface
+                if (omniverseView) {
+                    omniverseView.classList.add('active');
+                    document.body.classList.add('workspace-active'); // For global styling
+                }
+                const navBtn = document.querySelector('.nav-item[data-view="spatial-map"]');
+                // Ensure the workspace icon lights up for both, as they share the 'workspace' concept
+                if (navBtn) navBtn.classList.add('active');
+
+                this.addWorkspaceLog("Accediendo a Omniverse Map (Análisis Espacial)", "system");
+            } else if (viewName === 'classic-workspace') {
+                // Maintenance fallback
+                if (workspaceView) workspaceView.classList.add('active');
             } else if (viewName === 'home') {
                 if (userHomeView) userHomeView.classList.add('active');
                 document.querySelector('[data-view="home"]').classList.add('active');
@@ -853,16 +873,12 @@
             return;
         }
 
-        // Initialize all panels as active ONLY if opening for the first time
+        // Initialize in DEV mode ONLY if opening for the first time (Phase: Runtime Tuning)
         if (!this.workspaceHasBeenOpenedBefore) {
             this.workspaceHasBeenOpenedBefore = true;
-            ['editor', 'copilot', 'changes', 'backend', 'mission', 'portfolio'].forEach(pId => {
-                const panel = document.getElementById(`ws-panel-${pId}`);
-                const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
-                if (panel) panel.classList.add('active');
-                if (btn) btn.classList.add('active');
-            });
+            this.setFocalMode('dev');
         }
+
 
         // UX RULE: If targetPanel is explicitly requested (from outside or inside)
         if (targetPanel) {
@@ -913,6 +929,43 @@
         grid.className = 'workspace-grid';
         if (activePanels > 0) {
             grid.classList.add(`panels-${activePanels}`);
+        }
+    }
+
+    setFocalMode(mode) {
+        console.log(`[CREATOR] Activating Focal Mode: ${mode}`);
+
+        const modes = {
+            'dev': ['editor', 'copilot', 'changes'],
+            'ops': ['mission', 'portfolio', 'intake', 'roadmap'],
+            'diag': ['backend', 'audit']
+        };
+
+        const targetPanels = modes[mode] || [];
+
+        // Deactivate all first
+        document.querySelectorAll('.ws-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.ws-toggle').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.focal-btn').forEach(b => b.classList.remove('active'));
+
+        // Activate targets
+        targetPanels.forEach(pId => {
+            const panel = document.getElementById(`ws-panel-${pId}`);
+            const btn = document.querySelector(`.ws-toggle[data-panel="${pId}"]`);
+            if (panel) panel.classList.add('active');
+            if (btn) btn.classList.add('active');
+        });
+
+        const modeBtn = document.querySelector(`.focal-btn[data-mode="${mode}"]`);
+        if (modeBtn) modeBtn.classList.add('active');
+
+        this.updateGridLayout();
+
+        if (mode === 'ops') {
+            this.renderWorkspaceMissionDashboard(this.systemState);
+            this.renderRoadmap();
+        } else if (mode === 'diag') {
+            this.updateWorkspaceBackendState();
         }
     }
 

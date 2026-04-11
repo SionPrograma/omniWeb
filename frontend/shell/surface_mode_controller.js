@@ -18,7 +18,7 @@ class SurfaceModeController {
 
         // 1. Mission Control & Workspace Nav Items
         const missionNav = document.querySelector('[data-view="mission"]');
-        const workspaceNav = document.querySelector('[data-view="workspace"]');
+        const workspaceNav = document.querySelector('[data-view="spatial-map"]');
         const homeNav = document.querySelector('[data-view="home"]');
 
         if (missionNav) missionNav.style.display = isPublic ? 'none' : 'flex';
